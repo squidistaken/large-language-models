@@ -1,14 +1,68 @@
-\documentclass{article}
-\usepackage{graphicx} % Required for inserting images
-
-\title{Large Language Models - Course Project}
-\author{Marcus Persson}
-\date{September 2026}
+\input{report/header/header}
+\usepackage{float}
+\usepackage{url}
+\usepackage{amssymb}
+\usepackage[style=apa]{biblatex}
+\addbibresource{report/references.bib}
+\usepackage[colorlinks=false]{hyperref}
 
 \begin{document}
+\pagestyle{body}
+
+\title{
+    \vspace{5cm}
+        {\bf
+        {\Huge Cross-Lingual Multi-Label Emotion Classification Using Large Language Models}} \\
+    \vspace{1cm}
+        {\bf
+        {\Large Large Language Models}} \\
+        {\large WBAI065-05}
+}
+\date{}
 
 \maketitle
+\thispagestyle{titlepage}
 
-\section{Introduction}
+\vfill
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{| >{\raggedright\arraybackslash}p{4cm} | >{\raggedright\arraybackslash}p{10cm} |}
+    \hline
+    \textbf{Group Number:}          & 5 \\ \hline
+    \textbf{Authors:}               & Petros Kontopirghos (S) \\ 
+                                    & Marcus Harald Olof Persson (S5343798) \\ 
+                                    & Julian Wierenga (S) \\ \hline
+    \textbf{Delivery Date:}         & \today \\ \hline
+    
+    \end{tabular}
+\end{table}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\input{report/sections/01_introduction}
+\input{report/sections/02_background}
+\input{report/sections/03_data}
+\input{report/sections/04_methodology}
+\input{report/sections/05_evaluation}
+\input{report/sections/06_results}
+\input{report/sections/07_analysis}
+\input{report/sections/08_conclusion}
+
+\newpage
+
+\pagestyle{references}
+\printbibliography
+
+\newpage
+
+\appendix
+\pagestyle{appendix}
+
+\input{report/sections/09_appendix}
 
 \end{document}

@@ -1,0 +1,17 @@
+action: null
+
+data:
+  languages: [en, hr]
+  out_dir: data/raw/xed
+  force: false
+  base_url: https://raw.githubusercontent.com/Helsinki-NLP/XED/master
+  annotated_dir: AnnotatedData
+  projections_dir: Projections
+
+logging:
+  prefix: "[XED]"
+  level: INFO
+  log_dir: logs
+  verbose: false
+
+seed: 42

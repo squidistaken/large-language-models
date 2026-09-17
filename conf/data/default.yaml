@@ -1,0 +1,7 @@
+languages: [en, hr]
+out_dir: data/raw/xed
+force: false
+base_url: https://raw.githubusercontent.com/Helsinki-NLP/XED/master
+annotated_dir: AnnotatedData
+projections_dir: Projections
+pairs_dir: subtitle-retrieval/students

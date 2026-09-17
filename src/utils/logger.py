@@ -96,7 +96,7 @@ class Logger:
         Args:
             msg(str): The raw log message.
         """
-        self._logger.error(self._fmt(msg))
+        self._logger.exception(self._fmt(msg))
 
     def debug(self, msg: str) -> None:
         """Log a debug-level message.

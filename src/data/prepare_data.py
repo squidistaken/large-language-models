@@ -74,6 +74,7 @@ class PreparationSummary:
             unresolved_rows=counts.get("unresolved_rows", 0),
             duplicate_rows=counts.get("duplicate_rows", 0),
             gold_source_labels=counts.get("gold_source_labels", 0),
+            pivot_anchored_ids=counts.get("pivot_anchored_ids", 0),
             units_by_hops=manifest.get("units_by_alignment_hops", {}),
         )
         split = SplitStats(
@@ -202,12 +203,17 @@ class XEDPreparer:
                 current[:CHECKSUM_PREFIX],
             )
 
+        same_target = manifest.get("target_lang") == self.target_lang
+
         for name, digest in self.summary.raw_checksums.items():
             previous = summary.raw_checksums.get(name)
 
-            if previous is not None and previous != digest:
+            if previous is None and not same_target:
+                continue
+
+            if previous != digest:
                 summary.mismatches[name] = (
-                    f"sha256 {previous[:CHECKSUM_PREFIX]}",
+                    f"sha256 {previous[:CHECKSUM_PREFIX]}" if previous else "not used",
                     f"sha256 {digest[:CHECKSUM_PREFIX]}",
                 )
 
@@ -269,6 +275,7 @@ class XEDPreparer:
                 "gold_source_labels": alignment.gold_source_labels,
                 "direct_alignments": alignment.direct_alignments,
                 "bridged_alignments": alignment.bridged_alignments,
+                "pivot_anchored_ids": alignment.pivot_anchored_ids,
             },
             "units_by_alignment_hops": alignment.units_by_hops,
             "split_sizes": split.split_sizes,

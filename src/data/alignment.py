@@ -4,12 +4,13 @@ from dataclasses import dataclass, field
 
 from src.constants import GOLD, PIVOT_LANG, PROJECTED, SOURCE_LANG
 from src.data.labels import XED_LABELS, LabelSpace
-from src.data.xed_corpus import XEDCorpus
+from src.data.xed_corpus import AnnotationRow, PairRow, XEDCorpus
 from src.utils.logger import Logger
 from src.utils.text import normalise
 
 # XED's English annotations are NER-anonymised.
 PLACEHOLDER_PATTERN = re.compile(r"\[[A-Z_]+\]")
+DIGIT_PATTERN = re.compile(r"\d")
 DIRECT_HOPS = 1
 BRIDGED_HOPS = 2
 
@@ -58,11 +59,24 @@ class AlignmentStats:
     unresolved_rows: int = 0
     duplicate_rows: int = 0
     gold_source_labels: int = 0
+    pivot_anchored_ids: int = 0
     units_by_hops: dict[str, int] = field(default_factory=dict)
 
 
+def _match_key(text: str) -> str:
+    """Reduce an English line to a key for matching against XED's annotated text.
+
+    Args:
+        text (str): The English line.
+
+    Returns:
+        str: The comparison key.
+    """
+    return " ".join(DIGIT_PATTERN.sub(" ", normalise(text)).split())
+
+
 class GoldEnglishIndex:
-    """Lookup over XED's human-annotated English lines, tolerant of NER anonymisation."""
+    """Class for lookup over XED's human-annotated English lines, tolerant of NER anonymisation."""
 
     def __init__(self, logger: Logger) -> None:
         """Initialise the class.
@@ -82,11 +96,11 @@ class GoldEnglishIndex:
             label_ids (frozenset[int]): The gold label ids.
         """
         if not PLACEHOLDER_PATTERN.search(text):
-            self.exact.setdefault(normalise(text), label_ids)
+            self.exact.setdefault(_match_key(text), label_ids)
 
             return
 
-        segments = [normalise(segment) for segment in PLACEHOLDER_PATTERN.split(text)]
+        segments = [_match_key(segment) for segment in PLACEHOLDER_PATTERN.split(text)]
 
         # A line that is nothing but a placeholder would match anything, so it is unusable.
         if not any(segments):
@@ -96,15 +110,17 @@ class GoldEnglishIndex:
 
         self.buckets[segments[0].split(" ")[0]].append((pattern, label_ids))
 
-    def lookup(self, key: str) -> frozenset[int] | None:
-        """Look up a normalised English line.
+    def lookup(self, text: str) -> frozenset[int] | None:
+        """Look up an English line.
 
         Args:
-            key (str): The normalised English line.
+            text (str): The English line.
 
         Returns:
             frozenset[int] | None: A set of gold label ids, or None if the line is not annotated.
         """
+        key = _match_key(text)
+
         if key in self.exact:
             return self.exact[key]
 
@@ -125,6 +141,66 @@ class GoldEnglishIndex:
         self.logger.info(
             f"Gold English index: {len(self.exact)} exact, {patterns} anonymised patterns"
         )
+
+
+@dataclass(frozen=True)
+class Bridge:
+    """The English side reached from a Danish-referenced alignment."""
+
+    doc: str
+    sentence_id: str
+    text: str
+    english_id: bool
+
+
+class PivotIndex:
+    """Class for Danish-to-English bridges for annotations XED recorded against Danish subtitles."""
+
+    def __init__(self) -> None:
+        """Initialise the class."""
+        self.phrases: dict[tuple[str, str], str] = {}
+        self.links: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
+
+    def add_annotation(self, row: AnnotationRow) -> None:
+        """Index one annotation recorded against a Danish sentence.
+
+        Args:
+            row (AnnotationRow): The annotation.
+        """
+        self.phrases.setdefault((row.doc, row.sentence_id), row.phrase)
+
+    def add_link(self, row: PairRow) -> None:
+        """Index one Danish-to-English alignment.
+
+        Args:
+            row (PairRow): The alignment, oriented with English as the target.
+        """
+        self.links[(row.source_doc, row.source_id)].append(
+            (row.target_doc, row.target_id, row.target_text)
+        )
+
+    def lookup(self, row: PairRow) -> Bridge | None:
+        """Find the annotated English line a Danish-sourced row bridges to.
+
+        Args:
+            row (PairRow): A target-language alignment whose source side is Danish.
+
+        Returns:
+            Bridge | None: The English side, or None if the Danish sentence was not annotated.
+        """
+        location = (row.source_doc, row.source_id)
+        phrase = self.phrases.get(location)
+
+        if phrase is None:
+            return None
+
+        key = _match_key(phrase)
+
+        for doc, sentence_id, text in self.links.get(location, []):
+            if _match_key(text) == key:
+                return Bridge(doc, sentence_id, text, english_id=True)
+
+        return Bridge(row.source_doc, row.source_id, phrase, english_id=False)
 
 
 class AlignmentBuilder:
@@ -213,7 +289,7 @@ class AlignmentBuilder:
         source_labels, source = label_ids, PROJECTED
 
         for candidate in ordered:
-            gold = index.lookup(normalise(candidate.text))
+            gold = index.lookup(candidate.text)
 
             if gold is not None:
                 chosen = candidate
@@ -248,25 +324,26 @@ class AlignmentBuilder:
 
         return index
 
-    def _read_pivot(self) -> dict[str, tuple[str, str, str]]:
+    def _read_pivot(self) -> PivotIndex:
         """Index the Danish-to-English alignments that bridge pivot rows back to English.
 
         Returns:
-            dict[str, tuple[str, str, str]]: A dictionary containing an English document, identifier
-                                             and text per normalised pivot sentence.
+            PivotIndex: A collection of bridges, keyed by Danish sentence.
         """
-        pivot: dict[str, tuple[str, str, str]] = {}
+        pivot = PivotIndex()
+
+        for annotation in self.corpus.iter_annotations(self.corpus.annotations_path):
+            if annotation.doc.startswith(f"{PIVOT_LANG}/"):
+                pivot.add_annotation(annotation)
 
         # Oriented with English as the target, so the source side is the pivot language.
         for row in self.corpus.iter_pairs(self.corpus.pivot_path, SOURCE_LANG):
             if row.source_doc.startswith(f"{PIVOT_LANG}/"):
-                pivot.setdefault(
-                    normalise(row.source_text),
-                    (row.target_doc, row.target_id, row.target_text),
-                )
+                pivot.add_link(row)
 
         self.logger.info(
-            f"Read {self.corpus.pivot_path.name}: {len(pivot)} pivot-to-English bridges"
+            f"Read {self.corpus.annotations_path.name}: {len(pivot.phrases)} annotations "
+            f"recorded against {PIVOT_LANG} subtitles"
         )
 
         return pivot
@@ -279,7 +356,7 @@ class AlignmentBuilder:
                                         normalised target sentence.
         """
         candidates: dict[str, list[Candidate]] = defaultdict(list)
-        pivot = self._read_pivot() if self.use_pivot else {}
+        pivot = self._read_pivot() if self.use_pivot else PivotIndex()
 
         for row in self.corpus.iter_pairs(self.corpus.pairs_path, self.corpus.target_lang):
             key = normalise(row.target_text)
@@ -290,15 +367,16 @@ class AlignmentBuilder:
 
                 continue
 
-            bridge = pivot.get(normalise(row.source_text))
+            bridge = pivot.lookup(row)
 
             if bridge is None:
                 continue
 
-            en_doc, en_id, en_text = bridge
-
-            candidates[key].append(Candidate(BRIDGED_HOPS, row.align_id(en_doc, en_id), en_text))
+            candidates[key].append(
+                Candidate(BRIDGED_HOPS, row.align_id(bridge.doc, bridge.sentence_id), bridge.text)
+            )
             self.stats.bridged_alignments += 1
+            self.stats.pivot_anchored_ids += not bridge.english_id
 
         self.logger.info(
             f"Read {self.corpus.pairs_path.name}: {self.stats.direct_alignments} direct and "

@@ -1,15 +1,20 @@
+import csv
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from src.constants import SOURCE_LANG
+from src.data.download_data import ANNOTATIONS_FILE
 from src.data.labels import XED_LABELS, LabelSpace
 from src.utils.logger import Logger
 
 PIVOT_PAIRS_FILE = f"pairs-{SOURCE_LANG}.txt"
 PAIRS_FIELD_COUNT = 6
 LABELLED_FIELD_COUNT = 2
+ANNOTATION_MIN_FIELDS = 6
 MAX_REPORTED_LINES = 10
+PHRASE_TAB_PATTERN = re.compile(r"([^0-9/])\t([^0-9/])")
 
 
 def make_align_id(source_doc: str, target_doc: str, source_id: str, target_id: str) -> str:
@@ -54,6 +59,15 @@ class PairRow:
             source_id if source_id is not None else self.source_id,
             self.target_id,
         )
+
+
+@dataclass(frozen=True)
+class AnnotationRow:
+    """One annotated English phrase, located by the OPUS sentence XED recorded for it."""
+
+    doc: str
+    sentence_id: str
+    phrase: str
 
 
 @dataclass
@@ -124,6 +138,15 @@ class XEDCorpus:
         """
         return self.raw_dir / PIVOT_PAIRS_FILE
 
+    @property
+    def annotations_path(self) -> Path:
+        """Get the path to XED's record of which OPUS sentence each annotation came from.
+
+        Returns:
+            Path: A path.
+        """
+        return self.raw_dir / ANNOTATIONS_FILE
+
     def required_paths(self, use_pivot: bool) -> list[Path]:
         """List every raw file a preparation run reads.
 
@@ -136,9 +159,39 @@ class XEDCorpus:
         required = [self.annotated_path, self.projections_path, self.pairs_path]
 
         if use_pivot:
-            required.append(self.pivot_path)
+            required.extend([self.annotations_path, self.pivot_path])
 
         return required
+
+    @staticmethod
+    def iter_annotations(path: Path) -> Iterator[AnnotationRow]:
+        """Yield the annotated phrases that carry a usable OPUS location.
+
+        Args:
+            path (Path): The annotations file.
+
+        Yields:
+            AnnotationRow: A located annotation.
+        """
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                fields = PHRASE_TAB_PATTERN.sub(r"\1 \2", line).rstrip("\n").split("\t")
+
+                if len(fields) < ANNOTATION_MIN_FIELDS or not any(c.isdigit() for c in fields[0]):
+                    continue
+
+                _, _, phrase, _, sentence_id, doc = fields[:ANNOTATION_MIN_FIELDS]
+
+                if not sentence_id.isdigit() or "/" not in doc:
+                    continue
+
+                phrase = phrase.strip()
+
+                # Some phrases were exported with spreadsheet quoting, e.g. `"It's ""real""."`.
+                if len(phrase) > 1 and phrase.startswith('"') and phrase.endswith('"'):
+                    phrase = next(csv.reader([phrase]))[0]
+
+                yield AnnotationRow(doc, sentence_id, phrase)
 
     @staticmethod
     def iter_fields(path: Path) -> Iterator[tuple[int, list[str]]]:

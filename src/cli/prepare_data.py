@@ -3,7 +3,7 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from src.cli.prompts import ask_until, parse_choice, parse_splits
+from src.cli.prompts import ask_until, parse_choice, parse_int, parse_splits
 from src.constants import (
     BAND_NAMES,
     BAND_SIZES,
@@ -57,10 +57,15 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console,
         "Split ratios (train,dev,test)",
         ",".join(str(value) for value in cfg.prepare.splits),
-        lambda raw: parse_splits(raw, len(SPLIT_NAMES)),
+        parse_splits,
     )
 
-    seed = int(Prompt.ask("Random seed", default=str(cfg.prepare.seed)))
+    seed = ask_until(
+        console,
+        "Random seed",
+        str(cfg.prepare.seed),
+        lambda raw: parse_int(raw, "seed"),
+    )
     overwrite = Confirm.ask("Overwrite existing splits?", default=cfg.prepare.overwrite)
 
     cfg.prepare.target_lang = target_lang
@@ -139,13 +144,14 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         logger (Logger): The logger.
 
     Raises:
-        SystemExit: If the raw inputs are missing or no pair could be aligned.
+        SystemExit: If the settings are invalid, the raw inputs are missing, or no pair could be
+            aligned.
     """
 
     console = Console()
-    preparer = XEDPreparer(cfg.prepare, logger)
 
     try:
+        preparer = XEDPreparer(cfg.prepare, logger)
         summary = preparer.prepare()
 
     except (FileNotFoundError, ValueError) as e:

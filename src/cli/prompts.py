@@ -3,6 +3,8 @@ from collections.abc import Callable
 from rich.console import Console
 from rich.prompt import Prompt
 
+from src.data.splitting import validate_splits
+
 
 def ask_until[T](console: Console, question: str, default: str, parse: Callable[[str], T]) -> T:
     """Ask a question until the answer parses, reporting why each rejected answer failed.
@@ -73,18 +75,17 @@ def parse_choice(raw: str, allowed: list[str], subject: str) -> str:
     return value
 
 
-def parse_splits(raw: str, count: int) -> list[float]:
+def parse_splits(raw: str) -> list[float]:
     """Parse comma-separated split ratios that must sum to one.
 
     Args:
         raw (str): The raw answer.
-        count (int): How many ratios are expected.
 
     Returns:
         list[float]: A list of parsed ratios.
 
     Raises:
-        ValueError: If the ratios are unparseable, miscounted, or do not sum to one.
+        ValueError: If the ratios are unparseable or cannot partition the data.
     """
     try:
         splits = [float(part) for part in raw.split(",")]
@@ -92,7 +93,26 @@ def parse_splits(raw: str, count: int) -> list[float]:
     except ValueError as e:
         raise ValueError("Split ratios must be numbers.") from e
 
-    if len(splits) != count or abs(sum(splits) - 1.0) > 1e-6:
-        raise ValueError(f"Provide {count} ratios that sum to 1.0.")
+    validate_splits(splits)
 
     return splits
+
+
+def parse_int(raw: str, subject: str) -> int:
+    """Parse a whole number.
+
+    Args:
+        raw (str): The raw answer.
+        subject (str): The subject.
+
+    Returns:
+        int: A parsed integer.
+
+    Raises:
+        ValueError: If the answer is not a whole number.
+    """
+    try:
+        return int(raw.strip())
+
+    except ValueError as e:
+        raise ValueError(f"The {subject} must be a whole number, got '{raw}'.") from e

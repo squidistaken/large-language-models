@@ -13,6 +13,7 @@ REQUEST_TIMEOUT_SECONDS = 30
 DEFAULT_ANNOTATED_DIR = "AnnotatedData"
 DEFAULT_PROJECTIONS_DIR = "Projections"
 DEFAULT_PAIRS_DIR = "subtitle-retrieval/students"
+ANNOTATIONS_FILE = "student_annotations.csv"
 
 # Weird mistake from the repository.
 PROJECTION_FILENAME_OVERRIDES = {"tr": "tr-projections2.tsv"}
@@ -57,6 +58,9 @@ class XEDDownloader:
         if any(lang.lower() == "all" for lang in languages):
             languages = ALL_LANGUAGES
 
+        if SOURCE_LANG not in languages:
+            languages = [SOURCE_LANG, *languages]
+
         self.out_dir = Path(cfg.out_dir)
         self.languages = languages
         self.force = cfg.get("force", False)
@@ -91,6 +95,9 @@ class XEDDownloader:
 
             if lang in PAIRS_LANGS:
                 files[f"pairs-{lang}.txt"] = f"{self.base_url}/{self.pairs_dir}/pairs-{lang}.txt"
+
+            if lang == SOURCE_LANG:
+                files[ANNOTATIONS_FILE] = f"{self.base_url}/{self.pairs_dir}/{ANNOTATIONS_FILE}"
 
         return files
 

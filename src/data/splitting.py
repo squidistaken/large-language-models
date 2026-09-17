@@ -13,6 +13,25 @@ from src.utils.text import normalise
 STRATIFIER = "iterstrat.ml_stratifiers.MultilabelStratifiedShuffleSplit"
 
 
+def validate_splits(splits: tuple[float, ...] | list[float]) -> None:
+    """Check that split ratios can partition the data.
+
+    Args:
+        splits (tuple[float, ...] | list[float]): The train, development and test fractions.
+
+    Raises:
+        ValueError: If there are not three ratios, any is not positive, or they do not sum to one.
+    """
+    if len(splits) != len(SPLIT_NAMES):
+        raise ValueError(f"Provide {len(SPLIT_NAMES)} split ratios, got {len(splits)}.")
+
+    if any(share <= 0 for share in splits):
+        raise ValueError(f"Every split ratio must be greater than 0, got {list(splits)}.")
+
+    if abs(sum(splits) - 1.0) > 1e-6:
+        raise ValueError(f"Split ratios must sum to 1.0, got {sum(splits):g}.")
+
+
 @dataclass
 class SplitStats:
     """Counts describing how units were deduplicated, grouped and partitioned."""
@@ -43,10 +62,7 @@ class SplitAssigner:
         Raises:
             ValueError: If the fractions are not three values summing to one.
         """
-        if len(splits) != len(SPLIT_NAMES) or abs(sum(splits) - 1.0) > 1e-6:
-            raise ValueError(
-                f"splits must be {len(SPLIT_NAMES)} fractions summing to 1.0, got {splits}"
-            )
+        validate_splits(splits)
 
         self.logger = logger
         self.splits = splits

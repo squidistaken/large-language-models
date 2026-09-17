@@ -1,4 +1,12 @@
+defaults:
+  - override hydra/job_logging: disabled
+  - _self_
+
 action: null
+
+hydra:
+  run:
+    dir: ${logging.log_dir}
 
 data:
   languages: [en, hr]

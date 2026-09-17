@@ -1,6 +1,6 @@
 # Cross-Lingual Multi-Label Emotion Classification Using Large Language Models
 
-Repository for the Large Language Models course (WBAI065-05) at the University of Groningen.
+Repository for the Large Language Models course (WBAI068-05) at the University of Groningen.
 
 ## Team
 

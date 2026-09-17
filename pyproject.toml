@@ -1,7 +1,7 @@
 [project]
 name = "large-language-models"
 version = "0.1.0"
-description = "Repository for the Large Language Models course (WBAI065-05) at the University of Groningen."
+description = "Repository for the Large Language Models course (WBAI068-05) at the University of Groningen."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

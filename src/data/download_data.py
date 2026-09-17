@@ -7,15 +7,14 @@ from omegaconf import DictConfig
 from src.utils.logger import Logger
 
 DEFAULT_BASE_URL = "https://raw.githubusercontent.com/Helsinki-NLP/XED/master"
+REQUEST_TIMEOUT_SECONDS = 30
 DEFAULT_ANNOTATED_DIR = "AnnotatedData"
 DEFAULT_PROJECTIONS_DIR = "Projections"
 ANNOTATED_LANGS = {"en", "fi"}
 PROJECTION_ONLY_LANGS = {
     "ar",
     "bg",
-    "br",
     "bs",
-    "cn",
     "cs",
     "da",
     "de",
@@ -47,21 +46,27 @@ PROJECTION_ONLY_LANGS = {
     "sr",
     "sv",
     "th",
+    "pt_br",
     "tr",
-    "tw",
     "vi",
-    "zh",
+    "zh_cn",
+    "zh_tw",
+    "zh_yue",
 }
 ALL_LANGUAGES = sorted(ANNOTATED_LANGS | PROJECTION_ONLY_LANGS)
 
 # Weird mistake from the repository.
 PROJECTION_FILENAME_OVERRIDES = {"tr": "tr-projections2.tsv"}
+PROJECTION_REMOTE_CODE_OVERRIDES = {
+    "pt_br": "br",
+    "zh_cn": "cn",
+    "zh_tw": "tw",
+    "zh_yue": "zh",
+}
 LANGUAGE_NAMES = {
     "ar": "Arabic",
     "bg": "Bulgarian",
-    "br": "Breton",
     "bs": "Bosnian",
-    "cn": "Chinese (Simplified)",
     "cs": "Czech",
     "da": "Danish",
     "de": "German",
@@ -88,6 +93,7 @@ LANGUAGE_NAMES = {
     "no": "Norwegian",
     "pl": "Polish",
     "pt": "Portuguese",
+    "pt_br": "Portuguese (Brazil)",
     "ro": "Romanian",
     "ru": "Russian",
     "sk": "Slovak",
@@ -96,9 +102,10 @@ LANGUAGE_NAMES = {
     "sv": "Swedish",
     "th": "Thai",
     "tr": "Turkish",
-    "tw": "Chinese (Traditional)",
     "vi": "Vietnamese",
-    "zh": "Chinese",
+    "zh_cn": "Chinese (Simplified)",
+    "zh_tw": "Chinese (Traditional)",
+    "zh_yue": "Chinese (Cantonese)",
 }
 
 
@@ -146,8 +153,12 @@ class XEDDownloader:
                 files[f"neu_{lang}.txt"] = f"{self.base_url}/{self.annotated_dir}/neu_{lang}.txt"
 
             else:
-                filename = PROJECTION_FILENAME_OVERRIDES.get(lang, f"{lang}-projections.tsv")
-                files[filename] = f"{self.base_url}/{self.projections_dir}/{filename}"
+                remote_code = PROJECTION_REMOTE_CODE_OVERRIDES.get(lang, lang)
+                remote_filename = PROJECTION_FILENAME_OVERRIDES.get(
+                    remote_code, f"{remote_code}-projections.tsv"
+                )
+                local_filename = f"{lang}-projections.tsv"
+                files[local_filename] = f"{self.base_url}/{self.projections_dir}/{remote_filename}"
 
         return files
 
@@ -198,8 +209,14 @@ class XEDDownloader:
         req = urllib.request.Request(url, headers={"User-Agent": "xed-downloader"})
 
         try:
-            with urllib.request.urlopen(req) as resp, open(dest, "wb") as out_f:
+            with (
+                urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp,
+                open(dest, "wb") as out_f,
+            ):
                 out_f.write(resp.read())
 
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"Failed to fetch {url}: HTTP {e.code}") from e
+
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"Failed to fetch {url}: {e.reason}") from e

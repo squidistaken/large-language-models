@@ -74,6 +74,10 @@ def run_cli(cfg: DictConfig, logger: Logger) -> None:
     while True:
         console.print()
 
+        console.print("Select an Option:")
+
+        console.print()
+
         for i, key in enumerate(keys, start=1):
             console.print(f"  [green]{i}[/green]. {ACTIONS[key].LABEL}")
 
@@ -97,6 +101,9 @@ def run_cli(cfg: DictConfig, logger: Logger) -> None:
         module = ACTIONS[action]
 
         logger.info(f"Selected action: {action}.")
+
+        console.print()
+
         _print_banner(console, module.TITLE)
 
         if hasattr(module, "prompt"):

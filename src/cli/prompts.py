@@ -3,6 +3,8 @@ from collections.abc import Callable
 from rich.console import Console
 from rich.prompt import Prompt
 
+from src.data.splitting import validate_splits
+
 
 def ask_until[T](console: Console, question: str, default: str, parse: Callable[[str], T]) -> T:
     """Ask a question until the answer parses, reporting why each rejected answer failed.
@@ -49,3 +51,68 @@ def parse_languages(raw: str, allowed: list[str]) -> list[str]:
         raise ValueError(f"Unknown language code(s): {', '.join(invalid)}")
 
     return languages
+
+
+def parse_choice(raw: str, allowed: list[str], subject: str) -> str:
+    """Parse a single value that must come from a fixed set.
+
+    Args:
+        raw (str): The raw answer.
+        allowed (list[str]): The permitted values.
+        subject (str): The subject.
+
+    Returns:
+        str: A chosen value.
+
+    Raises:
+        ValueError: If the value is not permitted.
+    """
+    value = raw.strip()
+
+    if value not in allowed:
+        raise ValueError(f"Unknown {subject} '{value}'. Choose one of: {', '.join(allowed)}")
+
+    return value
+
+
+def parse_splits(raw: str) -> list[float]:
+    """Parse comma-separated split ratios that must sum to one.
+
+    Args:
+        raw (str): The raw answer.
+
+    Returns:
+        list[float]: A list of parsed ratios.
+
+    Raises:
+        ValueError: If the ratios are unparseable or cannot partition the data.
+    """
+    try:
+        splits = [float(part) for part in raw.split(",")]
+
+    except ValueError as e:
+        raise ValueError("Split ratios must be numbers.") from e
+
+    validate_splits(splits)
+
+    return splits
+
+
+def parse_int(raw: str, subject: str) -> int:
+    """Parse a whole number.
+
+    Args:
+        raw (str): The raw answer.
+        subject (str): The subject.
+
+    Returns:
+        int: A parsed integer.
+
+    Raises:
+        ValueError: If the answer is not a whole number.
+    """
+    try:
+        return int(raw.strip())
+
+    except ValueError as e:
+        raise ValueError(f"The {subject} must be a whole number, got '{raw}'.") from e

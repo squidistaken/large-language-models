@@ -4,7 +4,7 @@ Repository for the Large Language Models course (WBAI065-05) at the University o
 
 ## Team
 
- * Petros Kontopirghos (S)
+ * Petros Kontopirghos (S5851335)
  * Marcus Harald Olof Persson (S5343798)
  * Julian Wierenga (S)
 

@@ -6,14 +6,14 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.text import Text
 
-from src.cli import download_data
+from src.cli import download_data, prepare_data
 from src.utils.logger import Logger
 
 PROJECT_TITLE = "Cross-Lingual Multi-Label Emotion Classification Using Large Language Models"
 
 
 @runtime_checkable
-class CliAction(Protocol):
+class CLIAction(Protocol):
     """Interface class every module in `src.cli` must satisfy to be a menu action."""
 
     @property
@@ -27,8 +27,9 @@ class CliAction(Protocol):
     def prompt(self, cfg: DictConfig, console: Console, logger: Logger) -> None: ...
 
 
-ACTIONS: dict[str, CliAction] = {
+ACTIONS: dict[str, CLIAction] = {
     "download_data": download_data,
+    "prepare_data": prepare_data,
 }
 
 

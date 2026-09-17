@@ -1,112 +1,40 @@
 import urllib.error
 import urllib.request
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from omegaconf import DictConfig
 
+from src.constants import ALL_LANGUAGES, ANNOTATED_LANGS, PAIRS_LANGS, SOURCE_LANG
 from src.utils.logger import Logger
 
 DEFAULT_BASE_URL = "https://raw.githubusercontent.com/Helsinki-NLP/XED/master"
 REQUEST_TIMEOUT_SECONDS = 30
 DEFAULT_ANNOTATED_DIR = "AnnotatedData"
 DEFAULT_PROJECTIONS_DIR = "Projections"
-ANNOTATED_LANGS = {"en", "fi"}
-PROJECTION_ONLY_LANGS = {
-    "ar",
-    "bg",
-    "bs",
-    "cs",
-    "da",
-    "de",
-    "el",
-    "es",
-    "et",
-    "eu",
-    "fa",
-    "fr",
-    "gl",
-    "he",
-    "hr",
-    "hu",
-    "id",
-    "is",
-    "it",
-    "ja",
-    "mk",
-    "ml",
-    "ms",
-    "nl",
-    "no",
-    "pl",
-    "pt",
-    "ro",
-    "ru",
-    "sk",
-    "sl",
-    "sr",
-    "sv",
-    "th",
-    "pt_br",
-    "tr",
-    "vi",
-    "zh_cn",
-    "zh_tw",
-    "zh_yue",
-}
-ALL_LANGUAGES = sorted(ANNOTATED_LANGS | PROJECTION_ONLY_LANGS)
+DEFAULT_PAIRS_DIR = "subtitle-retrieval/students"
 
 # Weird mistake from the repository.
 PROJECTION_FILENAME_OVERRIDES = {"tr": "tr-projections2.tsv"}
-PROJECTION_REMOTE_CODE_OVERRIDES = {
-    "pt_br": "br",
-    "zh_cn": "cn",
-    "zh_tw": "tw",
-    "zh_yue": "zh",
-}
-LANGUAGE_NAMES = {
-    "ar": "Arabic",
-    "bg": "Bulgarian",
-    "bs": "Bosnian",
-    "cs": "Czech",
-    "da": "Danish",
-    "de": "German",
-    "el": "Greek",
-    "en": "English",
-    "es": "Spanish",
-    "et": "Estonian",
-    "eu": "Basque",
-    "fa": "Persian",
-    "fi": "Finnish",
-    "fr": "French",
-    "gl": "Galician",
-    "he": "Hebrew",
-    "hr": "Croatian",
-    "hu": "Hungarian",
-    "id": "Indonesian",
-    "is": "Icelandic",
-    "it": "Italian",
-    "ja": "Japanese",
-    "mk": "Macedonian",
-    "ml": "Malayalam",
-    "ms": "Malay",
-    "nl": "Dutch",
-    "no": "Norwegian",
-    "pl": "Polish",
-    "pt": "Portuguese",
-    "pt_br": "Portuguese (Brazil)",
-    "ro": "Romanian",
-    "ru": "Russian",
-    "sk": "Slovak",
-    "sl": "Slovenian",
-    "sr": "Serbian",
-    "sv": "Swedish",
-    "th": "Thai",
-    "tr": "Turkish",
-    "vi": "Vietnamese",
-    "zh_cn": "Chinese (Simplified)",
-    "zh_tw": "Chinese (Traditional)",
-    "zh_yue": "Chinese (Cantonese)",
-}
+PROJECTION_REMOTE_CODE_OVERRIDES = {"pt_br": "br"}
+
+
+@dataclass
+class DownloadSummary:
+    """The outcome of a download run."""
+
+    downloaded: list[str] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)
+    failed: list[str] = field(default_factory=list)
+
+    @property
+    def nothing_to_do(self) -> bool:
+        """Get whether every requested file was already present.
+
+        Returns:
+            bool: `True` when nothing was downloaded and nothing failed.
+        """
+        return bool(self.skipped) and not self.downloaded and not self.failed
 
 
 class XEDDownloader:
@@ -135,6 +63,7 @@ class XEDDownloader:
         self.base_url = cfg.get("base_url", DEFAULT_BASE_URL)
         self.annotated_dir = cfg.get("annotated_dir", DEFAULT_ANNOTATED_DIR)
         self.projections_dir = cfg.get("projections_dir", DEFAULT_PROJECTIONS_DIR)
+        self.pairs_dir = cfg.get("pairs_dir", DEFAULT_PAIRS_DIR)
         self.logger = logger
 
     def fetch_files(self) -> dict[str, str]:
@@ -152,7 +81,7 @@ class XEDDownloader:
                 )
                 files[f"neu_{lang}.txt"] = f"{self.base_url}/{self.annotated_dir}/neu_{lang}.txt"
 
-            else:
+            if lang != SOURCE_LANG:
                 remote_code = PROJECTION_REMOTE_CODE_OVERRIDES.get(lang, lang)
                 remote_filename = PROJECTION_FILENAME_OVERRIDES.get(
                     remote_code, f"{remote_code}-projections.tsv"
@@ -160,19 +89,22 @@ class XEDDownloader:
                 local_filename = f"{lang}-projections.tsv"
                 files[local_filename] = f"{self.base_url}/{self.projections_dir}/{remote_filename}"
 
+            if lang in PAIRS_LANGS:
+                files[f"pairs-{lang}.txt"] = f"{self.base_url}/{self.pairs_dir}/pairs-{lang}.txt"
+
         return files
 
-    def download(self) -> list[str]:
+    def download(self) -> DownloadSummary:
         """Download files.
 
         Skips files that already exist locally unless `self.force == True`.
 
         Returns:
-            list[str]: A list of failed downloaded files.
+            DownloadSummary: A collection of files downloaded, skipped, and failed.
         """
         self.out_dir.mkdir(parents=True, exist_ok=True)
 
-        failed = []
+        summary = DownloadSummary()
         files = self.fetch_files().items()
 
         for filename, url in self.logger.track(
@@ -181,19 +113,26 @@ class XEDDownloader:
             dest = self.out_dir / filename
 
             if dest.exists() and not self.force:
+                summary.skipped.append(filename)
                 self.logger.debug(f"Skipped {filename} (already exists)")
 
                 continue
 
             try:
                 self._fetch(url, dest)
+                summary.downloaded.append(filename)
                 self.logger.info(f"Downloaded {filename}")
 
             except RuntimeError as e:
+                summary.failed.append(filename)
                 self.logger.error(str(e))
-                failed.append(filename)
 
-        return failed
+        self.logger.info(
+            f"Downloaded {len(summary.downloaded)}, skipped {len(summary.skipped)}, "
+            f"failed {len(summary.failed)}"
+        )
+
+        return summary
 
     @staticmethod
     def _fetch(url: str, dest: Path) -> None:

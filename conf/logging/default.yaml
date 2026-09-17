@@ -1,0 +1,4 @@
+prefix: "[XED]"
+level: INFO
+log_dir: logs
+verbose: false

@@ -1,25 +1,13 @@
 defaults:
+  - data: default
+  - prepare: default
+  - logging: default
   - override hydra/job_logging: disabled
   - _self_
 
 action: null
+seed: 42
 
 hydra:
   run:
     dir: ${logging.log_dir}
-
-data:
-  languages: [en, hr]
-  out_dir: data/raw/xed
-  force: false
-  base_url: https://raw.githubusercontent.com/Helsinki-NLP/XED/master
-  annotated_dir: AnnotatedData
-  projections_dir: Projections
-
-logging:
-  prefix: "[XED]"
-  level: INFO
-  log_dir: logs
-  verbose: false
-
-seed: 42

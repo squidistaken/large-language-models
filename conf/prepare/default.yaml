@@ -1,0 +1,7 @@
+target_lang: hr
+raw_dir: ${data.out_dir}
+out_dir: data/processed/xed
+splits: [0.70, 0.20, 0.10]
+seed: ${seed}
+use_pivot: true
+overwrite: false

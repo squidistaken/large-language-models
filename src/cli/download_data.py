@@ -3,7 +3,9 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from src.data.download_data import ALL_LANGUAGES, LANGUAGE_NAMES, XEDDownloader
+from src.cli.prompts import ask_until, parse_languages
+from src.constants import ALL_LANGUAGES, BAND_NAMES, LANGUAGE_NAMES, LANGUAGE_TO_BAND
+from src.data.download_data import XEDDownloader
 from src.utils.logger import Logger
 
 LABEL = "Download Data"
@@ -22,31 +24,22 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
 
     table.add_column("Code", style="cyan")
     table.add_column("Language")
+    table.add_column("Band")
 
     for lang in ALL_LANGUAGES:
-        table.add_row(lang, LANGUAGE_NAMES[lang])
+        band = LANGUAGE_TO_BAND.get(lang)
+        label = f"{band} - {BAND_NAMES[band]}" if band else "source"
+
+        table.add_row(lang, LANGUAGE_NAMES[lang], label)
 
     console.print(table)
 
-    default_langs = ",".join(cfg.data.languages)
-
-    while True:
-        raw = Prompt.ask("Languages (comma-separated, or 'all')", default=default_langs)
-
-        if raw.strip().lower() == "all":
-            languages = ALL_LANGUAGES
-
-            break
-
-        languages = [lang.strip() for lang in raw.split(",") if lang.strip()]
-        invalid = [lang for lang in languages if lang not in ALL_LANGUAGES]
-
-        if invalid:
-            console.print(f"[red]Unknown language code(s): {', '.join(invalid)}[/red]")
-
-            continue
-
-        break
+    languages = ask_until(
+        console,
+        "Languages (comma-separated, or 'all')",
+        ",".join(cfg.data.languages),
+        lambda raw: parse_languages(raw, ALL_LANGUAGES),
+    )
 
     out_dir = Prompt.ask("Output directory", default=cfg.data.out_dir)
     force = Confirm.ask("Force re-download?", default=cfg.data.force)
@@ -69,10 +62,27 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         SystemExit: If one or more files failed to download.
     """
 
+    console = Console()
     downloader = XEDDownloader(cfg.data, logger)
-    failed = downloader.download()
+    summary = downloader.download()
 
-    if failed:
-        raise SystemExit(f"Failed to download: {failed}")
+    if summary.failed:
+        raise SystemExit(f"Failed to download: {summary.failed}")
+
+    if summary.nothing_to_do:
+        console.print(
+            f"All {len(summary.skipped)} file(s) already exist under "
+            f"[cyan]{cfg.data.out_dir}[/cyan]; nothing to do. Choose 'yes' at the re-download "
+            "prompt, or pass [cyan]data.force=true[/cyan], to fetch them again."
+        )
+
+        logger.info("Download skipped.")
+
+        return
+
+    console.print(
+        f"Downloaded {len(summary.downloaded)} file(s) to [cyan]{cfg.data.out_dir}[/cyan]"
+        + (f", skipped {len(summary.skipped)} already present." if summary.skipped else ".")
+    )
 
     logger.info("Download complete.")

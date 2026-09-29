@@ -35,3 +35,9 @@ checkpoint_metric: eval_loss
 #Output
 seed: ${seed}
 out_dir: outputs/finetune 
+
+# Run name, logging and quick-test limits
+run_name: ${now:%Y%m%d_%H%M%S}       # results go to outputs/finetune/<condition>/<run_name>
+report_to: none                      # To do
+max_train_samples: null
+max_eval_samples: null

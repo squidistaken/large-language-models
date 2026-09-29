@@ -1,0 +1,9 @@
+name: eurollm_9b
+hf_id: utter-project/EuroLLM-9B-Instruct
+revision: f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace
+dtype: bfloat16
+quantization: null # Options: null | 4bit
+batch_size: 8
+max_new_tokens: 32
+decoding:
+  do_sample: false

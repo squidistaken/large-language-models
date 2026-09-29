@@ -1,6 +1,7 @@
 defaults:
   - data: default
   - prepare: default
+  - finetune: default
   - logging: default
   - override hydra/job_logging: disabled
   - _self_

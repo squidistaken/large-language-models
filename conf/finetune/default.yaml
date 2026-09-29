@@ -1,0 +1,37 @@
+# Settings for action=finetune
+# Each run saves a copy of the values
+
+# what to train on
+condition: en              # en = English, hr = Croatian, both = both (bilingual)
+data_dir: ${prepare.out_dir}
+target_lang: ${prepare.target_lang}
+
+# Which model
+model_name: ???
+chat_template_kwargs: {}
+
+# LoRA add on
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all-linear
+
+# Precision
+quantization: none  # none = LoRA, 4bit = QLoRA 
+
+# Training
+learning_rate: 2.0e-4
+epochs: 3
+batch_size: 8
+grad_accum_steps: 2
+max_length: 256       # max tokens per example
+warmup_ratio: 0.03
+
+
+# choosing best checkpoint
+checkpoint_metric: eval_loss 
+
+#Output
+seed: ${seed}
+out_dir: outputs/finetune 

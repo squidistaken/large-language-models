@@ -95,7 +95,7 @@ class PEFTTrainer:
         """
         transformers.set_seed(self.cfg.seed)
 
-        tokenizer = load_tokenizer(self.cfg.model_name)
+        tokenizer = load_tokenizer(self.cfg.model_name, self.cfg.model_revision)
         train_features = self._features("train", tokenizer, self.cfg.max_train_samples)
         dev_features = self._features("dev", tokenizer, self.cfg.max_eval_samples)
         model = load_model(self.cfg, self.logger)
@@ -105,7 +105,7 @@ class PEFTTrainer:
             args=self._arguments(len(train_features)),
             train_dataset=Dataset.from_list(train_features),
             eval_dataset=Dataset.from_list(dev_features),
-            data_collator=DataCollatorForSeq2Seq(tokenizer, padding=True),
+            data_collator=DataCollatorForSeq2Seq(tokenizer, padding=True, pad_to_multiple_of=8),
             processing_class=tokenizer,
         )
 

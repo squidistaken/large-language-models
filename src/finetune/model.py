@@ -11,6 +11,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
+    PreTrainedModel,
     PreTrainedTokenizerBase,
 )
 
@@ -32,11 +33,12 @@ def training_dtype() -> torch.dtype:
     return torch.float32
 
 
-def load_tokenizer(model_name: str) -> PreTrainedTokenizerBase:
+def load_tokenizer(model_name: str, revision: str) -> PreTrainedTokenizerBase:
     """Load the tokenizer of a Hugging Face model.
 
     Args:
         model_name (str): The Hugging Face model name.
+        revision (str): The model version (branch, tag or commit hash).
 
     Returns:
         PreTrainedTokenizerBase: A tokenizer with a padding token.
@@ -44,7 +46,7 @@ def load_tokenizer(model_name: str) -> PreTrainedTokenizerBase:
     Raises:
         ValueError: If no tokenizer could be loaded for the model.
     """
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
 
     if not isinstance(tokenizer, PreTrainedTokenizerBase):
         raise ValueError(f"Could not load a tokenizer for '{model_name}'.")
@@ -55,8 +57,51 @@ def load_tokenizer(model_name: str) -> PreTrainedTokenizerBase:
     return tokenizer
 
 
+def load_base_model(model_name: str, revision: str, quantization: str) -> PreTrainedModel:
+    """Load the base model, optionally in 4-bit.
+
+    Args:
+        model_name (str): The Hugging Face model name.
+        revision (str): The model version (branch, tag or commit hash).
+        quantization (str): "none" for full precision or "4bit" for QLoRA.
+
+    Returns:
+        PreTrainedModel: The base model.
+
+    Raises:
+        ValueError: If the quantization setting is unknown or no model could be loaded.
+    """
+    dtype = training_dtype()
+    quantization_config = None
+
+    if quantization == FOUR_BIT:
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=dtype,
+            bnb_4bit_use_double_quant=True,
+        )
+    elif quantization != NO_QUANTIZATION:
+        raise ValueError(
+            f"Unknown quantization '{quantization}'. Choose '{NO_QUANTIZATION}' or '{FOUR_BIT}'."
+        )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        revision=revision,
+        dtype=dtype,
+        quantization_config=quantization_config,
+        device_map="auto" if quantization_config is not None else None,
+    )
+
+    if not isinstance(model, PreTrainedModel):
+        raise ValueError(f"Could not load a model for '{model_name}'.")
+
+    return model
+
+
 def load_model(cfg: DictConfig, logger: Logger) -> PeftModel | PeftMixedModel:
-    """Load the base model, optionally in 4-bit, and attach a LoRA adapter.
+    """Load the base model and attach a new, trainable LoRA adapter.
 
     Args:
         cfg (DictConfig): The finetune config.
@@ -64,33 +109,10 @@ def load_model(cfg: DictConfig, logger: Logger) -> PeftModel | PeftMixedModel:
 
     Returns:
         PeftModel | PeftMixedModel: The base model with a trainable LoRA adapter.
-
-    Raises:
-        ValueError: If the quantization setting is unknown.
     """
-    dtype = training_dtype()
-    quantization_config = None
+    model = load_base_model(cfg.model_name, cfg.model_revision, cfg.quantization)
 
     if cfg.quantization == FOUR_BIT:
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=dtype,
-            bnb_4bit_use_double_quant=True,
-        )
-    elif cfg.quantization != NO_QUANTIZATION:
-        raise ValueError(
-            f"Unknown quantization '{cfg.quantization}'. Choose '{NO_QUANTIZATION}' or '{FOUR_BIT}'."
-        )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        cfg.model_name,
-        dtype=dtype,
-        quantization_config=quantization_config,
-        device_map="auto" if quantization_config is not None else None,
-    )
-
-    if quantization_config is not None:
         model = prepare_model_for_kbit_training(model)
 
     lora_config = LoraConfig(

@@ -8,6 +8,7 @@ target_lang: ${prepare.target_lang}
 
 # Which model
 model_name: ???
+model_revision: main
 chat_template_kwargs: {}
 
 # LoRA add on

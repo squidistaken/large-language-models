@@ -1,6 +1,7 @@
 import math
 import platform
 import random
+import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -75,7 +76,7 @@ class PEFTTrainer:
             logger (Logger): The logger.
 
         Raises:
-            ValueError: If no model name is set.
+            ValueError: If no model name is set, or the run folder exists and overwrite is off.
         """
         if OmegaConf.is_missing(cfg, "model_name"):
             raise ValueError(
@@ -85,7 +86,13 @@ class PEFTTrainer:
 
         self.cfg = cfg
         self.logger = logger
+        self.resolved_cfg = OmegaConf.to_container(cfg, resolve=True)
         self.run_dir = Path(cfg.out_dir) / cfg.condition / str(cfg.run_name)
+        if self.run_dir.exists() and not cfg.overwrite:
+            raise ValueError(
+                f"{self.run_dir} already exists. Choose another finetune.run_name, or pass "
+                "finetune.overwrite=true to replace it (this also deletes its old scores)."
+            )
 
     def train(self) -> FinetuneSummary:
         """Train the adapter, keep the best checkpoint on dev, and save it with the run info.
@@ -94,6 +101,9 @@ class PEFTTrainer:
             FinetuneSummary: A collection of facts describing the run.
         """
         transformers.set_seed(self.cfg.seed)
+        if self.run_dir.exists():
+            shutil.rmtree(self.run_dir)
+            self.logger.info(f"Removed the previous run in {self.run_dir}")
 
         tokenizer = load_tokenizer(self.cfg.model_name, self.cfg.model_revision)
         train_features = self._features("train", tokenizer, self.cfg.max_train_samples)
@@ -131,7 +141,7 @@ class PEFTTrainer:
             self.run_dir / RUN_INFO_FILE,
             {
                 "summary": asdict(summary),
-                "config": OmegaConf.to_container(self.cfg, resolve=True),
+                "config": self.resolved_cfg,
                 "hardware": hardware,
                 "log_history": trainer.state.log_history,
             },

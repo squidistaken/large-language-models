@@ -42,7 +42,7 @@ run_name: ${now:%Y%m%d_%H%M%S}       # results go to outputs/finetune/<condition
 report_to: none                      # To do
 max_train_samples: null
 max_eval_samples: null
-
+overwrite: false                     # true = replace an existing run folder (including its scores)
 
 # Scoring a trained run
 score: 
@@ -51,4 +51,11 @@ score:
   batch_size: 16
   max_new_tokens: 48
   max_samples: null
-  
+
+
+# Choosing the final configuratoin on dev
+select: 
+  candidates: ???
+  conditions: [en, "${finetune.target_lang}", bilingual]
+  langs: [en, "${finetune.target_lang}"]
+  metric: micro_f1

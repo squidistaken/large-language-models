@@ -18,7 +18,8 @@ We use [uv](https://docs.astral.sh/uv/) for project management. Installation ins
 ```bash
 uv sync
 ```
-3. Run the program.
+3. Clone the [environment](.env.example) as `.env` and fill in the necessary blanks.
+4. Run the program.
 
 ```bash
 uv run main.py

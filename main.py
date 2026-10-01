@@ -1,7 +1,7 @@
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from src.cli import run_cli
+from src.cli.menu import run_cli
 from src.utils.logger import Logger
 
 

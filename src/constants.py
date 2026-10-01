@@ -77,3 +77,9 @@ LANGUAGE_NAMES = {
     "tr": "Turkish",
     "vi": "Vietnamese",
 }
+
+# Models.
+DEFAULT_DTYPE = "bfloat16"
+DEFAULT_BATCH_SIZE = 8
+DEFAULT_MAX_NEW_TOKENS = 32
+QUANTIZATION_4BIT = "4bit"

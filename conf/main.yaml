@@ -1,6 +1,7 @@
 defaults:
   - data: default
   - prepare: default
+  - model: eurollm_9b
   - finetune: default
   - logging: default
   - override hydra/job_logging: disabled

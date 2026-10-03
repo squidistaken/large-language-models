@@ -144,8 +144,8 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         logger (Logger): The logger.
 
     Raises:
-        SystemExit: If the settings are invalid, the raw inputs are missing, or no pair could be
-            aligned.
+        SystemExit: If the settings are invalid, the raw inputs are missing, no pair could be
+            aligned, or existing splits were built with other settings.
     """
 
     console = Console()
@@ -175,9 +175,8 @@ def run(cfg: DictConfig, logger: Logger) -> None:
 
         console.print(remedy)
 
-        logger.info("Preparation skipped; existing splits do not match the request.")
-
-        return
+        # The requested splits do not exist, so later steps must not run on the old ones.
+        raise SystemExit("Existing splits do not match the requested settings.")
 
     if summary.skipped:
         console.print(

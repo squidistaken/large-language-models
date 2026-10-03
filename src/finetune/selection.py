@@ -17,7 +17,6 @@ MODEL_KEYS = (
     "hf_id",
     "revision_sha",
     "dtype",
-    "quantization",
     "max_new_tokens",
     "decoding",
     "chat_template_kwargs",
@@ -34,6 +33,7 @@ FIXED_KEYS = (
 SHARED_KEYS = (
     *FIXED_KEYS,
     "lora",
+    "quantization",
     "learning_rate",
     "epochs",
     "batch_size",
@@ -244,6 +244,7 @@ class ConfigSelector:
         settings = {
             **run_info["config"],
             "model": {key: run_info["model"].get(key) for key in MODEL_KEYS},
+            "quantization": run_info["model"].get("quantization"),
         }
 
         return {key: settings.get(key) for key in SHARED_KEYS}

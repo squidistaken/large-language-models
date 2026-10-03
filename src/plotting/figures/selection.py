@@ -2,7 +2,7 @@ from matplotlib.figure import Figure
 
 from src.constants import SOURCE_LANG
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import NEUTRAL, UNIT, dots, language_keys, legend, panels
+from src.plotting.style import LANGUAGE_COLORS, UNIT, bars, color_keys, panels
 
 
 class Selection(BaseFigure):
@@ -39,18 +39,21 @@ class Selection(BaseFigure):
 
         langs = sorted(selection["langs"], key=lambda lang: lang != SOURCE_LANG)
         scores = {result["run_name"]: result["language_scores"] for result in selection["results"]}
-        fig, axes = panels(1, 1, 0.35 * len(scores) + 1.0)
+        colors = dict(zip(langs, LANGUAGE_COLORS, strict=False))
+        fig, axes = panels(1, 1, 0.4 * len(scores) + 1.2)
         ax = axes[0][0]
 
-        dots(
+        bars(
             ax,
             list(scores),
-            dict.fromkeys(langs, NEUTRAL),
-            lambda lang, run: (scores[run][lang], None) if lang in scores[run] else None,
-            lambda lang: lang,
+            colors,
+            lambda lang, run: scores[run].get(lang),
+            horizontal=True,
+            label="{:.3f}",
         )
         ax.set_xlim(*UNIT)
         ax.set_xlabel(f"Mean dev {selection['metric']} over the PEFT conditions")
-        legend(fig, language_keys(langs))
+        ax.set_ylabel("Candidate configuration")
+        ax.legend(handles=color_keys(colors), title="Language", loc="lower right")
 
         return fig

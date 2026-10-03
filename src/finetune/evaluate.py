@@ -29,7 +29,7 @@ class AdapterScorer:
         if not cfg.run_dir:
             raise ValueError(
                 "No finished run to score. Train one first, or pass its folder, e.g. "
-                "finetune.score.run_dir=outputs/finetune/bilingual/<run_name>."
+                "finetune.score.run_dir=outputs/<lang>/finetune/bilingual/<run_name>."
             )
 
         check_eval_split(cfg.split)

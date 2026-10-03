@@ -3,7 +3,7 @@ from collections import Counter
 from matplotlib.figure import Figure
 
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import NEUTRAL, UNIT, bars, color_keys, legend, panels
+from src.plotting.style import NEUTRAL, UNIT, bars, color_keys, panels
 
 GOLD = "gold"
 COUNTS = ("0", "1", "2", "3", "4+")
@@ -57,9 +57,10 @@ class LabelCounts(BaseFigure):
             for lang, lines in by_lang.items()
         }
         colors = {GOLD: NEUTRAL, **self.data.colors(list(predictions))}
-        fig, axes = panels(1, len(gold), 2.4, sharey=True)
+        langs = self.data.languages(gold)
+        fig, axes = panels(1, len(langs), 2.6, sharey=True)
 
-        for ax, lang in zip(axes[0], self.data.languages(gold), strict=True):
+        for ax, lang in zip(axes[0], langs, strict=True):
             found = {GOLD: shares(gold[lang])} | {
                 name: shares([line["predicted"] for line in by_lang[lang]])
                 for name, by_lang in predictions.items()
@@ -77,6 +78,6 @@ class LabelCounts(BaseFigure):
 
         axes[0][0].set_ylim(*UNIT)
         axes[0][0].set_ylabel("Share of lines")
-        legend(fig, color_keys(colors))
+        axes[0][0].legend(handles=color_keys(colors), loc="upper right")
 
         return fig

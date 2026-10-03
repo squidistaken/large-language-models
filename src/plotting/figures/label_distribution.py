@@ -3,7 +3,7 @@ from matplotlib.figure import Figure
 from src.constants import EMOTIONS, SPLIT_NAMES
 from src.data.prepare_data import pair_name
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import NEUTRAL, SHARE, dots, language_keys, legend, panels
+from src.plotting.style import LANGUAGE_COLORS, SHARE, bars, color_keys, panels
 
 
 class LabelDistribution(BaseFigure):
@@ -40,18 +40,21 @@ class LabelDistribution(BaseFigure):
             lines = [row["labels"] for row in self.data.records(lang, SPLIT_NAMES)]
             shares[lang] = {e: sum(e in line for line in lines) / len(lines) for e in EMOTIONS}
 
-        fig, axes = panels(1, 1, 2.6)
+        colors = dict(zip(langs, LANGUAGE_COLORS, strict=False))
+        fig, axes = panels(1, 1, 3.0)
         ax = axes[0][0]
 
-        dots(
+        bars(
             ax,
             EMOTIONS,
-            dict.fromkeys(langs, NEUTRAL),
-            lambda lang, emotion: (shares[lang][emotion], None),
-            lambda lang: lang,
+            colors,
+            lambda lang, emotion: shares[lang][emotion],
+            horizontal=True,
+            label="{:.2f}",
         )
         ax.set_xlim(*SHARE)
         ax.set_xlabel("Share of lines with the emotion")
-        legend(fig, language_keys(langs))
+        ax.set_ylabel("Emotion")
+        ax.legend(handles=color_keys(colors), title="Language", loc="lower right")
 
         return fig

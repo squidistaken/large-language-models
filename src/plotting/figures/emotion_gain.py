@@ -61,6 +61,7 @@ class EmotionGain(BaseFigure):
             ax.set_title(lang)
             ax.set_xlabel("F1 minus zero-shot F1")
 
+        axes[0][0].set_ylabel("Emotion")
         axes[0][0].set_xlim(*GAIN)
         legend(fig, color_keys(colors))
 

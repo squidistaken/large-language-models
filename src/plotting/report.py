@@ -10,7 +10,6 @@ from src.plotting.figures.compute import Compute
 from src.plotting.figures.emotion_gain import EmotionGain
 from src.plotting.figures.label_counts import LabelCounts
 from src.plotting.figures.label_distribution import LabelDistribution
-from src.plotting.figures.metric_history import MetricHistory
 from src.plotting.figures.metrics import AppendixMetrics, Metrics
 from src.plotting.figures.per_emotion import PerEmotionF1
 from src.plotting.figures.selection import Selection
@@ -20,7 +19,6 @@ from src.utils.logger import Logger
 
 FIGURES: tuple[type[BaseFigure], ...] = (
     TrainingHistory,
-    MetricHistory,
     Metrics,
     AppendixMetrics,
     PerEmotionF1,
@@ -68,7 +66,12 @@ def make_figures(
     data = FigureData(cfg, logger, str(run_name), rows, per_emotion)
     out_dir = Path(cfg.plot.out_dir)
     formats = [str(fmt) for fmt in cfg.plot.formats]
-    files = [path for figure in FIGURES for path in figure(data).save(out_dir, formats)]
+    files = [
+        path
+        for kind in FIGURES
+        for figure in kind.instances(data)
+        for path in figure.save(out_dir, formats)
+    ]
 
     logger.info(f"Wrote the figures to {out_dir}")
 

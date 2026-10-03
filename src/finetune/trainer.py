@@ -56,8 +56,7 @@ class FinetuneSummary:
 
 
 class MetricTrainer(Trainer):
-    """Trainer that also scores generated answers on dev after every evaluation, so the metrics
-    can be followed per epoch and pick the kept epoch, and that stops early."""
+    """Class that scores the dev set every epoch, and stops early when it does not improve."""
 
     def __init__(
         self,
@@ -71,9 +70,10 @@ class MetricTrainer(Trainer):
         Args:
             *args (Any): The Trainer arguments.
             dev_metrics (Callable[[], dict[str, float]]): The function that scores dev, returning
-                metrics keyed eval_<name>, or nothing when switched off.
+                                                          metrics keyed eval_<name>, or nothing when
+                                                          switched off.
             patience (int | None): The evaluations without improvement before stopping, or None
-                to always train every epoch.
+                                   to always train every epoch.
             **kwargs (Any): The Trainer keyword arguments.
         """
         super().__init__(*args, **kwargs)
@@ -276,7 +276,8 @@ class PEFTTrainer:
         return summary
 
     def _dev_metrics(self, examples: dict[str, list[dict]]) -> dict[str, float]:
-        """Score generated answers on the dev subset of every training language.
+        """Get the dev metrics, scored on a fixed subset of each language, or nothing when scoring
+        is off.
 
         Args:
             examples (dict[str, list[dict]]): The dev subset of each language; empty when per-epoch
@@ -298,7 +299,8 @@ class PEFTTrainer:
         return metrics
 
     def _checkpoint_rule(self) -> str:
-        """Describe how the kept epoch is chosen, for the run info.
+        """Get a sentence describing how the kept checkpoint is picked and early stopping is
+        applied.
 
         Returns:
             str: A sentence.
@@ -308,20 +310,23 @@ class PEFTTrainer:
         subset = (
             "every dev line" if cfg.metric_samples is None else f"{cfg.metric_samples} dev lines"
         )
-        rule = f"Evaluate on dev after every epoch; keep the epoch with the {best} dev {cfg.checkpoint_metric}"
+        rule = (
+            f"Evaluate on dev {cfg.evals_per_epoch} time(s) per epoch; keep the checkpoint with the "
+            f"{best} dev {cfg.checkpoint_metric}"
+        )
 
         if cfg.checkpoint_metric != "loss":
             rule += f", scored on {subset} per language"
 
         if cfg.early_stopping_patience is not None:
-            rule += f"; stop after {cfg.early_stopping_patience} epoch(s) without improvement"
+            rule += f"; stop after {cfg.early_stopping_patience} evaluation(s) without improvement"
 
         return rule + "."
 
     def _features(
         self, examples: list[dict], tokenizer: PreTrainedTokenizerBase
     ) -> list[dict[str, list[int]]]:
-        """Tokenise examples with the model's own chat template options.
+        """Get the tokenised features for the Trainer, with the model's chat template and max length.
 
         Args:
             examples (list[dict]): The conversational examples.
@@ -335,7 +340,7 @@ class PEFTTrainer:
         )
 
     def _arguments(self, train_examples: int, report_to_wandb: bool) -> TrainingArguments:
-        """Build the training arguments from the finetune config.
+        """Get the training arguments for the Trainer, including the warmup and evaluation steps.
 
         Args:
             train_examples (int): The number of training examples.
@@ -348,6 +353,7 @@ class PEFTTrainer:
             train_examples / (self.cfg.batch_size * self.cfg.grad_accum_steps)
         )
         warmup_steps = math.ceil(self.cfg.warmup_ratio * steps_per_epoch * self.cfg.epochs)
+        eval_steps = max(1, math.ceil(steps_per_epoch / self.cfg.evals_per_epoch))
 
         return TrainingArguments(
             output_dir=str(self.run_dir / CHECKPOINT_DIR),
@@ -359,8 +365,10 @@ class PEFTTrainer:
             gradient_checkpointing=self.cfg.gradient_checkpointing,
             gradient_checkpointing_kwargs={"use_reentrant": False},
             warmup_steps=warmup_steps,
-            eval_strategy="epoch",
-            save_strategy="epoch",
+            eval_strategy="steps",
+            eval_steps=eval_steps,
+            save_strategy="steps",
+            save_steps=eval_steps,
             save_total_limit=1,
             load_best_model_at_end=True,
             metric_for_best_model=self.cfg.checkpoint_metric,

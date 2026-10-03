@@ -3,4 +3,4 @@ run_name: null # null = the best run in ${finetune.out_dir}/selection.json
 include_zero_shot: true
 max_samples: null # null = every line; an integer is for quick smoke tests only
 overwrite: false # true = rescore runs that already have scores on this split
-out_dir: outputs/results
+out_dir: ${out_dir}/results

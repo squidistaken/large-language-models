@@ -4,7 +4,7 @@ from matplotlib.figure import Figure
 
 from src.evaluation.metrics import AGGREGATE_METRICS, metric_label
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import UNIT, color_keys, language_keys, legend, marker, offsets, panels
+from src.plotting.style import UNIT, bars, color_keys, legend, panels
 
 HEADLINE_METRICS = ("micro_f1", "jaccard_samples", "macro_f1")
 APPENDIX_METRICS = tuple(key for key in AGGREGATE_METRICS if key not in HEADLINE_METRICS)
@@ -46,43 +46,33 @@ class Metrics(BaseFigure):
         colors = self.data.colors({row["system"] for row in rows})
         langs = self.data.languages(row["eval_lang"] for row in rows)
         lookup = {(row["system"], row["eval_lang"]): row for row in rows}
-        names = list(colors)
         panel_rows = math.ceil(len(self.metrics) / PANEL_COLUMNS)
-        fig, axes = panels(
-            panel_rows,
-            PANEL_COLUMNS,
-            0.38 * len(names) * panel_rows + 0.9,
-            sharex=True,
-            sharey=True,
-        )
+        fig, axes = panels(panel_rows, PANEL_COLUMNS, 2.5 * panel_rows + 0.4, sharey=True)
 
         for ax, metric in zip(axes.flat, self.metrics, strict=False):
-            for y, name in enumerate(names):
-                found = [(lang, lookup[(name, lang)]) for lang in langs if (name, lang) in lookup]
-
-                if len(found) == 2:
-                    values = [row[metric] for _, row in found]
-                    ax.plot(values, [y, y], color=colors[name], linewidth=0.8, alpha=0.5)
-
-                # The two languages sit just above and below the row, so their intervals stay apart.
-                for (lang, row), offset in zip(found, offsets(len(found)) * 0.5, strict=True):
-                    if interval := row.get(f"{metric}_ci"):
-                        ax.plot(interval, [y + offset] * 2, color=colors[name], linewidth=1)
-
-                    ax.plot(
-                        row[metric], y + offset, "o", markersize=5, **marker(lang, colors[name])
-                    )
-
+            bars(
+                ax,
+                langs,
+                colors,
+                lambda name, lang, metric=metric: (
+                    lookup[(name, lang)][metric] if (name, lang) in lookup else None
+                ),
+                interval=lambda name, lang, metric=metric: lookup.get((name, lang), {}).get(
+                    f"{metric}_ci"
+                ),
+                label="{:.2f}",
+            )
             ax.set_title(metric_label(metric))
-            ax.set_yticks(range(len(names)), names)
-            ax.set_ylim(len(names) - 0.5, -0.5)
-            ax.grid(axis="y", visible=False)
+            ax.set_xlabel("Evaluation language")
 
         for ax in axes.flat[len(self.metrics) :]:
             ax.set_visible(False)
 
-        axes.flat[0].set_xlim(*UNIT)
-        legend(fig, [*color_keys(colors), *language_keys(langs)])
+        for ax in axes[:, 0]:
+            ax.set_ylabel("Score")
+
+        axes.flat[0].set_ylim(*UNIT)
+        legend(fig, color_keys(colors))
 
         return fig
 

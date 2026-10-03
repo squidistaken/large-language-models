@@ -4,4 +4,4 @@ candidate: null # null = the selected bilingual run's predictions in the target 
 lang: ${prepare.target_lang}
 split: ${evaluate.split}
 name: null # null = <baseline>_vs_<candidate>
-out_dir: outputs/analysis
+out_dir: ${out_dir}/analysis

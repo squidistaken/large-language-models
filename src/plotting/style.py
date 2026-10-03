@@ -1,6 +1,5 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
 
 import matplotlib
 
@@ -13,20 +12,20 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
-from src.constants import SOURCE_LANG
 from src.finetune.conditions import system_name, systems
 
 TEXT_WIDTH_IN = 17 / 2.54
 CATEGORICAL = ("tab:blue", "tab:orange", "tab:green", "tab:red")
+# A marker shape per system as well as a colour, so the figures also read in black and white.
+MARKERS = ("o", "s", "^", "D")
 NEUTRAL = "black"
+LANGUAGE_COLORS = ("tab:purple", "tab:brown")
 
 UNIT = (0.0, 1.0)  # every metric and share bounded by 0 and 1
-LOSS = (0.0, 1.25)  # cross-entropy per answer token
 GAIN = (-0.3, 0.3)  # difference in F1
 SHARE = (0.0, 0.5)  # share of lines carrying one emotion
 HOURS = (0.0, 2.0)  # training time per PEFT condition
-GROUP_SHARE = 0.72
-Estimate = tuple[float, list[float] | None]
+GROUP_SHARE = 0.8
 
 
 def system_colors(target_lang: str) -> dict[str, str]:
@@ -39,6 +38,18 @@ def system_colors(target_lang: str) -> dict[str, str]:
         dict[str, str]: A mapping from system name to hex colour.
     """
     return dict(zip(systems(target_lang), CATEGORICAL, strict=True))
+
+
+def system_markers(target_lang: str) -> dict[str, str]:
+    """Get the fixed marker shape of every system in the results.
+
+    Args:
+        target_lang (str): The assigned target language.
+
+    Returns:
+        dict[str, str]: A mapping from system name to marker shape.
+    """
+    return dict(zip(systems(target_lang), MARKERS, strict=True))
 
 
 def condition_color(condition: str, target_lang: str) -> str:
@@ -57,8 +68,21 @@ def condition_color(condition: str, target_lang: str) -> str:
 def apply_style() -> None:
     """Apply a style to matplotlib."""
     plt.rcdefaults()
+    plt.style.use("seaborn-v0_8-whitegrid")
     plt.rcParams.update(
         {
+            # Sizes for a figure set at the full text width of the report.
+            "font.size": 9,
+            "axes.titlesize": 9.5,
+            "axes.labelsize": 9,
+            "xtick.labelsize": 8,
+            "ytick.labelsize": 8,
+            "legend.fontsize": 8,
+            "figure.titlesize": 10.5,
+            "lines.linewidth": 1.5,
+            "lines.markersize": 5,
+            "legend.frameon": True,
+            "legend.framealpha": 0.9,
             "savefig.bbox": "tight",
             "savefig.dpi": 300,
             "pdf.fonttype": 42,
@@ -94,7 +118,7 @@ def panels(
 
 
 def legend(fig: Figure, handles: list) -> None:
-    """Get a legend for a figure.
+    """Get a legend for a figure, in one row below its panels.
 
     Args:
         fig (Figure): The figure.
@@ -104,7 +128,7 @@ def legend(fig: Figure, handles: list) -> None:
 
 
 def color_keys(colors: dict[str, str]) -> list[Patch]:
-    """Get legend entries for a mapping from system name to colour.
+    """Get legend entries for a mapping from series name to colour, for bars.
 
     Args:
         colors (dict[str, str]): The colour of each series.
@@ -115,33 +139,19 @@ def color_keys(colors: dict[str, str]) -> list[Patch]:
     return [Patch(color=color, label=name) for name, color in colors.items()]
 
 
-def marker(lang: str, color: str = NEUTRAL) -> dict[str, Any]:
-    """Get the marker style for a language: filled for the source language, hollow for others.
+def marker_keys(colors: dict[str, str], markers: dict[str, str]) -> list[Line2D]:
+    """Get legend entries for a mapping from series name to colour and marker, for points.
 
     Args:
-        lang (str): The language.
-        color (str): The colour of the series.
-
-    Returns:
-        dict[str, Any]: A dictionary of marker properties for a Line2D.
-    """
-    face = "white" if lang == SOURCE_LANG else color
-
-    return {"markerfacecolor": face, "markeredgecolor": color, "markeredgewidth": 1.3}
-
-
-def language_keys(langs: Sequence[str]) -> list[Line2D]:
-    """Get legend entries for a list of languages, with the source language filled and others hollow.
-
-    Args:
-        langs (Sequence[str]): The languages.
+        colors (dict[str, str]): The colour of each series.
+        markers (dict[str, str]): The marker shape of each series.
 
     Returns:
         list[Line2D]: A list of legend entries.
     """
     return [
-        Line2D([], [], linestyle="none", marker="o", markersize=6, label=lang, **marker(lang))
-        for lang in langs
+        Line2D([], [], color=color, marker=markers[name], linestyle="none", label=name)
+        for name, color in colors.items()
     ]
 
 
@@ -160,29 +170,25 @@ def offsets(count: int) -> np.ndarray:
 def dots(
     ax: Axes,
     categories: Sequence[str],
-    series: dict[str, str],
-    value: Callable[[str, str], Estimate | None],
-    lang: Callable[[str], str],
+    colors: dict[str, str],
+    markers: dict[str, str],
+    value: Callable[[str, str], float | None],
 ) -> None:
-    """Get a panel of dodged dots with optional confidence intervals: one row per category, one dot
-    per series.
+    """Get a panel of dodged points: one row per category, one point per series.
 
     Args:
         ax (Axes): The panel.
         categories (Sequence[str]): The rows, top to bottom.
-        series (dict[str, str]): The colour of each series.
-        value (Callable[[str, str], Estimate | None]): The value of a series in a category.
-        lang (Callable[[str], str]): The language of a series, which sets the marker fill.
+        colors (dict[str, str]): The colour of each series.
+        markers (dict[str, str]): The marker shape of each series.
+        value (Callable[[str, str], float | None]): The value of a series in a category.
     """
     for row, category in enumerate(categories):
-        present = [(name, value(name, category)) for name in series]
-        present = [(name, estimate) for name, estimate in present if estimate is not None]
+        present = [(name, value(name, category)) for name in colors]
+        present = [(name, point) for name, point in present if point is not None]
 
-        for (name, (point, interval)), offset in zip(present, offsets(len(present)), strict=True):
-            if interval is not None:
-                ax.plot(interval, [row + offset] * 2, color=series[name], linewidth=1, alpha=0.6)
-
-            ax.plot(point, row + offset, "o", markersize=5, **marker(lang(name), series[name]))
+        for (name, point), offset in zip(present, offsets(len(present)), strict=True):
+            ax.plot(point, row + offset, linestyle="none", marker=markers[name], color=colors[name])
 
     ax.set_yticks(range(len(categories)), categories)
     ax.set_ylim(len(categories) - 0.5, -0.5)
@@ -192,28 +198,52 @@ def dots(
 def bars(
     ax: Axes,
     categories: Sequence[str],
-    series: dict[str, str],
+    colors: dict[str, str],
     value: Callable[[str, str], float | None],
     horizontal: bool = False,
+    interval: Callable[[str, str], list[float] | None] | None = None,
+    label: str | None = None,
 ) -> None:
-    """Get a panel of dodged bars: one row per category, one bar per series.
+    """Get a panel of grouped bars from zero: one group per category, one bar per series, with
+    optional confidence intervals as error bars and the values printed at the bar ends.
 
     Args:
         ax (Axes): The panel.
         categories (Sequence[str]): The groups, in order.
-        series (dict[str, str]): The colour of each series.
+        colors (dict[str, str]): The colour of each series.
         value (Callable[[str, str], float | None]): The value of a series in a category.
         horizontal (bool): Whether the bars run left to right, with the groups top to bottom.
+        interval (Callable[[str, str], list[float] | None] | None): The [lower, upper] confidence
+            bounds of a series in a category, or None for no error bars.
+        label (str | None): The format of the printed values, e.g. "{:.2f}", or None for none.
     """
-    width = GROUP_SHARE / len(series)
-    draw = ax.barh if horizontal else ax.bar
+    width = GROUP_SHARE / len(colors)
 
     for position, category in enumerate(categories):
-        present = [(name, value(name, category)) for name in series]
+        present = [(name, value(name, category)) for name in colors]
         present = [(name, size) for name, size in present if size is not None]
 
         for (name, size), offset in zip(present, offsets(len(present)), strict=True):
-            draw(position + offset, size, width, color=series[name])
+            bounds = interval(name, category) if interval else None
+            error = [[size - bounds[0]], [bounds[1] - size]] if bounds else None
+            where = position + offset
+            if horizontal:
+                ax.barh(where, size, width, xerr=error, color=colors[name], capsize=2)
+            else:
+                ax.bar(where, size, width, yerr=error, color=colors[name], capsize=2)
+
+            if label is not None:
+                # Print the value past the error bar, so the two never overlap.
+                end = max(size, bounds[1]) if bounds else size
+                ax.annotate(
+                    label.format(size),
+                    (end, where) if horizontal else (where, end),
+                    xytext=(3, 0) if horizontal else (0, 2),
+                    textcoords="offset points",
+                    ha="left" if horizontal else "center",
+                    va="center" if horizontal else "bottom",
+                    fontsize=7,
+                )
 
     ticks, limits, grid = (
         (ax.set_yticks, ax.set_ylim, "y") if horizontal else (ax.set_xticks, ax.set_xlim, "x")

@@ -105,7 +105,7 @@ Output: `data/processed/xed/en-hr/`, with a `split_manifest.json` recording ever
 
 ### Fine-tuning
 
-Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition: `en`, `hr`, or `bilingual`. Only the answer tokens are trained. After every epoch the model is evaluated on dev twice: the dev loss, and the metrics of its generated answers on a fixed, seeded subset of 200 dev lines per language (`finetune.metric_samples`; `null` for all, `0` to skip). Both go to W&B and `run_info.json`, so the metrics can be followed per epoch. The epoch with the lowest dev loss is kept (`finetune.checkpoint_metric=micro_f1` keeps the highest dev micro-F1 instead), and training stops after one epoch without improvement (`finetune.early_stopping_patience`; `null` to always train every epoch). The run then scores itself on the full dev set and reruns the configuration selection (see below).
+Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition: `en`, `hr`, or `bilingual`. Only the answer tokens are trained. Four times per epoch (`finetune.evals_per_epoch`) the model is evaluated on dev twice: the dev loss, and the metrics of its generated answers on a fixed, seeded subset of 200 dev lines per language (`finetune.metric_samples`; `null` for all, `0` to skip). Both go to W&B and `run_info.json`, so the metrics can be followed during training. A checkpoint is saved at every evaluation; the one with the lowest dev loss is kept (`finetune.checkpoint_metric=micro_f1` keeps the highest dev micro-F1 instead), and training stops after two evaluations without improvement (`finetune.early_stopping_patience`; `null` to always train every epoch). The run then scores itself on the full dev set and reruns the configuration selection (see below).
 
 Interactively you are asked for the condition, the model, and a run name. Use the same run name for all three conditions of one configuration.
 
@@ -121,25 +121,25 @@ Slurm:
 
 The defaults are rank 16, alpha 32, dropout 0.05 on all linear layers; learning rate 2e-4, 3 epochs, batch 8 with 2 accumulation steps, maximum length 256 tokens, 3% warm-up, seed 42. On a small GPU, keep the effective batch the same with smaller steps. For a quick test, limit the data with `finetune.max_train_samples=64 finetune.max_eval_samples=32 finetune.score.max_samples=32`.
 
-Output: `outputs/finetune/<condition>/<run_name>/`, with the adapter and a `run_info.json` recording every hyperparameter, the model revision, library versions, hardware, peak GPU memory and the training log.
+Output: `outputs/hr/finetune/<condition>/<run_name>/`, with the adapter and a `run_info.json` recording every hyperparameter, the model revision, library versions, hardware, peak GPU memory and the training log.
 
 ### Scoring and Configuration Selection
 
 Lets a fine-tuned run answer every line of a split and computes all the metrics. Fine-tuning
 already scores each run on dev; use this to score a run again, or on test.
 
-After every full dev scoring, the final configuration is selected: the run name with the highest dev micro-F1, averaged over the three conditions per language and then over English and Croatian. All candidates must share the model, data and seed. The ranking is saved to `outputs/finetune/selection.json`.
+After every full dev scoring, the final configuration is selected: the run name with the highest dev micro-F1, averaged over the three conditions per language and then over English and Croatian. All candidates must share the model, data and seed. The ranking is saved to `outputs/hr/finetune/selection.json`.
 
 Interactively you are asked for the run folder (the latest by default) and the split.
 
 ```bash
-uv run main.py action=score_finetune finetune.score.run_dir=outputs/finetune/bilingual/base finetune.score.split=dev
+uv run main.py action=score_finetune finetune.score.run_dir=outputs/hr/finetune/bilingual/base finetune.score.split=dev
 ```
 
 Slurm:
 
 ```bash
-./slurm/run.sh --slurm-config a100 action=score_finetune finetune.score.run_dir=outputs/finetune/bilingual/base finetune.score.split=dev
+./slurm/run.sh --slurm-config a100 action=score_finetune finetune.score.run_dir=outputs/hr/finetune/bilingual/base finetune.score.split=dev
 ```
 
 Scoring a run on test that is not the selected configuration prints a warning: only the selected
@@ -152,16 +152,16 @@ Compares two systems line by line, for the qualitative analysis. Each line is ca
 Interactively you are asked for the two prediction files.
 
 ```bash
-uv run main.py action=compare_predictions analysis.baseline=outputs/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/finetune/hr/base/scores/test.hr.predictions.jsonl
+uv run main.py action=compare_predictions analysis.baseline=outputs/hr/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/hr/finetune/hr/base/scores/test.hr.predictions.jsonl
 ```
 
 Slurm:
 
 ```bash
-./slurm/run.sh --slurm-config cpu action=compare_predictions analysis.baseline=outputs/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/finetune/hr/base/scores/test.hr.predictions.jsonl
+./slurm/run.sh --slurm-config cpu action=compare_predictions analysis.baseline=outputs/hr/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/hr/finetune/hr/base/scores/test.hr.predictions.jsonl
 ```
 
-Output: `outputs/analysis/<name>.jsonl`, one row per line.
+Output: `outputs/hr/analysis/<name>.jsonl`, one row per line.
 
 ## Outputs
 
@@ -169,7 +169,7 @@ Output: `outputs/analysis/<name>.jsonl`, one row per line.
 data/
 ├── raw/xed/                          downloaded XED files
 └── processed/xed/en-hr/              splits, conversational splits, split_manifest.json
-outputs/
+outputs/<lang>/                       one folder per target language (out_dir)
 ├── finetune/
 │   ├── <condition>/<run_name>/
 │   │   ├── adapter/                  the kept LoRA adapter
@@ -179,6 +179,10 @@ outputs/
 └── analysis/<name>.jsonl             prediction comparisons
 logs/                                 one log file per CLI run
 ```
+
+Each target language keeps its own outputs, so runs for different languages never overwrite each
+other: `prepare.target_lang=sv` writes to `outputs/sv/`. Move every output elsewhere, e.g. to
+scratch storage, with `out_dir=/scratch/<s-number>/outputs/hr`.
 
 ## Metrics
 

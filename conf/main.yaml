@@ -14,6 +14,7 @@ defaults:
 
 action: null
 seed: 42
+out_dir: outputs/${prepare.target_lang}
 
 hydra:
   run:

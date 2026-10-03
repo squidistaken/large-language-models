@@ -39,11 +39,14 @@ SHARED_KEYS = (
     "batch_size",
     "grad_accum_steps",
     "warmup_ratio",
+    "evals_per_epoch",
+    "checkpoint_metric",
+    "early_stopping_patience",
 )
 
 
 def differing_keys(settings: list[dict[str, Any]], keys: tuple[str, ...]) -> list[str]:
-    """Find the settings that are not the same in every run.
+    """Get the keys that differ between a list of settings.
 
     Args:
         settings (list[dict[str, Any]]): The compared settings of each run.
@@ -104,7 +107,8 @@ class ConfigSelector:
         self.metric = str(cfg.select.metric)
 
     def select(self) -> SelectionSummary:
-        """Score every candidate on dev, rank them, and save the selection record.
+        """Select the best candidate configuration by averaging its dev scores over the conditions
+        and languages.
 
         Returns:
             SelectionSummary: A summary of the selection process.

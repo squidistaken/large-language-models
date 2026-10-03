@@ -6,7 +6,7 @@ from matplotlib.figure import Figure
 
 from src.evaluation.metrics import BOOTSTRAP_SAMPLES, example_jaccard
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import UNIT, color_keys, dots, legend, panels
+from src.plotting.style import UNIT, bars, color_keys, panels
 
 
 def bootstrap_mean(values: list[float], seed: int) -> list[float]:
@@ -78,18 +78,28 @@ class Alignment(BaseFigure):
         counts = {
             hop: max(len(by_hop.get(hop, [])) for by_hop in scores.values()) for hop in levels
         }
-        rows = [f"{hop} hop{'s' if hop != 1 else ''} (n={counts[hop]})" for hop in levels]
-        fig, axes = panels(1, 1, 0.45 * len(levels) + 1.0)
+        groups = [f"{hop} (n={counts[hop]})" for hop in levels]
+        level = dict(zip(groups, levels, strict=True))
+        fig, axes = panels(1, 1, 2.8)
         ax = axes[0][0]
 
-        def value(name: str, row: str) -> tuple[float, list[float]] | None:
-            lines = scores[name].get(levels[rows.index(row)])
-
-            return (mean(lines), bootstrap_mean(lines, self.data.cfg.seed)) if lines else None
-
-        dots(ax, rows, colors, value, lambda _: target)
-        ax.set_xlim(*UNIT)
-        ax.set_xlabel(f"Mean per-line Jaccard, {target}")
-        legend(fig, color_keys(colors))
+        bars(
+            ax,
+            groups,
+            colors,
+            lambda name, group: (
+                mean(scores[name][level[group]]) if scores[name].get(level[group]) else None
+            ),
+            interval=lambda name, group: (
+                bootstrap_mean(scores[name][level[group]], self.data.cfg.seed)
+                if scores[name].get(level[group])
+                else None
+            ),
+            label="{:.2f}",
+        )
+        ax.set_ylim(*UNIT)
+        ax.set_xlabel("Alignment hops behind the labels (lines)")
+        ax.set_ylabel(f"Mean per-line Jaccard, {target}")
+        ax.legend(handles=color_keys(colors), loc="upper right")
 
         return fig

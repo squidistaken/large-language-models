@@ -54,23 +54,29 @@ class Compute(BaseFigure):
         # Memory runs up to the GPU's own capacity, as recorded with the run.
         vram = max(info["model"].get("vram_gb") or DEFAULT_VRAM_GIB for info in run_infos.values())
         measures = {
-            "Training time (h)": (HOURS, hours),
+            "Training time (h)": (HOURS, hours, "{:.2f} h"),
             "Peak GPU memory (GiB)": (
                 (0.0, vram),
                 lambda info: info["summary"]["peak_gpu_memory_gib"],
+                "{:.1f} GiB",
             ),
         }
-        fig, axes = panels(1, len(measures), 0.4 * len(names) + 1.0, sharey=True)
+        fig, axes = panels(1, len(measures), 0.45 * len(names) + 1.2, sharey=True)
 
-        for ax, (label, (limits, measure)) in zip(axes[0], measures.items(), strict=True):
+        for ax, (axis_label, (limits, measure, label)) in zip(
+            axes[0], measures.items(), strict=True
+        ):
             bars(
                 ax,
                 list(names),
                 colors,
                 lambda name, row, measure=measure: measure(names[row]) if name == row else None,
                 horizontal=True,
+                label=label,
             )
             ax.set_xlim(*limits)
-            ax.set_xlabel(label)
+            ax.set_xlabel(axis_label)
+
+        axes[0][0].set_ylabel("PEFT condition")
 
         return fig

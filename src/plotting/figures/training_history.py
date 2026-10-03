@@ -1,12 +1,16 @@
+from typing import Any
+
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
-from src.finetune.conditions import system_name
-from src.plotting.figures.base import KEPT, BaseFigure, kept_epoch, kept_key, series
-from src.plotting.style import LOSS, NEUTRAL, condition_color, legend, panels
+from src.evaluation.metrics import SHORT_NAMES
+from src.finetune.conditions import condition_languages, system_name
+from src.plotting.figures.base import BaseFigure, FigureData, kept_epoch, series
+from src.plotting.figures.metrics import HEADLINE_METRICS
+from src.plotting.style import CATEGORICAL, NEUTRAL, panels
 
 SMOOTHING = 0.8
-DASHED = (0, (4, 2))
+LANGUAGE_STYLES = ("-", "--")
 
 
 def smooth(values: list[float]) -> list[float]:
@@ -28,7 +32,29 @@ def smooth(values: list[float]) -> list[float]:
 
 
 class TrainingHistory(BaseFigure):
-    """Class for the training history of every PEFT condition."""
+    """Class for the training history of one PEFT condition."""
+
+    def __init__(self, data: FigureData, condition: str) -> None:
+        """Initialise the class.
+
+        Args:
+            data (FigureData): The inputs of the figures.
+            condition (str): The PEFT condition.
+        """
+        super().__init__(data)
+        self.condition = condition
+
+    @classmethod
+    def instances(cls, data: FigureData) -> list[BaseFigure]:
+        """Get one figure per PEFT condition.
+
+        Args:
+            data (FigureData): The inputs of the figures.
+
+        Returns:
+            list[BaseFigure]: A list of figures.
+        """
+        return [cls(data, condition) for condition in data.run_infos]
 
     @property
     def name(self) -> str:
@@ -37,7 +63,7 @@ class TrainingHistory(BaseFigure):
         Returns:
             str: A file name stem.
         """
-        return f"training_history.{self.data.run_name}"
+        return f"training_history.{self.condition}.{self.data.run_name}"
 
     @property
     def title(self) -> str:
@@ -46,7 +72,7 @@ class TrainingHistory(BaseFigure):
         Returns:
             str: A title.
         """
-        return "Training and dev loss per PEFT condition"
+        return f"Training history of {system_name(self.condition)}"
 
     def draw(self) -> Figure:
         """Draw the figure.
@@ -54,53 +80,59 @@ class TrainingHistory(BaseFigure):
         Returns:
             Figure: A figure.
         """
-        target = self.data.target
-        fig, axes = panels(1, len(self.data.run_infos), 2.3, sharey=True)
+        info = self.data.run_infos[self.condition]
+        history = info["log_history"]
+        langs = condition_languages(self.condition, self.data.target)
+        scored = any(series(history, f"eval_{lang}_micro_f1")[0] for lang in langs)
+        kept = kept_epoch(info)
+        fig, axes = panels(1, 2 if scored else 1, 2.6)
+        loss = axes[0][0]
+        epochs, train = series(history, "loss")
+        dev_epochs, dev = series(history, "eval_loss")
 
-        for ax, (condition, run_info) in zip(axes[0], self.data.run_infos.items(), strict=True):
-            color = condition_color(condition, target)
-            epochs, train = series(run_info["log_history"], "loss")
-            dev_epochs, dev = series(run_info["log_history"], "eval_loss")
-            kept = kept_epoch(run_info)
+        loss.plot(epochs, train, color=CATEGORICAL[0], linewidth=0.8, alpha=0.3)
+        loss.plot(epochs, smooth(train), color=CATEGORICAL[0], label="Training loss (smoothed)")
+        loss.plot(dev_epochs, dev, color=CATEGORICAL[1], marker="o", label="Dev loss")
+        loss.set_ylim(bottom=0)
+        loss.set_xlabel("Epoch")
+        loss.set_ylabel("Cross-entropy loss")
+        loss.set_title("(a) Loss")
 
-            ax.plot(epochs, train, color=color, linewidth=0.7, alpha=0.3)
-            ax.plot(epochs, smooth(train), color=color)
-            ax.plot(
-                dev_epochs,
-                dev,
-                color=color,
-                linestyle=DASHED,
-                marker="o",
-                markersize=5,
-                markeredgecolor="white",
+        if scored:
+            metrics = axes[0][1]
+            colors = dict(zip(HEADLINE_METRICS, CATEGORICAL, strict=False))
+            styles: dict[str, Any] = dict(zip(langs, LANGUAGE_STYLES, strict=False))
+
+            for metric, color in colors.items():
+                for lang, style in styles.items():
+                    points, values = series(history, f"eval_{lang}_{metric}")
+                    metrics.plot(points, values, color=color, linestyle=style, marker="o")
+
+            metrics.set_xlabel("Epoch")
+            metrics.set_ylabel("Dev score")
+            metrics.set_title("(b) Dev metrics")
+            metrics.legend(
+                handles=[
+                    *[
+                        Line2D([], [], color=color, marker="o", label=SHORT_NAMES[metric])
+                        for metric, color in colors.items()
+                    ],
+                    *[
+                        Line2D([], [], color=NEUTRAL, linestyle=style, label=lang)
+                        for lang, style in styles.items()
+                    ],
+                ],
+                loc="best",
+                ncols=2,
             )
 
+        for ax in axes[0]:
             if kept is not None:
-                ax.plot(kept, dev[dev_epochs.index(kept)], markeredgecolor=NEUTRAL, **KEPT)
+                ax.axvline(kept, color=NEUTRAL, linestyle=":", linewidth=1.2)
 
-            ax.set_title(system_name(condition))
-            ax.set_xlabel("Epoch")
             ax.set_xlim(left=0)
-            ax.grid(axis="x", visible=False)
 
-        axes[0][0].set_ylim(*LOSS)
-        axes[0][0].set_ylabel("Cross-entropy loss")
-        legend(
-            fig,
-            [
-                Line2D([], [], color=NEUTRAL, label="Training loss (smoothed)"),
-                Line2D(
-                    [],
-                    [],
-                    color=NEUTRAL,
-                    linestyle=DASHED,
-                    marker="o",
-                    markersize=5,
-                    markeredgecolor="white",
-                    label="Dev loss (per epoch)",
-                ),
-                kept_key("Kept checkpoint"),
-            ],
-        )
+        kept_line = Line2D([], [], color=NEUTRAL, linestyle=":", label="Kept checkpoint")
+        loss.legend(handles=[*loss.get_legend_handles_labels()[0], kept_line], loc="best")
 
         return fig

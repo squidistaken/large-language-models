@@ -1,2 +1,2 @@
-out_dir: outputs/figures
+out_dir: ${out_dir}/figures
 formats: [pdf, png]

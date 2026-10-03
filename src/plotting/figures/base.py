@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
 from omegaconf import DictConfig
 
 from src.constants import SOURCE_LANG, ZERO_SHOT
@@ -13,18 +12,12 @@ from src.data.prepare_data import pair_name
 from src.data.writing import SplitWriter
 from src.finetune.conditions import conditions, system_name
 from src.finetune.selection import SELECTION_FILE
-from src.plotting.style import NEUTRAL, save, system_colors
+from src.plotting.style import save, system_colors, system_markers
 from src.utils.files import read_json, read_jsonl
 from src.utils.logger import Logger
 from src.utils.runs import predictions_path, read_run_info, results_stem, run_dir, zero_shot_dir
 
 CHECKPOINT_METRICS = {"loss": False, "micro_f1": True}
-KEPT: dict[str, Any] = {
-    "marker": "o",
-    "markersize": 11,
-    "markerfacecolor": "none",
-    "linestyle": "none",
-}
 
 
 class FigureData:
@@ -196,9 +189,32 @@ class FigureData:
         """
         return {name: color for name, color in system_colors(self.target).items() if name in names}
 
+    def markers(self, names: set[str] | list[str]) -> dict[str, str]:
+        """Get the marker shape of every given system, in display order.
+
+        Args:
+            names (set[str] | list[str]): The system names.
+
+        Returns:
+            dict[str, str]: A mapping from system name to marker shape.
+        """
+        return {k: v for k, v in system_markers(self.target).items() if k in names}
+
 
 class BaseFigure(ABC):
     """Class for the base of the report figures."""
+
+    @classmethod
+    def instances(cls, data: FigureData) -> list["BaseFigure"]:
+        """Get the figures this class draws for the data.
+
+        Args:
+            data (FigureData): The inputs of the figures.
+
+        Returns:
+            list[BaseFigure]: A list of figures.
+        """
+        return [cls(data)]
 
     def __init__(self, data: FigureData) -> None:
         """Initialise the class.
@@ -288,24 +304,3 @@ def kept_epoch(run_info: dict[str, Any]) -> float | None:
     pick = max if CHECKPOINT_METRICS[metric] else min
 
     return epochs[values.index(pick(values))]
-
-
-def kept_key(label: str) -> Line2D:
-    """Get the legend entry of the ring marking the kept epoch.
-
-    Args:
-        label (str): The legend label.
-
-    Returns:
-        Line2D: A legend entry.
-    """
-    return Line2D(
-        [],
-        [],
-        linestyle="none",
-        marker="o",
-        markersize=9,
-        markerfacecolor="none",
-        markeredgecolor=NEUTRAL,
-        label=label,
-    )

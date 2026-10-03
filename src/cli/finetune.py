@@ -92,7 +92,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     console = Console()
 
     try:
-        summary = PEFTTrainer(cfg.finetune, cfg.model, logger).train()
+        summary = PEFTTrainer(cfg.finetune, cfg.model, cfg.wandb, logger).train()
 
     except (FileNotFoundError, ValueError, TypeError) as e:
         raise SystemExit(str(e)) from e

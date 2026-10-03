@@ -1,8 +1,6 @@
 import math
-import os
 import shutil
 from dataclasses import asdict, dataclass
-from pathlib import Path
 
 import torch
 import transformers
@@ -21,14 +19,14 @@ from src.finetune.conditions import condition_languages
 from src.finetune.data import tokenise_examples
 from src.finetune.lora import add_lora
 from src.models.base import Model
+from src.utils import tracking
 from src.utils.files import write_json
 from src.utils.hardware import peak_memory_gib, reset_peak_memory
 from src.utils.logger import Logger
-from src.utils.runs import RUN_INFO_FILE, library_versions
+from src.utils.runs import RUN_INFO_FILE, library_versions, run_dir
 
 ADAPTER_DIR = "adapter"
 CHECKPOINT_DIR = "checkpoints"
-LOGGING_STEPS = 10
 CHECKPOINT_METRIC = "eval_loss"
 CHECKPOINT_RULE = "Evaluate on dev after every epoch; keep the epoch with the lowest dev loss."
 
@@ -53,21 +51,25 @@ class FinetuneSummary:
 class PEFTTrainer:
     """Class that fine-tunes the base model with LoRA for one PEFT condition."""
 
-    def __init__(self, cfg: DictConfig, model_cfg: DictConfig, logger: Logger) -> None:
+    def __init__(
+        self, cfg: DictConfig, model_cfg: DictConfig, wandb_cfg: DictConfig, logger: Logger
+    ) -> None:
         """Initialise the class.
 
         Args:
             cfg (DictConfig): The finetune config.
             model_cfg (DictConfig): The model config, shared with prompting.
+            wandb_cfg (DictConfig): The wandb config.
             logger (Logger): The logger.
 
         Raises:
             ValueError: If the model is unknown, or the run folder exists and overwrite is off.
         """
         self.cfg = cfg
+        self.wandb_cfg = wandb_cfg
         self.logger = logger
         self.model = Model(model_cfg, logger)
-        self.run_dir = Path(cfg.out_dir) / cfg.condition / str(cfg.run_name)
+        self.run_dir = run_dir(cfg.out_dir, cfg.condition, str(cfg.run_name))
 
         if self.run_dir.exists() and not cfg.overwrite:
             raise ValueError(
@@ -112,9 +114,22 @@ class PEFTTrainer:
         train_features = self._features(train_examples, tokenizer)
         dev_features = self._features(dev_examples, tokenizer)
         model = add_lora(self.model, self.cfg.lora)
+
+        wandb_run = tracking.start_finetune(
+            self.wandb_cfg,
+            cfg.condition,
+            str(cfg.run_name),
+            self.run_dir,
+            config={
+                "finetune": OmegaConf.to_container(cfg, resolve=True),
+                "model": self.model.info(),
+                "train_examples": len(train_features),
+                "dev_examples": len(dev_features),
+            },
+        )
         trainer = Trainer(
             model=model,
-            args=self._arguments(len(train_features)),
+            args=self._arguments(len(train_features), report_to_wandb=wandb_run is not None),
             train_dataset=Dataset.from_list(train_features),
             eval_dataset=Dataset.from_list(dev_features),
             data_collator=DataCollatorForSeq2Seq(tokenizer, padding=True, pad_to_multiple_of=8),
@@ -124,6 +139,9 @@ class PEFTTrainer:
         reset_peak_memory()
         trainer.train()
         trainer.save_model(str(self.run_dir / ADAPTER_DIR))
+
+        # The kept epoch is now in the adapter; its checkpoint also holds optimizer state, so drop it.
+        shutil.rmtree(self.run_dir / CHECKPOINT_DIR, ignore_errors=True)
 
         trainable, total = model.get_nb_trainable_parameters()
         model_info = self.model.info()
@@ -153,6 +171,11 @@ class PEFTTrainer:
             },
         )
 
+        if wandb_run is not None:
+            wandb_run.summary.update(
+                {f"summary/{key}": value for key, value in asdict(summary).items()}
+            )
+
         self.logger.info(f"Saved the adapter and run info to {self.run_dir}")
 
         # Free the GPU for scoring.
@@ -177,11 +200,12 @@ class PEFTTrainer:
             examples, tokenizer, self.model.chat_template_kwargs, self.cfg.max_length, self.logger
         )
 
-    def _arguments(self, train_examples: int) -> TrainingArguments:
+    def _arguments(self, train_examples: int, report_to_wandb: bool) -> TrainingArguments:
         """Build the training arguments from the finetune config.
 
         Args:
             train_examples (int): The number of training examples.
+            report_to_wandb (bool): Whether to stream the training logs to the open W&B run.
 
         Returns:
             TrainingArguments: A collection of training arguments.
@@ -199,7 +223,6 @@ class PEFTTrainer:
             per_device_eval_batch_size=self.cfg.batch_size,
             gradient_accumulation_steps=self.cfg.grad_accum_steps,
             gradient_checkpointing=self.cfg.gradient_checkpointing,
-            # Non-reentrant checkpointing lets gradients reach LoRA with frozen embeddings.
             gradient_checkpointing_kwargs={"use_reentrant": False},
             warmup_steps=warmup_steps,
             eval_strategy="epoch",
@@ -208,9 +231,9 @@ class PEFTTrainer:
             load_best_model_at_end=True,
             metric_for_best_model=CHECKPOINT_METRIC,
             greater_is_better=False,
-            logging_steps=LOGGING_STEPS,
+            logging_steps=self.cfg.logging_steps,
             seed=self.cfg.seed,
             full_determinism=self.cfg.full_determinism,
             bf16=self.model.torch_dtype == torch.bfloat16 and torch.cuda.is_available(),
-            report_to="none" if os.getenv("WANDB_MODE", "disabled") == "disabled" else "wandb",
+            report_to="wandb" if report_to_wandb else "none",
         )

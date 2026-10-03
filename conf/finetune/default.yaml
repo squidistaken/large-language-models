@@ -16,6 +16,7 @@ batch_size: 8
 grad_accum_steps: 2
 max_length: 256 # max tokens per example
 warmup_ratio: 0.03
+logging_steps: 10 # optimizer steps between training-loss logs
 gradient_checkpointing: true # recompute activations in the backward pass to save memory
 full_determinism: true # identical GPU runs for the same seed; false can be faster on large models
 

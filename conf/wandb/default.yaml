@@ -1,0 +1,4 @@
+project: large-language-models
+entity: null # null = your default W&B entity
+tags: []
+mode: ${oc.env:WANDB_MODE,disabled}

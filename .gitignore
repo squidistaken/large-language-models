@@ -233,3 +233,6 @@ __marimo__/
 /thesis/*.run.xml
 /thesis/*.synctex.gz
 /thesis/*.toc
+/wandb/
+/slurm/logs/
+/.venv-rtx/

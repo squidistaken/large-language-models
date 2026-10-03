@@ -1,19 +1,13 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from omegaconf import DictConfig
 from rich.console import Console
-from rich.table import Table
 
-from src.cli.prompts import ask_required, ask_until, parse_choice
-from src.constants import DEV, EVAL_SPLITS
+from src.cli.prompts import ask_required, ask_split
+from src.cli.render import render_scores, render_selection
+from src.constants import DEV, TEST
 from src.utils.logger import Logger
 from src.utils.runs import latest_run
-
-if TYPE_CHECKING:
-    from src.finetune.evaluate import ScoreSummary
-    from src.finetune.selection import SelectionSummary
 
 LABEL = "Score Fine-tuned Run"
 TITLE = "Score a Fine-tuned Run"
@@ -50,78 +44,33 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     if default_dir is None:
         console.print(f"[yellow]No finished run in {cfg.finetune.out_dir} yet.[/yellow]")
 
-    run_dir = ask_required(console, "Run folder", default_dir)
-    split = ask_until(
-        console,
-        f"Split ({', '.join(EVAL_SPLITS)})",
-        score_cfg.split,
-        lambda raw: parse_choice(raw, list(EVAL_SPLITS), "split"),
-    )
+    score_cfg.run_dir = ask_required(console, "Run folder", default_dir)
+    score_cfg.split = ask_split(console, score_cfg.split)
 
-    score_cfg.run_dir = run_dir
-    score_cfg.split = split
-
-    logger.info(f"score_finetune config: run_dir={run_dir} split={split}")
+    logger.info(f"score_finetune config: run_dir={score_cfg.run_dir} split={score_cfg.split}")
 
 
-def _render_scores(console: Console, summary: ScoreSummary) -> None:
-    """Render the scores of a fine-tuned run.
+def _warn_if_not_selected(cfg: DictConfig, console: Console, logger: Logger) -> None:
+    """Warn when a test scoring is not of the configuration the dev set selected.
 
     Args:
+        cfg (DictConfig): The dictionary object override.
         console (Console): The console.
-        summary (ScoreSummary): The summary to render.
+        logger (Logger): The logger.
     """
-    table = Table(title=f"Scores on {summary.split} ({summary.condition} condition)")
+    from src.finetune.selection import selected_run
 
-    table.add_column("Language", style="cyan")
-    table.add_column("micro-F1", justify="right")
-    table.add_column("Jaccard", justify="right")
-    table.add_column("Malformed", justify="right")
-    table.add_column("Empty", justify="right")
-    table.add_column("Lines", justify="right")
+    best = selected_run(cfg.finetune.out_dir)
 
-    for lang, metrics in summary.scores.items():
-        table.add_row(
-            lang,
-            f"{metrics['micro_f1']:.4f}",
-            f"{metrics['jaccard_samples']:.4f}",
-            f"{metrics['malformed_rate']:.1%}",
-            f"{metrics['empty_rate']:.1%}",
-            str(int(metrics["count"])),
+    if best is None or Path(cfg.finetune.score.run_dir).name != best:
+        message = (
+            f"Scoring {cfg.finetune.score.run_dir} on test, but it is not the configuration the "
+            f"dev set selected ({best or 'no selection yet'}). Only report test scores of the "
+            "selected configuration."
         )
 
-    console.print(table)
-    console.print(f"Scores saved to [cyan]{summary.scores_file}[/cyan]")
-
-
-def _render_selection(console: Console, summary: SelectionSummary) -> None:
-    """Render the ranked candidates.
-
-    Args:
-        console (Console): The console.
-        summary (SelectionSummary): The summary to render.
-    """
-    table = Table(title=f"Candidates ranked by dev {summary.metric}")
-
-    table.add_column("Rank", justify="right")
-    table.add_column("Run name", style="cyan")
-
-    for lang in summary.langs:
-        table.add_column(f"{lang} (mean)", justify="right")
-
-    table.add_column("Selection score", justify="right", style="bold")
-
-    for rank, result in enumerate(summary.results, start=1):
-        table.add_row(
-            str(rank),
-            result.run_name,
-            *[f"{result.language_scores.get(lang, 0.0):.4f}" for lang in summary.langs],
-            f"{result.selection_score:.4f}",
-        )
-
-    console.print(table)
-    console.print(f"Rule: {summary.rule}")
-    console.print(f"Final configuration: [bold cyan]{summary.best.run_name}[/bold cyan]")
+        logger.warning(message)
+        console.print(f"[yellow]{message}[/yellow]")
 
 
 def score_and_select(cfg: DictConfig, console: Console, logger: Logger) -> None:
@@ -141,13 +90,16 @@ def score_and_select(cfg: DictConfig, console: Console, logger: Logger) -> None:
     score_cfg = cfg.finetune.score
     score_cfg.run_dir = _run_dir(cfg)
 
+    if score_cfg.split == TEST and score_cfg.run_dir:
+        _warn_if_not_selected(cfg, console, logger)
+
     try:
-        scores = AdapterScorer(score_cfg, logger).score()
+        scores = AdapterScorer(score_cfg, cfg.wandb, logger).score()
 
     except (FileNotFoundError, ValueError, TypeError) as e:
         raise SystemExit(str(e)) from e
 
-    _render_scores(console, scores)
+    render_scores(console, scores)
 
     if scores.split != DEV or score_cfg.max_samples is not None:
         return
@@ -160,7 +112,7 @@ def score_and_select(cfg: DictConfig, console: Console, logger: Logger) -> None:
 
         return
 
-    _render_selection(console, selection)
+    render_selection(console, selection)
 
     console.print(f"Selection saved to [cyan]{cfg.finetune.out_dir}/{SELECTION_FILE}[/cyan]")
 

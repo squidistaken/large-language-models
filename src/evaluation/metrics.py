@@ -1,11 +1,55 @@
+from importlib.metadata import version
+from typing import Any
+
 import numpy as np
-from sklearn.metrics import f1_score, jaccard_score
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    hamming_loss,
+    jaccard_score,
+    precision_recall_fscore_support,
+    precision_score,
+    recall_score,
+)
 
 from src.constants import EMOTIONS
 from src.evaluation.parsing import ParsedOutput
 
 # A metric that divides by zero counts as 0.
 ZERO_DIVISION = 0.0
+
+PRIMARY_METRICS = ("micro_f1", "jaccard_samples")
+SECONDARY_METRICS = ("macro_f1", "micro_precision", "micro_recall", "hamming_loss")
+DIAGNOSTIC_METRICS = ("exact_match", "malformed_rate", "empty_rate")
+AGGREGATE_METRICS = (*PRIMARY_METRICS, *SECONDARY_METRICS, *DIAGNOSTIC_METRICS)
+
+SHORT_NAMES = {
+    "micro_f1": "micro-F1",
+    "jaccard_samples": "Jaccard",
+    "macro_f1": "macro-F1",
+    "micro_precision": "micro-P",
+    "micro_recall": "micro-R",
+    "hamming_loss": "Hamming",
+    "exact_match": "Exact",
+    "malformed_rate": "Malformed",
+    "empty_rate": "Empty",
+}
+
+LOWER_IS_BETTER = {"hamming_loss", "malformed_rate", "empty_rate"}
+
+
+def metric_label(key: str, short: bool = True) -> str:
+    """Get a label for a metric, optionally using the short name and indicating whether
+    lower is better.
+
+    Args:
+        key (str): The metric key.
+        short (bool): Whether to use the short name instead of the key.
+
+    Returns:
+        str: A label.
+    """
+    return f"{SHORT_NAMES[key] if short else key}{' ↓' if key in LOWER_IS_BETTER else ''}"
 
 
 def binarise(label_sets: list[list[str]]) -> np.ndarray:
@@ -17,30 +61,85 @@ def binarise(label_sets: list[list[str]]) -> np.ndarray:
     Returns:
         np.ndarray: A matrix with one row per line and one column per emotion.
     """
-    return np.array([[int(emotion in labels) for emotion in EMOTIONS] for labels in label_sets])
+    return np.array(
+        [[int(emotion in labels) for emotion in EMOTIONS] for labels in label_sets]
+    ).reshape(-1, len(EMOTIONS))
 
 
-# TODO: Compute all metrics required for the project.
-def score(gold: list[list[str]], predicted: list[ParsedOutput]) -> dict[str, float]:
-    """Score a set of predictions against the gold labels.
+def metrics_info() -> dict[str, Any]:
+    """Describe how the metrics are computed, for the scores file.
+
+    Returns:
+        dict[str, Any]: A dictionary with the label order, zero-division policy and library.
+    """
+    return {
+        "label_order": list(EMOTIONS),
+        "zero_division": ZERO_DIVISION,
+        "zero_division_policy": (
+            f"A metric whose denominator is zero (no positive gold labels or no predictions for a "
+            f"class or line) is set to {ZERO_DIVISION}."
+        ),
+        "malformed_policy": (
+            "Malformed answers and answers with no permitted label count as an empty predicted "
+            "label set."
+        ),
+        "implementation": f"scikit-learn {version('scikit-learn')}",
+    }
+
+
+def score(gold: list[list[str]], predicted: list[ParsedOutput]) -> dict[str, Any]:
+    """Score a set of predictions against the gold labels with every metric of the brief.
 
     Args:
         gold (list[list[str]]): The true labels of each line.
         predicted (list[ParsedOutput]): The parsed model answer for each line.
 
     Returns:
-        dict[str, float]: A dictionary with the metrics.
+        dict[str, Any]: A dictionary with the metrics and their values,
+                        plus the count of lines.
     """
     y_true = binarise(gold)
     y_pred = binarise([output.labels for output in predicted])
     count = len(predicted)
+    zero = {"zero_division": ZERO_DIVISION}
+    precision, recall, f1, support = precision_recall_fscore_support(
+        y_true, y_pred, average=None, labels=list(range(len(EMOTIONS))), **zero
+    )
 
     return {
-        "micro_f1": float(f1_score(y_true, y_pred, average="micro", zero_division=ZERO_DIVISION)),
-        "jaccard_samples": float(
-            jaccard_score(y_true, y_pred, average="samples", zero_division=ZERO_DIVISION)
-        ),
+        "micro_f1": float(f1_score(y_true, y_pred, average="micro", **zero)),
+        "jaccard_samples": float(jaccard_score(y_true, y_pred, average="samples", **zero)),
+        "macro_f1": float(f1_score(y_true, y_pred, average="macro", **zero)),
+        "micro_precision": float(precision_score(y_true, y_pred, average="micro", **zero)),
+        "micro_recall": float(recall_score(y_true, y_pred, average="micro", **zero)),
+        "hamming_loss": float(hamming_loss(y_true, y_pred)),
+        "exact_match": float(accuracy_score(y_true, y_pred)),
         "malformed_rate": sum(output.malformed for output in predicted) / count,
         "empty_rate": sum(not output.labels for output in predicted) / count,
         "count": count,
+        "per_emotion": {
+            emotion: {
+                "precision": float(precision[index]),
+                "recall": float(recall[index]),
+                "f1": float(f1[index]),
+                "support": int(support[index]),
+            }
+            for index, emotion in enumerate(EMOTIONS)
+        },
     }
+
+
+def example_jaccard(gold: list[str], predicted: list[str]) -> float:
+    """Get the Jaccard index for a single example, which is the size of the
+    intersection divided by the size of the union.
+
+    Args:
+        gold (list[str]): The true labels.
+        predicted (list[str]): The predicted labels.
+
+    Returns:
+        float: A Jaccard index.
+    """
+    union = set(gold) | set(predicted)
+
+    return len(set(gold) & set(predicted)) / len(union) if union else ZERO_DIVISION

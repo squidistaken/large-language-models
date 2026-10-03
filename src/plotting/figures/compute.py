@@ -33,6 +33,15 @@ class Compute(BaseFigure):
         """
         return f"compute.{self.data.run_name}"
 
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return "Training cost per PEFT condition"
+
     def draw(self) -> Figure:
         """Draw the figure.
 

@@ -16,6 +16,7 @@ class Metrics(BaseFigure):
 
     metrics = HEADLINE_METRICS
     prefix = "metrics"
+    heading = "Headline metrics"
 
     @property
     def name(self) -> str:
@@ -25,6 +26,15 @@ class Metrics(BaseFigure):
             str: A file name stem.
         """
         return f"{self.prefix}.{self.data.stem}"
+
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return f"{self.heading} on {self.data.split}"
 
     def draw(self) -> Figure:
         """Draw the figure.
@@ -82,3 +92,4 @@ class AppendixMetrics(Metrics):
 
     metrics = APPENDIX_METRICS
     prefix = "metrics_appendix"
+    heading = "Other metrics"

@@ -3,7 +3,7 @@ from matplotlib.lines import Line2D
 
 from src.finetune.conditions import system_name
 from src.plotting.figures.base import KEPT, BaseFigure, kept_epoch, kept_key, series
-from src.plotting.style import INK_SECONDARY, LOSS, SURFACE, condition_color, legend, panels
+from src.plotting.style import LOSS, NEUTRAL, condition_color, legend, panels
 
 SMOOTHING = 0.8
 DASHED = (0, (4, 2))
@@ -39,6 +39,15 @@ class TrainingHistory(BaseFigure):
         """
         return f"training_history.{self.data.run_name}"
 
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return "Training and dev loss per PEFT condition"
+
     def draw(self) -> Figure:
         """Draw the figure.
 
@@ -63,11 +72,11 @@ class TrainingHistory(BaseFigure):
                 linestyle=DASHED,
                 marker="o",
                 markersize=5,
-                markeredgecolor=SURFACE,
+                markeredgecolor="white",
             )
 
             if kept is not None:
-                ax.plot(kept, dev[dev_epochs.index(kept)], markeredgecolor=INK_SECONDARY, **KEPT)
+                ax.plot(kept, dev[dev_epochs.index(kept)], markeredgecolor=NEUTRAL, **KEPT)
 
             ax.set_title(system_name(condition))
             ax.set_xlabel("Epoch")
@@ -79,15 +88,15 @@ class TrainingHistory(BaseFigure):
         legend(
             fig,
             [
-                Line2D([], [], color=INK_SECONDARY, label="Training loss (smoothed)"),
+                Line2D([], [], color=NEUTRAL, label="Training loss (smoothed)"),
                 Line2D(
                     [],
                     [],
-                    color=INK_SECONDARY,
+                    color=NEUTRAL,
                     linestyle=DASHED,
                     marker="o",
                     markersize=5,
-                    markeredgecolor=SURFACE,
+                    markeredgecolor="white",
                     label="Dev loss (per epoch)",
                 ),
                 kept_key("Kept checkpoint"),

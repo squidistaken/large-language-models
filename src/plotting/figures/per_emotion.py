@@ -17,6 +17,15 @@ class PerEmotionF1(BaseFigure):
         """
         return f"per_emotion_f1.{self.data.stem}"
 
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return f"Per-emotion F1 on {self.data.split}"
+
     def draw(self) -> Figure:
         """Draw the figure.
 
@@ -44,7 +53,7 @@ class PerEmotionF1(BaseFigure):
                 lambda _, lang=lang: lang,
             )
             ax.set_yticks(range(len(EMOTIONS)), [f"{e} (n={support[e]:.0f})" for e in EMOTIONS])
-            ax.set_title(f"Per-emotion F1, {lang}")
+            ax.set_title(lang)
             ax.set_xlabel("F1")
 
         axes[0][0].set_xlim(*UNIT)

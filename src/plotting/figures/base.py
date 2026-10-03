@@ -13,7 +13,7 @@ from src.data.prepare_data import pair_name
 from src.data.writing import SplitWriter
 from src.finetune.conditions import conditions, system_name
 from src.finetune.selection import SELECTION_FILE
-from src.plotting.style import INK_SECONDARY, save, system_colors
+from src.plotting.style import NEUTRAL, save, system_colors
 from src.utils.files import read_json, read_jsonl
 from src.utils.logger import Logger
 from src.utils.runs import predictions_path, read_run_info, results_stem, run_dir, zero_shot_dir
@@ -217,6 +217,15 @@ class BaseFigure(ABC):
             str: A file name stem.
         """
 
+    @property
+    @abstractmethod
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+
     @abstractmethod
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -238,7 +247,12 @@ class BaseFigure(ABC):
         """
         fig = self.draw()
 
-        return [] if fig is None else save(fig, out_dir, self.name, formats)
+        if fig is None:
+            return []
+
+        fig.suptitle(self.title)
+
+        return save(fig, out_dir, self.name, formats)
 
 
 def series(history: list[dict[str, Any]], key: str) -> tuple[list[float], list[float]]:
@@ -292,6 +306,6 @@ def kept_key(label: str) -> Line2D:
         marker="o",
         markersize=9,
         markerfacecolor="none",
-        markeredgecolor=INK_SECONDARY,
+        markeredgecolor=NEUTRAL,
         label=label,
     )

@@ -2,7 +2,7 @@ from matplotlib.figure import Figure
 
 from src.constants import SOURCE_LANG
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import INK_SECONDARY, UNIT, dots, language_keys, legend, panels
+from src.plotting.style import NEUTRAL, UNIT, dots, language_keys, legend, panels
 
 
 class Selection(BaseFigure):
@@ -16,6 +16,15 @@ class Selection(BaseFigure):
             str: A file name stem.
         """
         return "selection"
+
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return "Dev-set selection of the configuration"
 
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -36,7 +45,7 @@ class Selection(BaseFigure):
         dots(
             ax,
             list(scores),
-            dict.fromkeys(langs, INK_SECONDARY),
+            dict.fromkeys(langs, NEUTRAL),
             lambda lang, run: (scores[run][lang], None) if lang in scores[run] else None,
             lambda lang: lang,
         )

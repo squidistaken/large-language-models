@@ -38,6 +38,15 @@ class Alignment(BaseFigure):
         """
         return f"alignment.{self.data.stem}"
 
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return f"Per-line Jaccard by alignment hops on {self.data.split}"
+
     def draw(self) -> Figure | None:
         """Draw the figure.
 

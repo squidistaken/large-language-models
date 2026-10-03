@@ -3,7 +3,7 @@ from matplotlib.figure import Figure
 from src.constants import EMOTIONS, SPLIT_NAMES
 from src.data.prepare_data import pair_name
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import INK_SECONDARY, SHARE, dots, language_keys, legend, panels
+from src.plotting.style import NEUTRAL, SHARE, dots, language_keys, legend, panels
 
 
 class LabelDistribution(BaseFigure):
@@ -17,6 +17,15 @@ class LabelDistribution(BaseFigure):
             str: A file name stem.
         """
         return f"label_distribution.{pair_name(self.data.target)}"
+
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return "Emotion distribution of the prepared data"
 
     def draw(self) -> Figure:
         """Draw the figure.
@@ -37,7 +46,7 @@ class LabelDistribution(BaseFigure):
         dots(
             ax,
             EMOTIONS,
-            dict.fromkeys(langs, INK_SECONDARY),
+            dict.fromkeys(langs, NEUTRAL),
             lambda lang, emotion: (shares[lang][emotion], None),
             lambda lang: lang,
         )

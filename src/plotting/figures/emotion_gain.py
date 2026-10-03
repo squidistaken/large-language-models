@@ -3,7 +3,7 @@ from matplotlib.figure import Figure
 from src.constants import EMOTIONS, ZERO_SHOT
 from src.finetune.conditions import system_name
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import GAIN, INK_SECONDARY, bars, color_keys, legend, panels
+from src.plotting.style import GAIN, NEUTRAL, bars, color_keys, legend, panels
 
 
 class EmotionGain(BaseFigure):
@@ -17,6 +17,15 @@ class EmotionGain(BaseFigure):
             str: A file name stem.
         """
         return f"emotion_gain.{self.data.stem}"
+
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return f"Per-emotion F1 gain over zero-shot on {self.data.split}"
 
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -48,8 +57,8 @@ class EmotionGain(BaseFigure):
                 return f1[(name, lang, emotion)] - f1[(baseline, lang, emotion)]
 
             bars(ax, EMOTIONS, colors, gain, horizontal=True)
-            ax.axvline(0, color=INK_SECONDARY, linewidth=0.8)
-            ax.set_title(f"F1 gain over zero-shot, {lang}")
+            ax.axvline(0, color=NEUTRAL, linewidth=0.8)
+            ax.set_title(lang)
             ax.set_xlabel("F1 minus zero-shot F1")
 
         axes[0][0].set_xlim(*GAIN)

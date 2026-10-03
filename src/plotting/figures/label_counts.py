@@ -3,7 +3,7 @@ from collections import Counter
 from matplotlib.figure import Figure
 
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import INK_SECONDARY, UNIT, bars, color_keys, legend, panels
+from src.plotting.style import NEUTRAL, UNIT, bars, color_keys, legend, panels
 
 GOLD = "gold"
 COUNTS = ("0", "1", "2", "3", "4+")
@@ -35,6 +35,15 @@ class LabelCounts(BaseFigure):
         """
         return f"label_counts.{self.data.stem}"
 
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return f"Labels per line on {self.data.split}"
+
     def draw(self) -> Figure:
         """Draw the figure.
 
@@ -47,7 +56,7 @@ class LabelCounts(BaseFigure):
             for by_lang in predictions.values()
             for lang, lines in by_lang.items()
         }
-        colors = {GOLD: INK_SECONDARY, **self.data.colors(list(predictions))}
+        colors = {GOLD: NEUTRAL, **self.data.colors(list(predictions))}
         fig, axes = panels(1, len(gold), 2.4, sharey=True)
 
         for ax, lang in zip(axes[0], self.data.languages(gold), strict=True):

@@ -17,14 +17,9 @@ from src.constants import SOURCE_LANG
 from src.finetune.conditions import system_name, systems
 
 TEXT_WIDTH_IN = 17 / 2.54
-CATEGORICAL = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100")
-INK = "#0b0b0b"
-INK_SECONDARY = "#52514e"
-INK_MUTED = "#898781"
-GRID = "#e1e0d9"
-AXIS = "#c3c2b7"
-SURFACE = "#ffffff"
-SERIF = ["TeX Gyre Termes", "Nimbus Roman", "Times New Roman", "Times", "DejaVu Serif"]
+CATEGORICAL = ("tab:blue", "tab:orange", "tab:green", "tab:red")
+NEUTRAL = "black"
+
 UNIT = (0.0, 1.0)  # every metric and share bounded by 0 and 1
 LOSS = (0.0, 1.25)  # cross-entropy per answer token
 GAIN = (-0.3, 0.3)  # difference in F1
@@ -61,42 +56,10 @@ def condition_color(condition: str, target_lang: str) -> str:
 
 def apply_style() -> None:
     """Apply a style to matplotlib."""
+    plt.rcdefaults()
     plt.rcParams.update(
         {
-            "font.family": "serif",
-            "font.serif": SERIF,
-            "font.size": 9,
-            "axes.titlesize": 9,
-            "axes.labelsize": 9,
-            "xtick.labelsize": 8,
-            "ytick.labelsize": 8,
-            "legend.fontsize": 8,
-            "text.color": INK,
-            "axes.labelcolor": INK_SECONDARY,
-            "axes.edgecolor": AXIS,
-            "axes.linewidth": 0.6,
-            "axes.spines.top": False,
-            "axes.spines.right": False,
-            "axes.grid": True,
-            "axes.axisbelow": True,
-            "grid.color": GRID,
-            "grid.linewidth": 0.5,
-            "grid.linestyle": "-",
-            "xtick.color": INK_MUTED,
-            "ytick.color": INK_MUTED,
-            "xtick.labelcolor": INK_SECONDARY,
-            "ytick.labelcolor": INK_SECONDARY,
-            "xtick.major.size": 0,
-            "ytick.major.size": 0,
-            "lines.linewidth": 1.5,
-            "lines.solid_capstyle": "round",
-            "lines.solid_joinstyle": "round",
-            "legend.frameon": False,
-            "figure.facecolor": SURFACE,
-            "axes.facecolor": SURFACE,
-            "savefig.facecolor": SURFACE,
             "savefig.bbox": "tight",
-            "savefig.pad_inches": 0.02,
             "savefig.dpi": 300,
             "pdf.fonttype": 42,
             "ps.fonttype": 42,
@@ -137,7 +100,7 @@ def legend(fig: Figure, handles: list) -> None:
         fig (Figure): The figure.
         handles (list): The legend entries.
     """
-    fig.legend(handles=handles, loc="outside upper center", ncols=len(handles))
+    fig.legend(handles=handles, loc="outside lower center", ncols=len(handles))
 
 
 def color_keys(colors: dict[str, str]) -> list[Patch]:
@@ -152,7 +115,7 @@ def color_keys(colors: dict[str, str]) -> list[Patch]:
     return [Patch(color=color, label=name) for name, color in colors.items()]
 
 
-def marker(lang: str, color: str = INK_SECONDARY) -> dict[str, Any]:
+def marker(lang: str, color: str = NEUTRAL) -> dict[str, Any]:
     """Get the marker style for a language: filled for the source language, hollow for others.
 
     Args:
@@ -162,7 +125,7 @@ def marker(lang: str, color: str = INK_SECONDARY) -> dict[str, Any]:
     Returns:
         dict[str, Any]: A dictionary of marker properties for a Line2D.
     """
-    face = SURFACE if lang == SOURCE_LANG else color
+    face = "white" if lang == SOURCE_LANG else color
 
     return {"markerfacecolor": face, "markeredgecolor": color, "markeredgewidth": 1.3}
 
@@ -250,7 +213,7 @@ def bars(
         present = [(name, size) for name, size in present if size is not None]
 
         for (name, size), offset in zip(present, offsets(len(present)), strict=True):
-            draw(position + offset, size, width, color=series[name], edgecolor=SURFACE, linewidth=1)
+            draw(position + offset, size, width, color=series[name])
 
     ticks, limits, grid = (
         (ax.set_yticks, ax.set_ylim, "y") if horizontal else (ax.set_xticks, ax.set_xlim, "x")

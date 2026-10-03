@@ -6,7 +6,7 @@ from src.finetune.conditions import condition_languages, system_name
 from src.plotting.figures.base import KEPT, BaseFigure, kept_epoch, kept_key, series
 from src.plotting.figures.metrics import HEADLINE_METRICS
 from src.plotting.style import (
-    INK_SECONDARY,
+    NEUTRAL,
     UNIT,
     condition_color,
     language_keys,
@@ -27,6 +27,15 @@ class MetricHistory(BaseFigure):
             str: A file name stem.
         """
         return f"metric_history.{self.data.run_name}"
+
+    @property
+    def title(self) -> str:
+        """Get the title shown above the figure.
+
+        Returns:
+            str: A title.
+        """
+        return "Dev metrics per epoch"
 
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -65,9 +74,7 @@ class MetricHistory(BaseFigure):
                     )
 
                     if kept is not None and kept in epochs:
-                        ax.plot(
-                            kept, values[epochs.index(kept)], markeredgecolor=INK_SECONDARY, **KEPT
-                        )
+                        ax.plot(kept, values[epochs.index(kept)], markeredgecolor=NEUTRAL, **KEPT)
 
             ax.set_title(f"Dev {metric_label(metric)}")
             ax.set_xlabel("Epoch")

@@ -68,8 +68,8 @@ The global `seed` (42) seeds the data split, training and sampled subsets. Decod
 Downloads the XED annotated and projected data files for one or more languages. Files that
 already exist are skipped unless `data.force=true`.
 
-Interactively you are asked for the languages (comma-separated, or `all`), the output folder, and
-whether to re-download.
+Interactively you are asked for the languages (comma-separated, or `all`; `en,hr` by default), the
+output folder, and whether to re-download.
 
 ```bash
 uv run main.py action=download_data data.languages=[en,hr]
@@ -83,11 +83,11 @@ Slurm:
 
 ### Data Preparation
 
-Builds a fixed, leakage-controlled 70/20/10 train/dev/test split of **matched English–Croatian pairs**, plus conversational versions of each split for fine-tuning:
+Builds a fixed, leakage-controlled 70/20/10 train/dev/test split of **matched English–target-language pairs** (English–Croatian by default), plus conversational versions of each split for fine-tuning:
 
 - the split is made by XED alignment id with multi-label stratification, so parallel versions of a subtitle always land in the same partition;
 - exact duplicates are removed and never cross partitions;
-- Croatian labels are projected from English, and are treated as projected reference labels.
+- target-language labels are projected from English, and are treated as projected reference labels.
 
 Interactively you are asked for the target language, folders, split ratios, seed, and whether to overwrite. Existing splits are reused; if they were built with other settings the action stops, and `prepare.overwrite=true` rebuilds them.
 
@@ -105,9 +105,15 @@ Output: `data/processed/xed/en-hr/`, with a `split_manifest.json` recording ever
 
 ### Fine-tuning
 
-Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition: `en`, `hr`, or `bilingual`. Only the answer tokens are trained. Four times per epoch (`finetune.evals_per_epoch`) the model is evaluated on dev twice: the dev loss, and the metrics of its generated answers on a fixed, seeded subset of 200 dev lines per language (`finetune.metric_samples`; `null` for all, `0` to skip). Both go to W&B and `run_info.json`, so the metrics can be followed during training. A checkpoint is saved at every evaluation; the one with the lowest dev loss is kept (`finetune.checkpoint_metric=micro_f1` keeps the highest dev micro-F1 instead), and training stops after two evaluations without improvement (`finetune.early_stopping_patience`; `null` to always train every epoch). The run then scores itself on the full dev set and reruns the configuration selection (see below).
+Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition for the target language (`prepare.target_lang`, Croatian by default):
 
-Interactively you are asked for the condition, the model, and a run name. Use the same run name for all three conditions of one configuration.
+| Condition | Trains on | Evaluated on |
+|---|---|---|
+| `en` | English | English and the target language |
+| `<target>` | the target language | the target language |
+| `bilingual` | English + the target language | English and the target language |
+
+Interactively you are asked for the target language, then shown what each condition trains and is evaluated on, and asked for the condition, the model, and a run name. Use the same run name for all three conditions of one configuration.
 
 ```bash
 uv run main.py action=finetune finetune.condition=bilingual finetune.run_name=base
@@ -128,9 +134,7 @@ Output: `outputs/hr/finetune/<condition>/<run_name>/`, with the adapter and a `r
 Lets a fine-tuned run answer every line of a split and computes all the metrics. Fine-tuning
 already scores each run on dev; use this to score a run again, or on test.
 
-After every full dev scoring, the final configuration is selected: the run name with the highest dev micro-F1, averaged over the three conditions per language and then over English and Croatian. All candidates must share the model, data and seed. The ranking is saved to `outputs/hr/finetune/selection.json`.
-
-Interactively you are asked for the run folder (the latest by default) and the split.
+Interactively you are asked for the target language, the run folder (the latest of that language by default) and the split.
 
 ```bash
 uv run main.py action=score_finetune finetune.score.run_dir=outputs/hr/finetune/bilingual/base finetune.score.split=dev
@@ -149,7 +153,7 @@ configuration's test scores should be reported.
 
 Compares two systems line by line, for the qualitative analysis. Each line is categorised as improved, worsened, same-correct or same-incorrect by its per-line Jaccard index, and enriched with the aligned English subtitle and its labels, the label source, and the number of alignment hops, to help tell model errors from alignment or projection noise.
 
-Interactively you are asked for the two prediction files.
+Interactively you are asked for the target language and the two prediction files.
 
 ```bash
 uv run main.py action=compare_predictions analysis.baseline=outputs/hr/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/hr/finetune/hr/base/scores/test.hr.predictions.jsonl

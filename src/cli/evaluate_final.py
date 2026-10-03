@@ -2,7 +2,7 @@ from omegaconf import DictConfig
 from rich.console import Console
 from rich.prompt import Confirm
 
-from src.cli.prompts import ask_split
+from src.cli.prompts import ask_split, ask_target_lang
 from src.cli.render import render_comparison, render_results
 from src.utils.logger import Logger
 
@@ -18,13 +18,14 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console (Console): The console.
         logger (Logger): The logger.
     """
+    target_lang = ask_target_lang(console, cfg)
     cfg.evaluate.split = ask_split(console, cfg.evaluate.split)
     cfg.evaluate.include_zero_shot = Confirm.ask(
         "Include the zero-shot baseline?", default=cfg.evaluate.include_zero_shot
     )
 
     logger.info(
-        f"evaluate_final config: split={cfg.evaluate.split} "
+        f"evaluate_final config: target_lang={target_lang} split={cfg.evaluate.split} "
         f"include_zero_shot={cfg.evaluate.include_zero_shot}"
     )
 

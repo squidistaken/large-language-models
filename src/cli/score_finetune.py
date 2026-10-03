@@ -3,7 +3,7 @@ from pathlib import Path
 from omegaconf import DictConfig
 from rich.console import Console
 
-from src.cli.prompts import ask_required, ask_split
+from src.cli.prompts import ask_required, ask_split, ask_target_lang
 from src.cli.render import render_scores, render_selection
 from src.constants import DEV, TEST
 from src.utils.logger import Logger
@@ -38,6 +38,8 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console (Console): The console.
         logger (Logger): The logger.
     """
+    ask_target_lang(console, cfg)
+
     score_cfg = cfg.finetune.score
     default_dir = _run_dir(cfg)
 

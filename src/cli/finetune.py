@@ -7,10 +7,10 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
-from src.cli.prompts import ask_model, ask_until, parse_choice
+from src.cli.prompts import ask_model, ask_target_lang, ask_until, parse_choice
 from src.cli.score_finetune import score_and_select
-from src.constants import DEV
-from src.finetune.conditions import conditions
+from src.constants import DEV, LANGUAGE_NAMES
+from src.finetune.conditions import condition_languages, conditions, evaluation_languages
 from src.utils.logger import Logger
 
 # The trainer loads torch and transformers, so it is imported only when the action runs; the
@@ -22,6 +22,31 @@ LABEL = "Fine-tune (PEFT)"
 TITLE = "Parameter-Efficient Fine-Tuning"
 
 
+def _render_conditions(console: Console, target_lang: str) -> None:
+    """Render what each PEFT condition trains and is evaluated on, for a target language.
+
+    Args:
+        console (Console): The console.
+        target_lang (str): The assigned target language.
+    """
+    table = Table(title=f"PEFT conditions for {LANGUAGE_NAMES[target_lang]}")
+
+    table.add_column("Condition", style="cyan")
+    table.add_column("Trains on")
+    table.add_column("Evaluated on")
+
+    for condition in conditions(target_lang):
+        trains = condition_languages(condition, target_lang)
+        evaluates = evaluation_languages(condition, target_lang)
+        table.add_row(
+            condition,
+            " + ".join(LANGUAGE_NAMES[lang] for lang in trains),
+            ", ".join(LANGUAGE_NAMES[lang] for lang in evaluates),
+        )
+
+    console.print(table)
+
+
 def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     """Prompt the user for options.
 
@@ -30,7 +55,11 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console (Console): The console.
         logger (Logger): The logger.
     """
-    options = conditions(cfg.finetune.target_lang)
+    target_lang = ask_target_lang(console, cfg)
+    options = conditions(target_lang)
+
+    _render_conditions(console, target_lang)
+
     condition = ask_until(
         console,
         f"Condition ({', '.join(options)})",
@@ -44,7 +73,10 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     cfg.finetune.condition = condition
     cfg.finetune.run_name = run_name
 
-    logger.info(f"finetune config: condition={condition} model={model} run_name={run_name}")
+    logger.info(
+        f"finetune config: target_lang={target_lang} condition={condition} model={model} "
+        f"run_name={run_name}"
+    )
 
 
 def _render(console: Console, summary: FinetuneSummary) -> None:

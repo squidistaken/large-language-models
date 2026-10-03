@@ -1,7 +1,7 @@
 from omegaconf import DictConfig
 from rich.console import Console
 
-from src.cli.prompts import ask_model, ask_split
+from src.cli.prompts import ask_model, ask_split, ask_target_lang
 from src.cli.render import render_scores
 from src.utils.logger import Logger
 
@@ -17,10 +17,13 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console (Console): The console.
         logger (Logger): The logger.
     """
+    target_lang = ask_target_lang(console, cfg)
     model = ask_model(console, cfg)
     cfg.prompting.split = ask_split(console, cfg.prompting.split)
 
-    logger.info(f"zero_shot config: model={model} split={cfg.prompting.split}")
+    logger.info(
+        f"zero_shot config: target_lang={target_lang} model={model} split={cfg.prompting.split}"
+    )
 
 
 def run(cfg: DictConfig, logger: Logger) -> None:

@@ -2,6 +2,7 @@ from omegaconf import DictConfig
 from rich.console import Console
 from rich.prompt import Prompt
 
+from src.cli.prompts import ask_target_lang
 from src.cli.render import render_comparison
 from src.utils.logger import Logger
 
@@ -17,6 +18,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console (Console): The console.
         logger (Logger): The logger.
     """
+    ask_target_lang(console, cfg)
     console.print(
         "Leave a path empty to use the default: zero-shot against the selected bilingual run, "
         f"on {cfg.analysis.split} in {cfg.analysis.lang}."

@@ -4,7 +4,14 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
 from src.cli.prompts import ask_until, parse_languages
-from src.constants import ALL_LANGUAGES, BAND_NAMES, LANGUAGE_NAMES, LANGUAGE_TO_BAND
+from src.constants import (
+    ALL_LANGUAGES,
+    BAND_NAMES,
+    DEFAULT_TARGET_LANG,
+    LANGUAGE_NAMES,
+    LANGUAGE_TO_BAND,
+    SOURCE_LANG,
+)
 from src.data.download_data import XEDDownloader
 from src.utils.logger import Logger
 
@@ -37,7 +44,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     languages = ask_until(
         console,
         "Languages (comma-separated, or 'all')",
-        ",".join(cfg.data.languages),
+        f"{SOURCE_LANG},{DEFAULT_TARGET_LANG}",
         lambda raw: parse_languages(raw, ALL_LANGUAGES),
     )
 

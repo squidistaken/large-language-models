@@ -1,8 +1,10 @@
+import ssl
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import certifi
 from omegaconf import DictConfig
 
 from src.constants import ALL_LANGUAGES, ANNOTATED_LANGS, SOURCE_LANG
@@ -10,6 +12,8 @@ from src.utils.logger import Logger
 
 DEFAULT_BASE_URL = "https://raw.githubusercontent.com/Helsinki-NLP/XED/master"
 REQUEST_TIMEOUT_SECONDS = 30
+# Trust certifi's certificates.
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 DEFAULT_ANNOTATED_DIR = "AnnotatedData"
 DEFAULT_PROJECTIONS_DIR = "Projections"
 DEFAULT_PAIRS_DIR = "subtitle-retrieval/students"
@@ -156,7 +160,9 @@ class XEDDownloader:
 
         try:
             with (
-                urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp,
+                urllib.request.urlopen(
+                    req, timeout=REQUEST_TIMEOUT_SECONDS, context=SSL_CONTEXT
+                ) as resp,
                 open(dest, "wb") as out_f,
             ):
                 out_f.write(resp.read())

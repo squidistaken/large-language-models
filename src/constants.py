@@ -5,6 +5,10 @@ PROCESSED_DIR = "data/processed/xed"
 # Reproducibility.
 DEFAULT_SEED = 42
 SPLIT_NAMES = ("train", "dev", "test")
+TRAIN, DEV, TEST = SPLIT_NAMES
+
+# The partitions a model is scored on.
+EVAL_SPLITS = (DEV, TEST)
 DEFAULT_SPLITS = (0.70, 0.20, 0.10)
 
 # The eight permitted labels, in the fixed order used by every downstream metric.

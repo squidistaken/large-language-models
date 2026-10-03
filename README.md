@@ -6,7 +6,7 @@ Repository for the Large Language Models course (WBAI068-05) at the University o
 
  * Petros Kontopirghos (S5851335)
  * Marcus Harald Olof Persson (S5343798)
- * Julian Wierenga (S)
+ * Julian Wierenga (S5628237)
 
 ## Development
 
@@ -74,4 +74,41 @@ Non-interactively:
 
 ```bash
 uv run main.py action=prepare_data prepare.target_lang=hr prepare.seed=42 prepare.overwrite=true
+```
+
+### Fine-tuning
+
+Fine-tunes the base model with LoRA on the conversational splits from Data Preparation, in one
+of three conditions: English only, target language only, or both (bilingual).
+
+Interactively, choose "Fine-tune (PEFT)" from the menu and you'll be prompted for:
+
+- **Condition:** `en`, the target language, or `bilingual`.
+- **Model:** One of the configs in [conf/model](conf/model), e.g. `qwen3_5_0_8b` for a quick
+  local test.
+- **Run name:** The name of the output folder.
+
+Non-interactively:
+
+```bash
+uv run main.py action=finetune model=qwen3_5_9b finetune.condition=bilingual finetune.run_name=base
+```
+
+On a small GPU, keep the effective batch the same with smaller steps, e.g.
+`finetune.batch_size=2 finetune.grad_accum_steps=8`.
+
+### Scoring and Configuration Selection
+
+Scoring lets a fine-tuned run answer every line of a split and computes all the required metrics for the project. Fine-tuning scores the new run on dev by itself; use
+this action to score a run again, or on the test set.
+
+Interactively, choose "Score Fine-tuned Run" from the menu and you'll be prompted for:
+
+- **Run folder:** A finished fine-tuning run; the latest one by default.
+- **Split:** `dev` or `test`.
+
+Non-interactively:
+
+```bash
+uv run main.py action=score_finetune finetune.score.run_dir=outputs/finetune/bilingual/base finetune.score.split=dev
 ```

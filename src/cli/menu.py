@@ -6,7 +6,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.text import Text
 
-from src.cli import download_data, prepare_data
+from src.cli import download_data, finetune, prepare_data, score_finetune
 from src.utils.logger import Logger
 
 PROJECT_TITLE = "Cross-Lingual Multi-Label Emotion Classification Using Large Language Models"
@@ -30,6 +30,8 @@ class CLIAction(Protocol):
 ACTIONS: dict[str, CLIAction] = {
     "download_data": download_data,
     "prepare_data": prepare_data,
+    "finetune": finetune,
+    "score_finetune": score_finetune,
 }
 
 

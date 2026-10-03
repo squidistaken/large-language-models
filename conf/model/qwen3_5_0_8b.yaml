@@ -7,3 +7,5 @@ batch_size: 8
 max_new_tokens: 32
 decoding:
   do_sample: false
+chat_template_kwargs:
+  enable_thinking: false

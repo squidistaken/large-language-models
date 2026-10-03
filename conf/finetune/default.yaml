@@ -17,6 +17,11 @@ grad_accum_steps: 2
 max_length: 256 # max tokens per example
 warmup_ratio: 0.03
 logging_steps: 10 # optimizer steps between training-loss logs
+
+# Per epoch: dev loss, plus the metrics of generated answers on a fixed dev subset
+metric_samples: 200 # dev lines per language scored after every epoch; null = all, 0 = off
+checkpoint_metric: loss # what picks the kept epoch and drives early stopping: loss | micro_f1
+early_stopping_patience: 1 # stop after this many epochs without improvement; null = off
 gradient_checkpointing: true # recompute activations in the backward pass to save memory
 full_determinism: true # identical GPU runs for the same seed; false can be faster on large models
 

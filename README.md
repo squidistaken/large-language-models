@@ -105,7 +105,7 @@ Output: `data/processed/xed/en-hr/`, with a `split_manifest.json` recording ever
 
 ### Fine-tuning
 
-Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition: `en`, `hr`, or `bilingual`. Only the answer tokens are trained. The model is evaluated on dev after every epoch and the epoch with the lowest dev loss is kept. The run then scores itself on dev and reruns the configuration selection (see below).
+Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition: `en`, `hr`, or `bilingual`. Only the answer tokens are trained. After every epoch the model is evaluated on dev twice: the dev loss, and the metrics of its generated answers on a fixed, seeded subset of 200 dev lines per language (`finetune.metric_samples`; `null` for all, `0` to skip). Both go to W&B and `run_info.json`, so the metrics can be followed per epoch. The epoch with the lowest dev loss is kept (`finetune.checkpoint_metric=micro_f1` keeps the highest dev micro-F1 instead), and training stops after one epoch without improvement (`finetune.early_stopping_patience`; `null` to always train every epoch). The run then scores itself on the full dev set and reruns the configuration selection (see below).
 
 Interactively you are asked for the condition, the model, and a run name. Use the same run name for all three conditions of one configuration.
 

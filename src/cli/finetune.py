@@ -59,7 +59,9 @@ def _render(console: Console, summary: FinetuneSummary) -> None:
     table.add_column("Quantity")
     table.add_column("Value", justify="right", style="cyan")
 
-    best = "n/a" if summary.best_dev_loss is None else f"{summary.best_dev_loss:.4f}"
+    best = (
+        "n/a" if summary.best_checkpoint_score is None else f"{summary.best_checkpoint_score:.4f}"
+    )
     peak = "n/a" if summary.peak_gpu_memory_gib is None else f"{summary.peak_gpu_memory_gib} GiB"
 
     table.add_row("Condition", summary.condition)
@@ -69,7 +71,8 @@ def _render(console: Console, summary: FinetuneSummary) -> None:
     table.add_row("Dev examples", str(summary.dev_examples))
     table.add_row("Trainable parameters", f"{summary.trainable_params:,}")
     table.add_row("Total parameters", f"{summary.total_params:,}")
-    table.add_row("Best dev loss", best)
+    table.add_row("Epochs trained", f"{summary.epochs_trained:g}")
+    table.add_row(f"Best {summary.checkpoint_metric}", best)
     table.add_row("Peak GPU memory", peak)
     table.add_row("Device", summary.device)
     table.add_row("Saved to", summary.run_dir)

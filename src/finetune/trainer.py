@@ -1,6 +1,9 @@
 import math
 import shutil
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from statistics import mean
+from typing import Any
 
 import torch
 import transformers
@@ -15,6 +18,8 @@ from transformers import (
 
 from src.constants import DEV, TRAIN
 from src.data.loading import load_examples
+from src.evaluation.metrics import AGGREGATE_METRICS
+from src.evaluation.scoring import score_examples
 from src.finetune.conditions import condition_languages
 from src.finetune.data import tokenise_examples
 from src.finetune.lora import add_lora
@@ -27,8 +32,8 @@ from src.utils.runs import RUN_INFO_FILE, library_versions, run_dir
 
 ADAPTER_DIR = "adapter"
 CHECKPOINT_DIR = "checkpoints"
-CHECKPOINT_METRIC = "eval_loss"
-CHECKPOINT_RULE = "Evaluate on dev after every epoch; keep the epoch with the lowest dev loss."
+# The metrics that can pick the kept epoch, and whether higher is better.
+CHECKPOINT_METRICS = {"loss": False, "micro_f1": True}
 
 
 @dataclass
@@ -43,9 +48,67 @@ class FinetuneSummary:
     dev_examples: int
     trainable_params: int
     total_params: int
-    best_dev_loss: float | None
+    checkpoint_metric: str
+    best_checkpoint_score: float | None
+    epochs_trained: float
     peak_gpu_memory_gib: float | None
     device: str
+
+
+class MetricTrainer(Trainer):
+    """Trainer that also scores generated answers on dev after every evaluation, so the metrics
+    can be followed per epoch and pick the kept epoch, and that stops early."""
+
+    def __init__(
+        self,
+        *args: Any,
+        dev_metrics: Callable[[], dict[str, float]],
+        patience: int | None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialise the class.
+
+        Args:
+            *args (Any): The Trainer arguments.
+            dev_metrics (Callable[[], dict[str, float]]): The function that scores dev, returning
+                metrics keyed eval_<name>, or nothing when switched off.
+            patience (int | None): The evaluations without improvement before stopping, or None
+                to always train every epoch.
+            **kwargs (Any): The Trainer keyword arguments.
+        """
+        super().__init__(*args, **kwargs)
+        self.dev_metrics = dev_metrics
+        self.patience = patience
+        self.stale = 0
+
+    def evaluate(self, *args: Any, **kwargs: Any) -> dict[str, float]:
+        """Evaluate the dev loss, then score generated answers and check for early stopping.
+
+        Args:
+            *args (Any): The Trainer.evaluate arguments.
+            **kwargs (Any): The Trainer.evaluate keyword arguments.
+
+        Returns:
+            dict[str, float]: The dev loss and metrics.
+        """
+        metrics = super().evaluate(*args, **kwargs)
+
+        if scores := self.dev_metrics():
+            self.log(scores)
+            metrics.update(scores)
+
+        if self.patience is not None:
+            # The best score so far is updated only after this returns, so it is the previous one.
+            key = str(self.args.metric_for_best_model)
+            value, best = (
+                metrics[key if key.startswith("eval_") else f"eval_{key}"],
+                self.state.best_metric,
+            )
+            better = best is None or (value > best if self.args.greater_is_better else value < best)
+            self.stale = 0 if better else self.stale + 1
+            self.control.should_training_stop = self.stale >= self.patience
+
+        return metrics
 
 
 class PEFTTrainer:
@@ -70,6 +133,17 @@ class PEFTTrainer:
         self.logger = logger
         self.model = Model(model_cfg, logger)
         self.run_dir = run_dir(cfg.out_dir, cfg.condition, str(cfg.run_name))
+
+        if cfg.checkpoint_metric not in CHECKPOINT_METRICS:
+            raise ValueError(
+                f"Unknown finetune.checkpoint_metric '{cfg.checkpoint_metric}'. Choose one of: "
+                f"{', '.join(CHECKPOINT_METRICS)}"
+            )
+
+        if cfg.checkpoint_metric != "loss" and cfg.metric_samples == 0:
+            raise ValueError(
+                "A metric checkpoint needs per-epoch scoring; set finetune.metric_samples."
+            )
 
         if self.run_dir.exists() and not cfg.overwrite:
             raise ValueError(
@@ -103,6 +177,19 @@ class PEFTTrainer:
         dev_examples = load_examples(
             cfg.data_dir, cfg.target_lang, langs, DEV, self.logger, cfg.max_eval_samples, cfg.seed
         )
+        # The same seeded subset every epoch, so the per-epoch scores are comparable.
+        metric_examples = {
+            lang: load_examples(
+                cfg.data_dir,
+                cfg.target_lang,
+                [lang],
+                DEV,
+                self.logger,
+                cfg.metric_samples,
+                cfg.seed,
+            )
+            for lang in (langs if cfg.metric_samples != 0 else [])
+        }
 
         self.model.load()
 
@@ -127,13 +214,15 @@ class PEFTTrainer:
                 "dev_examples": len(dev_features),
             },
         )
-        trainer = Trainer(
+        trainer = MetricTrainer(
             model=model,
             args=self._arguments(len(train_features), report_to_wandb=wandb_run is not None),
             train_dataset=Dataset.from_list(train_features),
             eval_dataset=Dataset.from_list(dev_features),
             data_collator=DataCollatorForSeq2Seq(tokenizer, padding=True, pad_to_multiple_of=8),
             processing_class=tokenizer,
+            dev_metrics=lambda: self._dev_metrics(metric_examples),
+            patience=cfg.early_stopping_patience,
         )
 
         reset_peak_memory()
@@ -154,7 +243,9 @@ class PEFTTrainer:
             dev_examples=len(dev_features),
             trainable_params=trainable,
             total_params=total,
-            best_dev_loss=trainer.state.best_metric,
+            checkpoint_metric=f"dev {cfg.checkpoint_metric}",
+            best_checkpoint_score=trainer.state.best_metric,
+            epochs_trained=trainer.state.epoch or 0.0,
             peak_gpu_memory_gib=peak_memory_gib(),
             device=model_info["device"],
         )
@@ -164,7 +255,7 @@ class PEFTTrainer:
             {
                 "summary": asdict(summary),
                 "config": OmegaConf.to_container(self.cfg, resolve=True),
-                "checkpoint_rule": CHECKPOINT_RULE,
+                "checkpoint_rule": self._checkpoint_rule(),
                 "model": model_info,
                 "versions": library_versions(),
                 "log_history": trainer.state.log_history,
@@ -183,6 +274,49 @@ class PEFTTrainer:
         self.model.unload()
 
         return summary
+
+    def _dev_metrics(self, examples: dict[str, list[dict]]) -> dict[str, float]:
+        """Score generated answers on the dev subset of every training language.
+
+        Args:
+            examples (dict[str, list[dict]]): The dev subset of each language; empty when per-epoch
+                scoring is off.
+
+        Returns:
+            dict[str, float]: The metrics, keyed eval_<lang>_<metric>, and the mean micro-F1 over
+                the languages as eval_micro_f1.
+        """
+        metrics: dict[str, float] = {}
+
+        for lang, lines in examples.items():
+            scores, _ = score_examples(self.model, lines, lang)
+            metrics.update({f"eval_{lang}_{key}": scores[key] for key in AGGREGATE_METRICS})
+
+        if examples:
+            metrics["eval_micro_f1"] = mean(metrics[f"eval_{lang}_micro_f1"] for lang in examples)
+
+        return metrics
+
+    def _checkpoint_rule(self) -> str:
+        """Describe how the kept epoch is chosen, for the run info.
+
+        Returns:
+            str: A sentence.
+        """
+        cfg = self.cfg
+        best = "highest" if CHECKPOINT_METRICS[cfg.checkpoint_metric] else "lowest"
+        subset = (
+            "every dev line" if cfg.metric_samples is None else f"{cfg.metric_samples} dev lines"
+        )
+        rule = f"Evaluate on dev after every epoch; keep the epoch with the {best} dev {cfg.checkpoint_metric}"
+
+        if cfg.checkpoint_metric != "loss":
+            rule += f", scored on {subset} per language"
+
+        if cfg.early_stopping_patience is not None:
+            rule += f"; stop after {cfg.early_stopping_patience} epoch(s) without improvement"
+
+        return rule + "."
 
     def _features(
         self, examples: list[dict], tokenizer: PreTrainedTokenizerBase
@@ -229,8 +363,8 @@ class PEFTTrainer:
             save_strategy="epoch",
             save_total_limit=1,
             load_best_model_at_end=True,
-            metric_for_best_model=CHECKPOINT_METRIC,
-            greater_is_better=False,
+            metric_for_best_model=self.cfg.checkpoint_metric,
+            greater_is_better=CHECKPOINT_METRICS[self.cfg.checkpoint_metric],
             logging_steps=self.cfg.logging_steps,
             seed=self.cfg.seed,
             full_determinism=self.cfg.full_determinism,

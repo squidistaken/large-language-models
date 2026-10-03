@@ -6,16 +6,23 @@ from typing import Any
 from omegaconf import DictConfig, OmegaConf
 
 from src.constants import EMOTIONS, ZERO_SHOT
-from src.evaluation.metrics import AGGREGATE_METRICS, metrics_info
+from src.evaluation.metrics import AGGREGATE_METRICS, bootstrap_intervals, metrics_info
 from src.evaluation.scoring import ScoreSummary
 from src.finetune.conditions import conditions, system_name
 from src.finetune.evaluate import AdapterScorer
 from src.finetune.selection import ConfigSelector, SelectionSummary
 from src.prompting.scorer import PromptScorer
 from src.utils import tracking
-from src.utils.files import read_json, write_json
+from src.utils.files import read_json, read_jsonl, write_json
 from src.utils.logger import Logger
-from src.utils.runs import pinned_model_cfg, read_run_info, results_stem, run_dir, scores_path
+from src.utils.runs import (
+    pinned_model_cfg,
+    predictions_path,
+    read_run_info,
+    results_stem,
+    run_dir,
+    scores_path,
+)
 
 
 @dataclass
@@ -51,8 +58,6 @@ class FinalEvaluator:
             self.run_name = str(cfg.evaluate.run_name)
 
         else:
-            # Selecting again, rather than reading selection.json, makes every run that finished
-            # by now a candidate, even when parallel jobs wrote the file in another order.
             self.selection = ConfigSelector(cfg.finetune, logger).select()
             self.run_name = self.selection.best.run_name
 
@@ -66,12 +71,16 @@ class FinalEvaluator:
             condition: run_dir(self.cfg.finetune.out_dir, condition, self.run_name)
             for condition in conditions(self.cfg.finetune.target_lang)
         }
+        folders: dict[str, Path] = {}
         scores = {}
 
         if self.cfg.evaluate.include_zero_shot:
-            scores[ZERO_SHOT] = self._score_zero_shot(next(iter(runs.values())))
+            scorer = self._zero_shot_scorer(next(iter(runs.values())))
+            folders[ZERO_SHOT] = scorer.run_dir
+            scores[ZERO_SHOT] = self._ensure(scorer.run_dir, scorer.score)
 
         for condition, run in runs.items():
+            folders[condition] = run
             scores[condition] = self._ensure(run, lambda run=run: self._score_adapter(run))
 
         summary = ResultsSummary(self.run_name, self.split, self.max_samples)
@@ -79,11 +88,20 @@ class FinalEvaluator:
         for condition, by_lang in scores.items():
             for lang, metrics in by_lang.items():
                 base = {"system": system_name(condition), "eval_lang": lang}
+                lines = read_jsonl(
+                    predictions_path(folders[condition], self.split, self.max_samples, lang)
+                )
+                intervals = bootstrap_intervals(
+                    [line["gold"] for line in lines],
+                    [line["predicted"] for line in lines],
+                    seed=self.cfg.seed,
+                )
 
                 summary.rows.append(
                     {
                         **base,
                         **{key: metrics[key] for key in AGGREGATE_METRICS},
+                        **{f"{key}_ci": bounds for key, bounds in intervals.items()},
                         "count": metrics["count"],
                     }
                 )
@@ -146,22 +164,21 @@ class FinalEvaluator:
 
         return AdapterScorer(score_cfg, self.cfg.wandb, self.logger).score()
 
-    def _score_zero_shot(self, peft_run: Path) -> dict[str, dict[str, Any]]:
-        """Score the base model a PEFT run started from with the zero-shot prompt.
+    def _zero_shot_scorer(self, peft_run: Path) -> PromptScorer:
+        """Set up zero-shot scoring of the base model a PEFT run started from.
 
         Args:
             peft_run (Path): A PEFT run of the evaluated configuration.
 
         Returns:
-            dict[str, dict[str, Any]]: The scores per language.
+            PromptScorer: A scorer that can score the base model on the partition.
         """
         model_cfg = pinned_model_cfg(read_run_info(peft_run))
         prompt_cfg = self.cfg.prompting.copy()
         prompt_cfg.split = self.split
         prompt_cfg.max_samples = self.max_samples
-        scorer = PromptScorer(prompt_cfg, model_cfg, self.cfg.wandb, self.logger)
 
-        return self._ensure(scorer.run_dir, scorer.score)
+        return PromptScorer(prompt_cfg, model_cfg, self.cfg.wandb, self.logger)
 
     def _log(self, summary: ResultsSummary) -> None:
         """Log the results tables, and the dev ranking if this run made it, to W&B.

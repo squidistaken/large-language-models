@@ -143,3 +143,55 @@ def example_jaccard(gold: list[str], predicted: list[str]) -> float:
     union = set(gold) | set(predicted)
 
     return len(set(gold) & set(predicted)) / len(union) if union else ZERO_DIVISION
+
+
+INTERVAL_METRICS = ("micro_f1", "jaccard_samples", "macro_f1")
+BOOTSTRAP_SAMPLES = 1000
+
+
+def bootstrap_intervals(
+    gold: list[list[str]],
+    predicted: list[list[str]],
+    seed: int,
+    level: float = 0.95,
+    samples: int = BOOTSTRAP_SAMPLES,
+) -> dict[str, list[float]]:
+    """Estimate percentile bootstrap confidence intervals by resampling the lines.
+
+    Args:
+        gold (list[list[str]]): The true labels of each line.
+        predicted (list[list[str]]): The predicted labels of each line.
+        seed (int): The seed of the resampling.
+        level (float): The confidence level.
+        samples (int): The number of bootstrap samples.
+
+    Returns:
+        dict[str, list[float]]: A dictionary with the metrics and their confidence intervals.
+    """
+    y_true, y_pred = binarise(gold).astype(bool), binarise(predicted).astype(bool)
+    true_pos, false_pos, false_neg = y_true & y_pred, ~y_true & y_pred, y_true & ~y_pred
+    union = (y_true | y_pred).sum(axis=1)
+    line_jaccard = np.divide(
+        true_pos.sum(axis=1), union, out=np.full(len(union), ZERO_DIVISION), where=union > 0
+    )
+    resamples = np.random.default_rng(seed).integers(0, len(gold), size=(samples, len(gold)))
+    tp, fp, fn = (counts[resamples].sum(axis=1) for counts in (true_pos, false_pos, false_neg))
+
+    def f1(tp: np.ndarray, fp: np.ndarray, fn: np.ndarray) -> np.ndarray:
+        denominator = 2 * tp + fp + fn
+
+        return np.divide(
+            2 * tp, denominator, out=np.full(tp.shape, ZERO_DIVISION), where=denominator > 0
+        )
+
+    estimates = {
+        "micro_f1": f1(tp.sum(axis=1), fp.sum(axis=1), fn.sum(axis=1)),
+        "jaccard_samples": line_jaccard[resamples].mean(axis=1),
+        "macro_f1": f1(tp, fp, fn).mean(axis=1),
+    }
+    tail = (1 - level) / 2 * 100
+
+    return {
+        metric: [float(np.percentile(values, tail)), float(np.percentile(values, 100 - tail))]
+        for metric, values in estimates.items()
+    }

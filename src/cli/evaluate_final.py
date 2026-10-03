@@ -43,7 +43,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     """
     from src.evaluation.compare import PredictionComparer
     from src.evaluation.results import FinalEvaluator
-    from src.plotting.figures import make_figures
+    from src.plotting.report import make_figures
 
     console = Console()
 

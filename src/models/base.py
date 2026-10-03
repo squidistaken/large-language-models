@@ -227,39 +227,60 @@ class Model:
             for start in range(0, len(conversations), self.batch_size)
         ]
         completions: list[str] = []
+        # Generation reads the newest tokens off the right edge, so it pads on the left; training
+        # pads on the right, so restore the side afterwards when called during training.
+        padding_side = tokenizer.padding_side
+        tokenizer.padding_side = "left"
 
-        for batch in self.logger.track(batches, desc="Generating"):
-            prompts = [
-                tokenizer.apply_chat_template(
-                    conversation,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    **self.chat_template_kwargs,
-                )
-                for conversation in batch
-            ]
+        try:
+            for batch in self.logger.track(batches, desc="Generating"):
+                completions.extend(self._generate_batch(model, batch))
 
-            # The prompts are already rendered, so the tokenizer only adds what the template left
-            # out.
-            inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)
-
-            with torch.inference_mode():
-                outputs = model.generate(
-                    **inputs,
-                    max_new_tokens=self.max_new_tokens,
-                    pad_token_id=tokenizer.pad_token_id,
-                    **self.decoding,
-                )
-
-            # Left padding keeps every prompt the same length, so one offset drops all of them.
-            new_tokens = outputs[:, inputs["input_ids"].shape[1] :]
-
-            completions.extend(
-                text.strip()
-                for text in tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
-            )
+        finally:
+            tokenizer.padding_side = padding_side
 
         return completions
+
+    def _generate_batch(self, model: Any, batch: list[list[dict]]) -> list[str]:
+        """Generate the completions of one batch of conversations.
+
+        Args:
+            model (Any): The loaded model, already checked to be able to generate.
+            batch (list[list[dict]]): The prompt-side conversations.
+
+        Returns:
+            list[str]: A list holding the raw completion per conversation, in the given order.
+        """
+        tokenizer = self.tokenizer
+        prompts = [
+            tokenizer.apply_chat_template(
+                conversation,
+                tokenize=False,
+                add_generation_prompt=True,
+                **self.chat_template_kwargs,
+            )
+            for conversation in batch
+        ]
+
+        # The prompts are already rendered, so the tokenizer only adds what the template left out.
+        inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)
+
+        with torch.inference_mode():
+            # The cache is off while training with gradient checkpointing; generation needs it.
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=self.max_new_tokens,
+                pad_token_id=tokenizer.pad_token_id,
+                use_cache=True,
+                **self.decoding,
+            )
+
+        # Left padding keeps every prompt the same length, so one offset drops all of them.
+        new_tokens = outputs[:, inputs["input_ids"].shape[1] :]
+
+        return [
+            text.strip() for text in tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
+        ]
 
     def info(self) -> dict[str, Any]:
         """Describe the model and its settings, for a run manifest.

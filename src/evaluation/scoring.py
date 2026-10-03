@@ -41,7 +41,7 @@ def score_examples(
     model: Model,
     examples: list[dict],
     lang: str,
-    path: Path,
+    path: Path | None = None,
 ) -> tuple[dict[str, Any], list[dict]]:
     """Score one partition by letting the model answer every example and comparing its output to
     the gold answer.
@@ -49,9 +49,10 @@ def score_examples(
     Args:
         model (Model): The loaded model.
         examples (list[dict]): The conversational examples, whose last message is the gold
-            answer and whose second-to-last is the subtitle.
+                               answer and whose second-to-last is the subtitle.
         lang (str): The language of the examples.
-        path (Path): The JSON Lines file for the per-line predictions.
+        path (Path | None): The JSON Lines file for the per-line predictions, or None to keep
+                            them in memory only.
 
     Returns:
         tuple[dict[str, Any], list[dict]]: The scores and the per-line predictions.
@@ -72,7 +73,8 @@ def score_examples(
         for example, labels, answer, output in zip(examples, gold, answers, parsed, strict=True)
     ]
 
-    write_jsonl(path, rows)
+    if path is not None:
+        write_jsonl(path, rows)
 
     return score(gold, parsed), rows
 

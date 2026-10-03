@@ -1,0 +1,7 @@
+# evaluate_final writes the default pair; set both paths to compare any other two systems.
+baseline: null # null = the zero-shot predictions in the target language
+candidate: null # null = the selected bilingual run's predictions in the target language
+lang: ${prepare.target_lang}
+split: ${evaluate.split}
+name: null # null = <baseline>_vs_<candidate>
+out_dir: outputs/analysis

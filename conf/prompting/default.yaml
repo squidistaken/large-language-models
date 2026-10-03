@@ -1,0 +1,6 @@
+data_dir: ${prepare.out_dir}
+target_lang: ${prepare.target_lang}
+out_dir: outputs/prompting
+split: dev
+max_samples: null # null = every line; an integer scores a seeded random subset per language
+seed: ${seed}

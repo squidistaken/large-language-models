@@ -1,5 +1,9 @@
 from collections.abc import Callable
 
+from hydra import compose
+from hydra.core.global_hydra import GlobalHydra
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig
 from rich.console import Console
 from rich.prompt import Prompt
 
@@ -26,6 +30,53 @@ def ask_until[T](console: Console, question: str, default: str, parse: Callable[
 
         except ValueError as e:
             console.print(f"[red]{e}[/red]")
+
+
+def ask_required(console: Console, question: str, default: str | None) -> str:
+    """Ask a question until the answer is not empty.
+
+    Args:
+        console (Console): The console.
+        question (str): The question to ask.
+        default (str | None): The answer used when the user just presses return, if any.
+
+    Returns:
+        str: A non-empty answer.
+    """
+    while True:
+        raw = Prompt.ask(question) if default is None else Prompt.ask(question, default=default)
+
+        if raw.strip():
+            return raw.strip()
+
+        console.print("[red]An answer is required.[/red]")
+
+
+def ask_model(console: Console, cfg: DictConfig) -> str:
+    """Ask which model to use, and load the chosen one.
+
+    Args:
+        console (Console): The console.
+        cfg (DictConfig): The dictionary object override.
+
+    Returns:
+        str: A chosen model.
+    """
+    options = GlobalHydra.instance().config_loader().get_group_options("model")
+    name = ask_until(
+        console,
+        f"Model ({', '.join(options)})",
+        str(cfg.model.name),
+        lambda raw: parse_choice(raw, options, "model"),
+    )
+
+    if name != cfg.model.name:
+        hydra_cfg = HydraConfig.get()
+        overrides = [item for item in hydra_cfg.overrides.task if not item.startswith("model=")]
+        composed = compose(hydra_cfg.job.config_name, overrides=[*overrides, f"model={name}"])
+        cfg.model = composed.model
+
+    return name
 
 
 def parse_languages(raw: str, allowed: list[str]) -> list[str]:

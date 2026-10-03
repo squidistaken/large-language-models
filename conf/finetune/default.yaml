@@ -1,61 +1,39 @@
-# Settings for action=finetune
-# Each run saves a copy of the values
-
-# what to train on
-condition: en              # en = English, hr = Croatian, both = both (bilingual)
+condition: en # en = English only, hr (the target_lang) = Croatian only, bilingual = both
 data_dir: ${prepare.out_dir}
 target_lang: ${prepare.target_lang}
 
-# Which model
-model_name: ???
-model_revision: main
-chat_template_kwargs: {}
-
-# LoRA add on
+# LoRA adapter (QLoRA when model.quantization=4bit)
 lora:
   r: 16
   alpha: 32
   dropout: 0.05
   target_modules: all-linear
 
-# Precision
-quantization: none  # none = LoRA, 4bit = QLoRA 
-
 # Training
 learning_rate: 2.0e-4
 epochs: 3
 batch_size: 8
 grad_accum_steps: 2
-max_length: 256       # max tokens per example
+max_length: 256 # max tokens per example
 warmup_ratio: 0.03
+gradient_checkpointing: true # recompute activations in the backward pass to save memory
+full_determinism: true # identical GPU runs for the same seed; false can be faster on large models
 
-
-# choosing best checkpoint
-checkpoint_metric: eval_loss 
-
-#Output
+# Output
 seed: ${seed}
-out_dir: outputs/finetune 
-
-# Run name, logging and quick-test limits
-run_name: ${now:%Y%m%d_%H%M%S}       # results go to outputs/finetune/<condition>/<run_name>
-report_to: none                      # To do
+out_dir: outputs/finetune
+run_name: ${now:%Y%m%d_%H%M%S}
 max_train_samples: null
 max_eval_samples: null
-overwrite: false                     # true = replace an existing run folder (including its scores)
+overwrite: false # true = replace an existing run folder
 
-# Scoring a trained run
-score: 
-  run_dir: ???
+# Scoring a trained run; runs automatically on dev after fine-tuning.
+score:
+  run_dir: null # null = the latest finished run
   split: dev
-  batch_size: 16
-  max_new_tokens: 48
   max_samples: null
 
-
-# Choosing the final configuratoin on dev
-select: 
-  candidates: ???
-  conditions: [en, "${finetune.target_lang}", bilingual]
-  langs: [en, "${finetune.target_lang}"]
+# Choosing the final configuration; runs automatically after every full dev scoring.
+select:
+  candidates: null # null = every run scored on the full dev set in all conditions
   metric: micro_f1

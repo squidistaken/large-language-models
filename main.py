@@ -1,3 +1,12 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+os.environ.setdefault("TORCH_CPP_LOG_LEVEL", "ERROR")
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
 

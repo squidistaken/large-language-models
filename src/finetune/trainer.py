@@ -1,11 +1,9 @@
 import math
-import platform
-import random
+import os
 import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-import peft
 import torch
 import transformers
 from datasets import Dataset
@@ -17,15 +15,22 @@ from transformers import (
     TrainingArguments,
 )
 
-from src.finetune.data import load_examples, tokenise_examples
-from src.finetune.model import load_model, load_tokenizer, training_dtype
+from src.constants import DEV, TRAIN
+from src.data.loading import load_examples
+from src.finetune.conditions import condition_languages
+from src.finetune.data import tokenise_examples
+from src.finetune.lora import add_lora
+from src.models.base import Model
 from src.utils.files import write_json
+from src.utils.hardware import peak_memory_gib, reset_peak_memory
 from src.utils.logger import Logger
+from src.utils.runs import RUN_INFO_FILE, library_versions
 
 ADAPTER_DIR = "adapter"
 CHECKPOINT_DIR = "checkpoints"
-RUN_INFO_FILE = "run_info.json"
 LOGGING_STEPS = 10
+CHECKPOINT_METRIC = "eval_loss"
+CHECKPOINT_RULE = "Evaluate on dev after every epoch; keep the epoch with the lowest dev loss."
 
 
 @dataclass
@@ -33,61 +38,37 @@ class FinetuneSummary:
     """Facts about one fine-tuning run, rendered by the CLI and stored in the run info."""
 
     condition: str
-    model_name: str
+    model: str
+    revision_sha: str
     run_dir: str
     train_examples: int
     dev_examples: int
     trainable_params: int
     total_params: int
     best_dev_loss: float | None
+    peak_gpu_memory_gib: float | None
     device: str
-
-
-def describe_hardware() -> dict[str, str]:
-    """Describe the machine and library versions a run used.
-
-    Returns:
-        dict[str, str]: The device name and software versions.
-    """
-    if torch.cuda.is_available():
-        device = torch.cuda.get_device_name(0)
-    elif torch.backends.mps.is_available():
-        device = "Apple MPS"
-    else:
-        device = "CPU"
-
-    return {
-        "device": device,
-        "python": platform.python_version(),
-        "torch": torch.__version__,
-        "transformers": transformers.__version__,
-        "peft": peft.__version__,
-    }
 
 
 class PEFTTrainer:
     """Class that fine-tunes the base model with LoRA for one PEFT condition."""
 
-    def __init__(self, cfg: DictConfig, logger: Logger) -> None:
+    def __init__(self, cfg: DictConfig, model_cfg: DictConfig, logger: Logger) -> None:
         """Initialise the class.
 
         Args:
             cfg (DictConfig): The finetune config.
+            model_cfg (DictConfig): The model config, shared with prompting.
             logger (Logger): The logger.
 
         Raises:
-            ValueError: If no model name is set, or the run folder exists and overwrite is off.
+            ValueError: If the model is unknown, or the run folder exists and overwrite is off.
         """
-        if OmegaConf.is_missing(cfg, "model_name"):
-            raise ValueError(
-                "finetune.model_name is not set. Pass finetune.model_name=<Hugging Face model> "
-                "(the primary model is still to be chosen, #19)."
-            )
-
         self.cfg = cfg
         self.logger = logger
-        self.resolved_cfg = OmegaConf.to_container(cfg, resolve=True)
+        self.model = Model(model_cfg, logger)
         self.run_dir = Path(cfg.out_dir) / cfg.condition / str(cfg.run_name)
+
         if self.run_dir.exists() and not cfg.overwrite:
             raise ValueError(
                 f"{self.run_dir} already exists. Choose another finetune.run_name, or pass "
@@ -101,15 +82,36 @@ class PEFTTrainer:
             FinetuneSummary: A collection of facts describing the run.
         """
         transformers.set_seed(self.cfg.seed)
+
         if self.run_dir.exists():
             shutil.rmtree(self.run_dir)
             self.logger.info(f"Removed the previous run in {self.run_dir}")
 
-        tokenizer = load_tokenizer(self.cfg.model_name, self.cfg.model_revision)
-        train_features = self._features("train", tokenizer, self.cfg.max_train_samples)
-        dev_features = self._features("dev", tokenizer, self.cfg.max_eval_samples)
-        model = load_model(self.cfg, self.logger)
+        cfg = self.cfg
+        langs = condition_languages(cfg.condition, cfg.target_lang)
+        train_examples = load_examples(
+            cfg.data_dir,
+            cfg.target_lang,
+            langs,
+            TRAIN,
+            self.logger,
+            cfg.max_train_samples,
+            cfg.seed,
+        )
+        dev_examples = load_examples(
+            cfg.data_dir, cfg.target_lang, langs, DEV, self.logger, cfg.max_eval_samples, cfg.seed
+        )
 
+        self.model.load()
+
+        tokenizer = self.model.tokenizer
+
+        # Generation pads on the left; training pads on the right so positions start at zero.
+        tokenizer.padding_side = "right"
+
+        train_features = self._features(train_examples, tokenizer)
+        dev_features = self._features(dev_examples, tokenizer)
+        model = add_lora(self.model, self.cfg.lora)
         trainer = Trainer(
             model=model,
             args=self._arguments(len(train_features)),
@@ -119,58 +121,61 @@ class PEFTTrainer:
             processing_class=tokenizer,
         )
 
+        reset_peak_memory()
         trainer.train()
         trainer.save_model(str(self.run_dir / ADAPTER_DIR))
-        tokenizer.save_pretrained(str(self.run_dir / ADAPTER_DIR))
 
         trainable, total = model.get_nb_trainable_parameters()
-        hardware = describe_hardware()
+        model_info = self.model.info()
         summary = FinetuneSummary(
             condition=self.cfg.condition,
-            model_name=self.cfg.model_name,
+            model=self.model.hf_id,
+            revision_sha=self.model.revision_sha,
             run_dir=str(self.run_dir),
             train_examples=len(train_features),
             dev_examples=len(dev_features),
             trainable_params=trainable,
             total_params=total,
             best_dev_loss=trainer.state.best_metric,
-            device=hardware["device"],
+            peak_gpu_memory_gib=peak_memory_gib(),
+            device=model_info["device"],
         )
 
         write_json(
             self.run_dir / RUN_INFO_FILE,
             {
                 "summary": asdict(summary),
-                "config": self.resolved_cfg,
-                "hardware": hardware,
+                "config": OmegaConf.to_container(self.cfg, resolve=True),
+                "checkpoint_rule": CHECKPOINT_RULE,
+                "model": model_info,
+                "versions": library_versions(),
                 "log_history": trainer.state.log_history,
             },
         )
 
         self.logger.info(f"Saved the adapter and run info to {self.run_dir}")
 
+        # Free the GPU for scoring.
+        del trainer, model
+        self.model.unload()
+
         return summary
 
     def _features(
-        self, split: str, tokenizer: PreTrainedTokenizerBase, limit: int | None
+        self, examples: list[dict], tokenizer: PreTrainedTokenizerBase
     ) -> list[dict[str, list[int]]]:
-        """Load and tokenise one partition, optionally keeping a random subset for quick tests.
+        """Tokenise examples with the model's own chat template options.
 
         Args:
-            split (str): The partition name.
+            examples (list[dict]): The conversational examples.
             tokenizer (PreTrainedTokenizerBase): The model's tokenizer.
-            limit (int | None): The maximum number of examples, or None for all of them.
 
         Returns:
             list[dict[str, list[int]]]: A list of tokenised examples.
         """
-        examples = load_examples(self.cfg, split, self.logger)
-
-        if limit is not None:
-            random.Random(self.cfg.seed).shuffle(examples)
-            examples = examples[:limit]
-
-        return tokenise_examples(examples, tokenizer, self.cfg, self.logger)
+        return tokenise_examples(
+            examples, tokenizer, self.model.chat_template_kwargs, self.cfg.max_length, self.logger
+        )
 
     def _arguments(self, train_examples: int) -> TrainingArguments:
         """Build the training arguments from the finetune config.
@@ -179,7 +184,7 @@ class PEFTTrainer:
             train_examples (int): The number of training examples.
 
         Returns:
-            TrainingArguments: The training arguments.
+            TrainingArguments: A collection of training arguments.
         """
         steps_per_epoch = math.ceil(
             train_examples / (self.cfg.batch_size * self.cfg.grad_accum_steps)
@@ -193,15 +198,19 @@ class PEFTTrainer:
             per_device_train_batch_size=self.cfg.batch_size,
             per_device_eval_batch_size=self.cfg.batch_size,
             gradient_accumulation_steps=self.cfg.grad_accum_steps,
+            gradient_checkpointing=self.cfg.gradient_checkpointing,
+            # Non-reentrant checkpointing lets gradients reach LoRA with frozen embeddings.
+            gradient_checkpointing_kwargs={"use_reentrant": False},
             warmup_steps=warmup_steps,
             eval_strategy="epoch",
             save_strategy="epoch",
             save_total_limit=1,
             load_best_model_at_end=True,
-            metric_for_best_model=self.cfg.checkpoint_metric,
+            metric_for_best_model=CHECKPOINT_METRIC,
             greater_is_better=False,
             logging_steps=LOGGING_STEPS,
             seed=self.cfg.seed,
-            bf16=training_dtype() == torch.bfloat16,
-            report_to=self.cfg.report_to,
+            full_determinism=self.cfg.full_determinism,
+            bf16=self.model.torch_dtype == torch.bfloat16 and torch.cuda.is_available(),
+            report_to="none" if os.getenv("WANDB_MODE", "disabled") == "disabled" else "wandb",
         )

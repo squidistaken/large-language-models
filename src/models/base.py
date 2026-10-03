@@ -1,10 +1,9 @@
 import gc
-from abc import ABC
-from dataclasses import asdict, dataclass
-from typing import Any, ClassVar, Protocol
+from typing import Any
 
 import torch
 from omegaconf import DictConfig, OmegaConf
+from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from transformers.generation import GenerationMixin
 from transformers.modeling_utils import PreTrainedModel
@@ -26,72 +25,74 @@ DTYPES: dict[str, torch.dtype] = {
 }
 
 
-class AutoLoader(Protocol):
-    """Class that loads pretrained weights from HuggingFace."""
+def _mapping(cfg: DictConfig, key: str) -> dict[str, Any]:
+    """Get a mapping from the config, resolving any interpolations and converting keys to strings.
 
-    def from_pretrained(self, *args: Any, **kwargs: Any) -> Any: ...
+    Args:
+        cfg (DictConfig): The config.
+        key (str): The key of the mapping.
 
+    Returns:
+        dict[str, Any]: A mapping, or an empty mapping if the key is not present.
+    """
+    value = OmegaConf.to_container(cfg.get(key, {}), resolve=True)
 
-@dataclass(frozen=True)
-class ModelCard:
-    """The published facts about a model."""
-
-    name: str
-    hf_id: str
-    params: str
-    licence: str
-    languages: str
-    accessibility: str
+    return {str(name): item for name, item in value.items()} if isinstance(value, dict) else {}
 
 
-class BaseModel(ABC):
-    """Base class to wrap Hugging Face causal language models for batched generation."""
+class Model:
+    """Class to wrap a Hugging Face causal language model."""
 
-    card: ClassVar[ModelCard]
-    auto_class: ClassVar[AutoLoader] = AutoModelForCausalLM
+    auto_class = AutoModelForCausalLM
 
     def __init__(self, cfg: DictConfig, logger: Logger) -> None:
         """Initialise the class.
 
         Args:
-            cfg (DictConfig): The dictionary object override.
+            cfg (DictConfig): The model config.
             logger (Logger): The logger.
         """
         self.logger = logger
-        self.hf_id = str(cfg.get("hf_id", self.card.hf_id))
+        self.name = str(cfg.name)
+        self.hf_id = str(cfg.hf_id)
         self.revision = str(cfg.get("revision", "main"))
         self.dtype = str(cfg.get("dtype", DEFAULT_DTYPE))
         self.quantization = cfg.get("quantization", None)
         self.batch_size = int(cfg.get("batch_size", DEFAULT_BATCH_SIZE))
         self.max_new_tokens = int(cfg.get("max_new_tokens", DEFAULT_MAX_NEW_TOKENS))
-        decoding = OmegaConf.to_container(cfg.get("decoding", {}), resolve=True)
-        self.decoding = (
-            {str(key): value for key, value in decoding.items()}
-            if isinstance(decoding, dict)
-            else {}
-        )
+        self.decoding = _mapping(cfg, "decoding")
+        self.chat_template_kwargs = _mapping(cfg, "chat_template_kwargs")
 
         if self.dtype not in DTYPES:
             raise ValueError(f"Unknown dtype {self.dtype!r}, expected one of {sorted(DTYPES)}")
 
-        self._model: PreTrainedModel | None = None
+        self._model: PreTrainedModel | PeftModel | None = None
         self._tokenizer: PreTrainedTokenizerBase | None = None
         self._revision_sha = self.revision
 
     @property
-    def model(self) -> PreTrainedModel:
+    def model(self) -> PreTrainedModel | PeftModel:
         """Get the loaded model.
 
         Returns:
-            PreTrainedModel: A model.
+            PreTrainedModel | PeftModel: A model.
 
         Raises:
             RuntimeError: If the weights have not been loaded.
         """
         if self._model is None:
-            raise RuntimeError(f"{self.card.name} is not loaded, call load() first")
+            raise RuntimeError(f"{self.name} is not loaded, call load() first")
 
         return self._model
+
+    @model.setter
+    def model(self, model: PreTrainedModel | PeftModel) -> None:
+        """Replace the loaded model, e.g. with one that has a LoRA adapter on top.
+
+        Args:
+            model (PreTrainedModel | PeftModel): The new model.
+        """
+        self._model = model
 
     @property
     def tokenizer(self) -> PreTrainedTokenizerBase:
@@ -104,13 +105,13 @@ class BaseModel(ABC):
             RuntimeError: If the tokenizer has not been loaded.
         """
         if self._tokenizer is None:
-            raise RuntimeError(f"{self.card.name} is not loaded, call load() first")
+            raise RuntimeError(f"{self.name} is not loaded, call load() first")
 
         return self._tokenizer
 
     @property
     def is_loaded(self) -> bool:
-        """Whether the weights are in memory.
+        """Get whether the model and tokenizer are loaded.
 
         Returns:
             bool: True if the model and tokenizer are loaded.
@@ -159,18 +160,10 @@ class BaseModel(ABC):
             bnb_4bit_compute_dtype=self.torch_dtype,
         )
 
-    def template_kwargs(self) -> dict[str, Any]:
-        """Get the extra keyword arguments this model's chat template expects.
-
-        Returns:
-            dict[str, Any]: A dictionary containing template arguments.
-        """
-        return {}
-
     def load(self) -> None:
         """Load the tokenizer and the weights at the pinned revision."""
         if self.is_loaded:
-            self.logger.warning(f"{self.card.name} is already loaded, skipping")
+            self.logger.warning(f"{self.name} is already loaded, skipping")
 
             return
 
@@ -223,8 +216,8 @@ class BaseModel(ABC):
         tokenizer = self.tokenizer
         model = self.model
 
-        if not isinstance(model, GenerationMixin):
-            raise TypeError(f"{self.card.name} was loaded as a model that cannot generate")
+        if not isinstance(model, GenerationMixin | PeftModel):
+            raise TypeError(f"{self.name} was loaded as a model that cannot generate")
 
         batches = [
             conversations[start : start + self.batch_size]
@@ -238,7 +231,7 @@ class BaseModel(ABC):
                     conversation,
                     tokenize=False,
                     add_generation_prompt=True,
-                    **self.template_kwargs(),
+                    **self.chat_template_kwargs,
                 )
                 for conversation in batch
             ]
@@ -269,10 +262,10 @@ class BaseModel(ABC):
         """Describe the model and its settings, for a run manifest.
 
         Returns:
-            dict[str, Any]: A dictionary containing the card and the resolved run settings.
+            dict[str, Any]: A dictionary containing the resolved run settings.
         """
         return {
-            **asdict(self.card),
+            "name": self.name,
             "hf_id": self.hf_id,
             "revision": self.revision,
             "revision_sha": self.revision_sha,
@@ -281,6 +274,7 @@ class BaseModel(ABC):
             "batch_size": self.batch_size,
             "max_new_tokens": self.max_new_tokens,
             "decoding": self.decoding,
+            "chat_template_kwargs": self.chat_template_kwargs,
             "device": device_summary(),
             "vram_gb": round(vram_gb(), 1),
         }
@@ -298,4 +292,4 @@ class BaseModel(ABC):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        self.logger.info(f"Unloaded {self.card.name}")
+        self.logger.info(f"Unloaded {self.name}")

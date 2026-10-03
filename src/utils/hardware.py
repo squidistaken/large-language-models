@@ -20,6 +20,24 @@ def vram_gb() -> float:
     return total / BYTES_PER_GIB
 
 
+def reset_peak_memory() -> None:
+    """Reset peak memory statistics, if there is a GPU."""
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
+
+def peak_memory_gib() -> float | None:
+    """Measure the most GPU memory PyTorch has allocated since the last reset.
+
+    Returns:
+        float | None: A peak in GiB, or None on a machine without a GPU.
+    """
+    if not torch.cuda.is_available():
+        return None
+
+    return round(torch.cuda.max_memory_allocated() / BYTES_PER_GIB, 2)
+
+
 def device_summary() -> str:
     """Describe the hardware a run landed on.
 

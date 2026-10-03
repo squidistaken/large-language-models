@@ -33,7 +33,12 @@ def _mapping(cfg: DictConfig, key: str) -> dict[str, Any]:
     Returns:
         dict[str, Any]: A mapping, or an empty mapping if the key is not present.
     """
-    value = OmegaConf.to_container(cfg.get(key, {}), resolve=True)
+    node = cfg.get(key)
+
+    if node is None:
+        return {}
+
+    value = OmegaConf.to_container(node, resolve=True)
 
     return {str(name): item for name, item in value.items()} if isinstance(value, dict) else {}
 

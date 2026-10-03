@@ -29,6 +29,7 @@ uv run main.py          # opens the interactive menu
 | `HF_HOME` | Optional model cache location; on Hábrók, jobs default to `/scratch/$USER/hf-cache`. |
 | `WANDB_MODE` | `online`, `offline` or `disabled` (an empty value counts as disabled). |
 | `WANDB_API_KEY` | Needed for online W&B runs, unless you have run `wandb login`. |
+| `WANDB_ENTITY`, `WANDB_PROJECT` | The W&B team and project to log to; the entity defaults to your own. |
 | `WANDB_DIR`, `UV_CACHE_DIR` | Optional cache locations, e.g. on `/scratch`. |
 
 Model weights, access tokens and the dataset are never committed: `data/`, `outputs/`, `logs/`,
@@ -191,7 +192,7 @@ Malformed answers, and answers with no permitted label, count as an empty label 
 
 ## Weights & Biases
 
-Set `WANDB_MODE=online` and `WANDB_API_KEY` in `.env` (or run `wandb login`). The project defaults to `large-language-models`; change it with `wandb.project=...` or `wandb.entity=...`.
+Set `WANDB_MODE=online` and `WANDB_API_KEY` in `.env` (or run `wandb login`). The project defaults to `large-language-models` under your own entity; set `WANDB_ENTITY` and `WANDB_PROJECT` in `.env` to log to the team's project instead.
 
 Each fine-tuned adapter is one W&B run (`<condition>/<run_name>`, grouped by run name). It holds the training curves, and later scoring jobs resume the same run, adding the metrics, per-emotion tables and predictions.
 

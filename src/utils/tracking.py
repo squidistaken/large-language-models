@@ -54,7 +54,7 @@ def start(
 
     run = wandb.init(
         project=cfg.project,
-        entity=cfg.get("entity"),
+        entity=cfg.get("entity") or None,
         name=name,
         group=group,
         job_type=job_type,

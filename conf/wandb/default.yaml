@@ -1,4 +1,4 @@
-project: large-language-models
-entity: null # null = your default W&B entity
+project: ${oc.env:WANDB_PROJECT,large-language-models}
+entity: ${oc.env:WANDB_ENTITY,null} # the team or user to log to; null = your default W&B entity
 tags: []
 mode: ${oc.env:WANDB_MODE,disabled}

@@ -9,15 +9,13 @@ from transformers.generation import GenerationMixin
 from transformers.modeling_utils import PreTrainedModel
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from src.constants import (
-    DEFAULT_BATCH_SIZE,
-    DEFAULT_DTYPE,
-    DEFAULT_MAX_NEW_TOKENS,
-    QUANTIZATION_4BIT,
-)
 from src.utils.hardware import device_summary, vram_gb
 from src.utils.logger import Logger
 
+DEFAULT_DTYPE = "bfloat16"
+DEFAULT_BATCH_SIZE = 8
+DEFAULT_MAX_NEW_TOKENS = 32
+QUANTIZATION_4BIT = "4bit"
 DTYPES: dict[str, torch.dtype] = {
     "bfloat16": torch.bfloat16,
     "float16": torch.float16,

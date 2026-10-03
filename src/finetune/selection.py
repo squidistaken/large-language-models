@@ -6,11 +6,10 @@ from typing import Any
 from omegaconf import DictConfig
 
 from src.constants import DEV, SOURCE_LANG
-from src.evaluation.scoring import SCORES_DIR, scores_stem
 from src.finetune.conditions import conditions, evaluation_languages
 from src.utils.files import read_json, write_json
 from src.utils.logger import Logger
-from src.utils.runs import read_run_info
+from src.utils.runs import SCORES_DIR, read_run_info, run_dir, scores_path, scores_stem
 
 SELECTION_FILE = "selection.json"
 DEV_SCORES_FILE = f"{scores_stem(DEV, None)}.json"
@@ -112,7 +111,7 @@ class ConfigSelector:
 
         Raises:
             ValueError: If there are no candidates, or they were not trained with the same model
-                and data.
+                        and data.
         """
         summary = SelectionSummary(
             metric=self.metric,
@@ -192,17 +191,17 @@ class ConfigSelector:
         configs = []
 
         for condition in self.conditions:
-            run_dir = self.out_dir / condition / run_name
-            scores_path = run_dir / SCORES_DIR / DEV_SCORES_FILE
+            run = run_dir(self.cfg.out_dir, condition, run_name)
+            path = scores_path(run, DEV, None)
 
-            if not scores_path.exists():
+            if not path.exists():
                 raise FileNotFoundError(
-                    f"Missing {scores_path}. Train '{run_name}' for condition '{condition}' and "
-                    "score it on the full dev set first."
+                    f"Missing {path}. Train '{run_name}' for condition '{condition}' and score it "
+                    "on the full dev set first."
                 )
 
-            configs.append(self._settings(read_run_info(run_dir)))
-            scores = read_json(scores_path)["scores"]
+            configs.append(self._settings(read_run_info(run)))
+            scores = read_json(path)["scores"]
 
             for lang in evaluation_languages(condition, self.cfg.target_lang):
                 if lang in per_lang:
@@ -244,3 +243,17 @@ class ConfigSelector:
         }
 
         return {key: settings.get(key) for key in SHARED_KEYS}
+
+
+def selected_run(out_dir: str) -> str | None:
+    """Get the run name the last dev-set selection picked.
+
+    Args:
+        out_dir (str): The base folder of the fine-tuning runs.
+
+    Returns:
+        str | None: A run name, or None if no selection has been made yet.
+    """
+    path = Path(out_dir) / SELECTION_FILE
+
+    return str(read_json(path)["best"]) if path.exists() else None

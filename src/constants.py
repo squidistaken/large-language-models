@@ -48,7 +48,6 @@ BAND_SIZES = {
 LANGUAGE_TO_BAND = {lang: band for band, langs in LANGUAGE_BANDS.items() for lang in langs}
 ALL_LANGUAGES = sorted(set(LANGUAGE_TO_BAND) | {SOURCE_LANG})
 TARGET_LANGS = sorted(LANGUAGE_TO_BAND)
-PAIRS_LANGS = set(ALL_LANGUAGES)
 LANGUAGE_NAMES = {
     "ar": "Arabic",
     "bg": "Bulgarian",
@@ -82,8 +81,7 @@ LANGUAGE_NAMES = {
     "vi": "Vietnamese",
 }
 
-# Models.
-DEFAULT_DTYPE = "bfloat16"
-DEFAULT_BATCH_SIZE = 8
-DEFAULT_MAX_NEW_TOKENS = 32
-QUANTIZATION_4BIT = "4bit"
+# The systems compared: zero-shot prompting and the PEFT conditions (English, the target language,
+# or both).
+ZERO_SHOT = "zero_shot"
+BILINGUAL = "bilingual"

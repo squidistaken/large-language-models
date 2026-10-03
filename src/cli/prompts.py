@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 from rich.console import Console
 from rich.prompt import Prompt
 
+from src.constants import EVAL_SPLITS
 from src.data.splitting import validate_splits
 
 
@@ -167,3 +168,21 @@ def parse_int(raw: str, subject: str) -> int:
 
     except ValueError as e:
         raise ValueError(f"The {subject} must be a whole number, got '{raw}'.") from e
+
+
+def ask_split(console: Console, default: str) -> str:
+    """Ask which partition to score: dev or test.
+
+    Args:
+        console (Console): The console.
+        default (str): The answer used when the user just presses return.
+
+    Returns:
+        str: A chosen partition.
+    """
+    return ask_until(
+        console,
+        f"Split ({', '.join(EVAL_SPLITS)})",
+        default,
+        lambda raw: parse_choice(raw, list(EVAL_SPLITS), "split"),
+    )

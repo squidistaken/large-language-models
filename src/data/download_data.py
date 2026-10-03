@@ -5,7 +5,7 @@ from pathlib import Path
 
 from omegaconf import DictConfig
 
-from src.constants import ALL_LANGUAGES, ANNOTATED_LANGS, PAIRS_LANGS, SOURCE_LANG
+from src.constants import ALL_LANGUAGES, ANNOTATED_LANGS, SOURCE_LANG
 from src.utils.logger import Logger
 
 DEFAULT_BASE_URL = "https://raw.githubusercontent.com/Helsinki-NLP/XED/master"
@@ -93,7 +93,7 @@ class XEDDownloader:
                 local_filename = f"{lang}-projections.tsv"
                 files[local_filename] = f"{self.base_url}/{self.projections_dir}/{remote_filename}"
 
-            if lang in PAIRS_LANGS:
+            if lang in ALL_LANGUAGES:
                 files[f"pairs-{lang}.txt"] = f"{self.base_url}/{self.pairs_dir}/pairs-{lang}.txt"
 
             if lang == SOURCE_LANG:

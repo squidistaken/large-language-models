@@ -1,6 +1,4 @@
-from src.constants import SOURCE_LANG
-
-BILINGUAL = "bilingual"
+from src.constants import BILINGUAL, SOURCE_LANG, ZERO_SHOT
 
 
 def conditions(target_lang: str) -> list[str]:
@@ -56,3 +54,27 @@ def evaluation_languages(condition: str, target_lang: str) -> list[str]:
         return [target_lang]
 
     return [SOURCE_LANG, target_lang]
+
+
+def system_name(condition: str) -> str:
+    """Get the display name of a PEFT condition.
+
+    Args:
+        condition (str): The PEFT condition.
+
+    Returns:
+        str: A display name.
+    """
+    return "zero-shot" if condition == ZERO_SHOT else f"PEFT-{condition}"
+
+
+def systems(target_lang: str) -> list[str]:
+    """Get the display names of all systems for a target language.
+
+    Args:
+        target_lang (str): The assigned target language.
+
+    Returns:
+        list[str]: A list of system names.
+    """
+    return [system_name(condition) for condition in (ZERO_SHOT, *conditions(target_lang))]

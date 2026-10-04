@@ -125,7 +125,7 @@ Slurm:
 ./slurm/run.sh --slurm-config a100 action=finetune finetune.condition=bilingual finetune.run_name=base
 ```
 
-The defaults are rank 16, alpha 32, dropout 0.05 on all linear layers; learning rate 2e-4, 3 epochs, batch 8 with 2 accumulation steps, maximum length 256 tokens, 3% warm-up, seed 42. On a small GPU, keep the effective batch the same with smaller steps. For a quick test, limit the data with `finetune.max_train_samples=64 finetune.max_eval_samples=32 finetune.score.max_samples=32`.
+The defaults are rank 16, alpha 32, dropout 0.05 on all linear layers; learning rate 2e-4, 3 epochs, batch 8 with 2 accumulation steps, maximum length 256 tokens, 3% warm-up, seed 42. The model is evaluated on dev twice per epoch; the checkpoint with the highest dev micro-F1 is kept, and training stops after one epoch without improvement. On a small GPU, keep the effective batch the same with smaller steps. For a quick test, limit the data with `finetune.max_train_samples=64 finetune.max_eval_samples=32 finetune.score.max_samples=32`.
 
 Output: `outputs/hr/finetune/<condition>/<run_name>/`, with the adapter and a `run_info.json` recording every hyperparameter, the model revision, library versions, hardware, peak GPU memory and the training log.
 
@@ -133,6 +133,14 @@ Output: `outputs/hr/finetune/<condition>/<run_name>/`, with the adapter and a `r
 
 Lets a fine-tuned run answer every line of a split and computes all the metrics. Fine-tuning
 already scores each run on dev; use this to score a run again, or on test.
+
+After every full dev scoring, one final PEFT configuration is selected. A configuration is the set of
+fine-tuning choices the three conditions share (LoRA or QLoRA, adapter, optimisation and checkpoint
+settings), trained under one run name; the base model, data split and seed are the same for every
+candidate. Each candidate's dev micro-F1 is averaged per language over the conditions evaluated in
+that language (English: `en` and `bilingual`; the target language: all three), then over the two
+languages with equal weight, and the highest score wins. Only the selected configuration is scored on
+test.
 
 Interactively you are asked for the target language, the run folder (the latest of that language by default) and the split.
 
@@ -146,8 +154,7 @@ Slurm:
 ./slurm/run.sh --slurm-config a100 action=score_finetune finetune.score.run_dir=outputs/hr/finetune/bilingual/base finetune.score.split=dev
 ```
 
-Scoring a run on test that is not the selected configuration prints a warning: only the selected
-configuration's test scores should be reported.
+Output: `outputs/hr/finetune/<condition>/<run_name>/scores/`, with `<split>.json` and the per-line predictions `<split>.<lang>.predictions.jsonl`, and the dev-set ranking in `outputs/hr/finetune/selection.json`.
 
 ### Comparing Predictions
 

@@ -25,7 +25,7 @@ class EmotionGain(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Per-emotion F1 gain over zero-shot on {self.data.split}"
+        return f"Per-emotion F1 gain over zero-shot on {self.data.split} ({self.data.run_name})"
 
     def draw(self) -> Figure | None:
         """Draw the figure.

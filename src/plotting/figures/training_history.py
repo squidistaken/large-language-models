@@ -7,46 +7,32 @@ from src.evaluation.metrics import SHORT_NAMES
 from src.finetune.conditions import condition_languages, system_name
 from src.plotting.figures.base import BaseFigure, FigureData, kept_epoch, series
 from src.plotting.figures.metrics import HEADLINE_METRICS
-from src.plotting.style import CATEGORICAL, NEUTRAL, panels
+from src.plotting.style import CATEGORICAL, NEUTRAL, legend, panels
 
-SMOOTHING = 0.8
 LANGUAGE_STYLES = ("-", "--")
-
-
-def smooth(values: list[float]) -> list[float]:
-    """Smooth a noisy series with a bias-corrected exponential moving average.
-
-    Args:
-        values (list[float]): The series.
-
-    Returns:
-        list[float]: A smoothed series of the same length.
-    """
-    smoothed, average = [], 0.0
-
-    for step, value in enumerate(values, start=1):
-        average = SMOOTHING * average + (1 - SMOOTHING) * value
-        smoothed.append(average / (1 - SMOOTHING**step))
-
-    return smoothed
+# The loss panel stays neutral, so its lines never share a colour with a metric.
+DEV_LOSS = "0.55"
 
 
 class TrainingHistory(BaseFigure):
-    """Class for the training history of one PEFT condition."""
+    """Class for the training history of one PEFT condition of one candidate configuration."""
 
-    def __init__(self, data: FigureData, condition: str) -> None:
+    def __init__(self, data: FigureData, condition: str, run_name: str) -> None:
         """Initialise the class.
 
         Args:
             data (FigureData): The inputs of the figures.
             condition (str): The PEFT condition.
+            run_name (str): The candidate configuration.
         """
         super().__init__(data)
         self.condition = condition
+        self.run_name = run_name
 
     @classmethod
     def instances(cls, data: FigureData) -> list[BaseFigure]:
-        """Get one figure per PEFT condition.
+        """Get one figure per PEFT condition of every candidate configuration; training happens on
+        dev only, so every candidate's history may be shown, not just the selected one.
 
         Args:
             data (FigureData): The inputs of the figures.
@@ -54,7 +40,11 @@ class TrainingHistory(BaseFigure):
         Returns:
             list[BaseFigure]: A list of figures.
         """
-        return [cls(data, condition) for condition in data.run_infos]
+        return [
+            cls(data, condition, run_name)
+            for run_name in data.candidates
+            for condition in data.run_infos
+        ]
 
     @property
     def name(self) -> str:
@@ -63,7 +53,7 @@ class TrainingHistory(BaseFigure):
         Returns:
             str: A file name stem.
         """
-        return f"training_history.{self.condition}.{self.data.run_name}"
+        return f"training_history.{self.condition}.{self.run_name}"
 
     @property
     def title(self) -> str:
@@ -72,7 +62,7 @@ class TrainingHistory(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Training history of {system_name(self.condition)}"
+        return f"Training history of {system_name(self.condition)} ({self.run_name})"
 
     def draw(self) -> Figure:
         """Draw the figure.
@@ -80,7 +70,7 @@ class TrainingHistory(BaseFigure):
         Returns:
             Figure: A figure.
         """
-        info = self.data.run_infos[self.condition]
+        info = self.data.candidate_infos(self.run_name)[self.condition]
         history = info["log_history"]
         langs = condition_languages(self.condition, self.data.target)
         scored = any(series(history, f"eval_{lang}_micro_f1")[0] for lang in langs)
@@ -90,13 +80,18 @@ class TrainingHistory(BaseFigure):
         epochs, train = series(history, "loss")
         dev_epochs, dev = series(history, "eval_loss")
 
-        loss.plot(epochs, train, color=CATEGORICAL[0], linewidth=0.8, alpha=0.3)
-        loss.plot(epochs, smooth(train), color=CATEGORICAL[0], label="Training loss (smoothed)")
-        loss.plot(dev_epochs, dev, color=CATEGORICAL[1], marker="o", label="Dev loss")
+        loss.plot(epochs, train, color=NEUTRAL, linewidth=1)
+        loss.plot(dev_epochs, dev, color=DEV_LOSS, marker="o")
         loss.set_ylim(bottom=0)
         loss.set_xlabel("Epoch")
         loss.set_ylabel("Cross-entropy loss")
         loss.set_title("(a) Loss")
+
+        handles = [
+            Line2D([], [], color=NEUTRAL, linewidth=1, label="Training loss"),
+            Line2D([], [], color=DEV_LOSS, marker="o", label="Dev loss"),
+            Line2D([], [], color=NEUTRAL, linestyle=":", label="Kept checkpoint"),
+        ]
 
         if scored:
             metrics = axes[0][1]
@@ -111,20 +106,16 @@ class TrainingHistory(BaseFigure):
             metrics.set_xlabel("Epoch")
             metrics.set_ylabel("Dev score")
             metrics.set_title("(b) Dev metrics")
-            metrics.legend(
-                handles=[
-                    *[
-                        Line2D([], [], color=color, marker="o", label=SHORT_NAMES[metric])
-                        for metric, color in colors.items()
-                    ],
-                    *[
-                        Line2D([], [], color=NEUTRAL, linestyle=style, label=lang)
-                        for lang, style in styles.items()
-                    ],
+            handles += [
+                *[
+                    Line2D([], [], color=color, marker="o", label=SHORT_NAMES[metric])
+                    for metric, color in colors.items()
                 ],
-                loc="best",
-                ncols=2,
-            )
+                *[
+                    Line2D([], [], color=NEUTRAL, linestyle=style, label=f"Dev, {lang}")
+                    for lang, style in styles.items()
+                ],
+            ]
 
         for ax in axes[0]:
             if kept is not None:
@@ -132,7 +123,6 @@ class TrainingHistory(BaseFigure):
 
             ax.set_xlim(left=0)
 
-        kept_line = Line2D([], [], color=NEUTRAL, linestyle=":", label="Kept checkpoint")
-        loss.legend(handles=[*loss.get_legend_handles_labels()[0], kept_line], loc="best")
+        legend(fig, handles, ncols=4 if scored else None)
 
         return fig

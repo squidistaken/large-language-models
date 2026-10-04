@@ -7,6 +7,7 @@ from src.finetune.selection import selected_run
 from src.plotting.figures.alignment import Alignment
 from src.plotting.figures.base import BaseFigure, FigureData
 from src.plotting.figures.compute import Compute
+from src.plotting.figures.configurations import Configurations
 from src.plotting.figures.emotion_gain import EmotionGain
 from src.plotting.figures.label_counts import LabelCounts
 from src.plotting.figures.label_distribution import LabelDistribution
@@ -28,6 +29,7 @@ FIGURES: tuple[type[BaseFigure], ...] = (
     Alignment,
     Compute,
     Selection,
+    Configurations,
 )
 
 

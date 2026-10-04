@@ -108,7 +108,33 @@ class FigureData:
         Returns:
             dict[str, dict[str, Any]]: A mapping from condition to run info.
         """
-        return {condition: read_run_info(path) for condition, path in self.runs.items()}
+        return self.candidate_infos(self.run_name)
+
+    @cached_property
+    def candidates(self) -> list[str]:
+        """Get the candidate configurations the dev-set selection ranked.
+
+        Returns:
+            list[str]: A list of run names.
+        """
+        if self.selection is None:
+            return [self.run_name]
+
+        return [result["run_name"] for result in self.selection["results"]]
+
+    def candidate_infos(self, run_name: str) -> dict[str, dict[str, Any]]:
+        """Get the run info of every PEFT condition of one candidate configuration.
+
+        Args:
+            run_name (str): The candidate's run name.
+
+        Returns:
+            dict[str, dict[str, Any]]: A mapping from condition to run info.
+        """
+        return {
+            condition: read_run_info(run_dir(self.cfg.finetune.out_dir, condition, run_name))
+            for condition in conditions(self.target)
+        }
 
     @cached_property
     def predictions(self) -> dict[str, dict[str, list[dict]]]:

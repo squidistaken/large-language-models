@@ -20,6 +20,7 @@ CATEGORICAL = ("tab:blue", "tab:orange", "tab:green", "tab:red")
 MARKERS = ("o", "s", "^", "D")
 NEUTRAL = "black"
 LANGUAGE_COLORS = ("tab:purple", "tab:brown")
+CONFIGURATION_COLORS = ("tab:cyan", "tab:olive", "tab:pink", "tab:gray")
 
 UNIT = (0.0, 1.0)  # every metric and share bounded by 0 and 1
 GAIN = (-0.3, 0.3)  # difference in F1
@@ -117,14 +118,15 @@ def panels(
     )
 
 
-def legend(fig: Figure, handles: list) -> None:
-    """Get a legend for a figure, in one row below its panels.
+def legend(fig: Figure, handles: list, ncols: int | None = None) -> None:
+    """Get a legend for a figure, below its panels.
 
     Args:
         fig (Figure): The figure.
         handles (list): The legend entries.
+        ncols (int | None): The entries per row, or None for a single row.
     """
-    fig.legend(handles=handles, loc="outside lower center", ncols=len(handles))
+    fig.legend(handles=handles, loc="outside lower center", ncols=ncols or len(handles))
 
 
 def color_keys(colors: dict[str, str]) -> list[Patch]:

@@ -24,7 +24,7 @@ class PerEmotionF1(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Per-emotion F1 on {self.data.split}"
+        return f"Per-emotion F1 on {self.data.split} ({self.data.run_name})"
 
     def draw(self) -> Figure:
         """Draw the figure.

@@ -34,7 +34,7 @@ class Metrics(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"{self.heading} on {self.data.split}"
+        return f"{self.heading} on {self.data.split} ({self.data.run_name})"
 
     def draw(self) -> Figure:
         """Draw the figure.

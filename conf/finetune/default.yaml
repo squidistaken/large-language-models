@@ -19,9 +19,9 @@ warmup_ratio: 0.03
 logging_steps: 10 # optimizer steps between training-loss logs
 
 # Dev evaluation: the loss, plus the metrics of generated answers on a fixed dev subset
-evals_per_epoch: 4 # dev evaluations, and checkpoints, per epoch
-metric_samples: 200 # dev lines per language scored at every evaluation; null = all, 0 = off
-checkpoint_metric: loss # what picks the kept checkpoint and drives early stopping: loss | micro_f1
+evals_per_epoch: 2 # dev evaluations, and checkpoints, per epoch
+metric_samples: null # dev lines per language scored at every evaluation; null = all, 0 = off
+checkpoint_metric: micro_f1 # what picks the kept checkpoint and drives early stopping: loss | micro_f1
 early_stopping_patience: 2 # stop after this many evaluations without improvement; null = off
 gradient_checkpointing: true # recompute activations in the backward pass to save memory
 full_determinism: true # identical GPU runs for the same seed; false can be faster on large models

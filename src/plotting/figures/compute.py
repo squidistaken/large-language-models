@@ -40,7 +40,7 @@ class Compute(BaseFigure):
         Returns:
             str: A title.
         """
-        return "Training cost per PEFT condition"
+        return f"Training cost per PEFT condition ({self.data.run_name})"
 
     def draw(self) -> Figure:
         """Draw the figure.

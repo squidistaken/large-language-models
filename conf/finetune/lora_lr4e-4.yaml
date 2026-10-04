@@ -1,0 +1,11 @@
+# @package _global_
+# LoRA at twice the default learning rate.
+defaults:
+  - default@finetune
+  - _self_
+
+finetune:
+  run_name: lora_lr4e-4
+  learning_rate: 4.0e-4
+model:
+  quantization: null

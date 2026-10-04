@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from matplotlib.figure import Figure
 from omegaconf import DictConfig
@@ -17,6 +19,9 @@ from src.utils.files import read_json, read_jsonl
 from src.utils.logger import Logger
 from src.utils.runs import predictions_path, read_run_info, results_stem, run_dir, zero_shot_dir
 
+if TYPE_CHECKING:
+    from src.evaluation.results import ResultsSummary
+
 CHECKPOINT_METRICS = {"loss": False, "micro_f1": True}
 
 
@@ -28,8 +33,7 @@ class FigureData:
         cfg: DictConfig,
         logger: Logger,
         run_name: str,
-        rows: list[dict[str, Any]] | None = None,
-        per_emotion: list[dict[str, Any]] | None = None,
+        summary: ResultsSummary | None = None,
     ) -> None:
         """Initialise the class.
 
@@ -37,10 +41,8 @@ class FigureData:
             cfg (DictConfig): The full config.
             logger (Logger): The logger.
             run_name (str): The configuration.
-            rows (list[dict[str, Any]] | None): The aggregate results; None reads them from disk.
-                                                Defaults to None.
-            per_emotion (list[dict[str, Any]] | None): The per-emotion results; None reads them
-                                                       from disk. Defaults to None.
+            summary (ResultsSummary | None): The final results; None reads them from disk.
+                                             Defaults to None.
         """
         self.cfg = cfg
         self.logger = logger
@@ -50,8 +52,13 @@ class FigureData:
         self.max_samples = cfg.evaluate.max_samples
         self.stem = results_stem(self.split, self.max_samples, run_name)
 
-        if rows is not None and per_emotion is not None:
-            self.__dict__["results"] = {"results": rows, "per_emotion": per_emotion}
+        if summary is not None:
+            self.__dict__["results"] = {
+                "results": summary.rows,
+                "per_emotion": summary.per_emotion,
+                "seeds": summary.seeds,
+                "learning_curve": summary.curve,
+            }
 
     @cached_property
     def results(self) -> dict[str, Any]:
@@ -231,7 +238,7 @@ class BaseFigure(ABC):
     """Class for the base of the report figures."""
 
     @classmethod
-    def instances(cls, data: FigureData) -> list["BaseFigure"]:
+    def instances(cls, data: FigureData) -> list[BaseFigure]:
         """Get the figures this class draws for the data.
 
         Args:

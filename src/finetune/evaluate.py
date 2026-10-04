@@ -71,7 +71,7 @@ class AdapterScorer:
             self.model.unload()
 
         wandb_run = tracking.start_finetune(
-            self.wandb_cfg, run.condition, str(run.run_name), self.run_dir
+            self.wandb_cfg, run.condition, self.run_dir.name, self.run_dir
         )
 
         tracking.log_scores(wandb_run, summary.split, summary.scores, summary.predictions)

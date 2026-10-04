@@ -126,6 +126,7 @@ def render_results(console: Console, summary: ResultsSummary) -> None:
             summary.rows,
         )
     )
+    _experiment_tables(console, summary)
 
     for path in summary.files:
         console.print(f"Saved [cyan]{path}[/cyan]")
@@ -153,3 +154,51 @@ def render_comparison(console: Console, summary: ComparisonSummary) -> None:
 
     for path in summary.files:
         console.print(f"Saved [cyan]{path}[/cyan]")
+
+
+def _experiment_tables(console: Console, summary: ResultsSummary) -> None:
+    """Get the mean and standard deviation of every metric for every system and language, across the
+    main run and its repetitions, and the learning curve of the selected configuration, across the
+    main run and its capped runs.
+
+    Args:
+        console (Console): The console.
+        summary (ResultsSummary): The summary to render.
+    """
+    from src.evaluation.metrics import PRIMARY_METRICS, metric_label
+
+    if summary.seeds:
+        seeds = ", ".join(str(seed) for seed in summary.seeds[0]["seeds"])
+        table = Table(title=f"Mean ± sd on {summary.split} over seeds {seeds} ({summary.run_name})")
+
+        for column in ("System", "Language", *map(metric_label, PRIMARY_METRICS)):
+            table.add_column(
+                column, justify="left" if column in ("System", "Language") else "right"
+            )
+
+        for row in summary.seeds:
+            table.add_row(
+                row["system"],
+                row["eval_lang"],
+                *(f"{row[key]['mean']:.4f} ± {row[key]['std']:.4f}" for key in PRIMARY_METRICS),
+            )
+
+        console.print(table)
+
+    if summary.curve:
+        table = Table(title=f"Learning curve on {summary.split} ({summary.run_name})")
+
+        for column in ("System", "Lines", *map(metric_label, PRIMARY_METRICS)):
+            table.add_column(column, justify="left" if column == "System" else "right")
+
+        for row in sorted(summary.curve, key=lambda row: (row["system"], row["lines"])):
+            table.add_row(
+                row["system"],
+                str(row["lines"]),
+                *(
+                    f"{row[key]:.4f} [{row[f'{key}_ci'][0]:.4f}, {row[f'{key}_ci'][1]:.4f}]"
+                    for key in PRIMARY_METRICS
+                ),
+            )
+
+        console.print(table)

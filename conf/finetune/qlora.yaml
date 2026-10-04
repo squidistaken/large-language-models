@@ -1,0 +1,10 @@
+# @package _global_
+# QLoRA: LoRA on the 4-bit quantised model.
+defaults:
+  - default@finetune
+  - _self_
+
+finetune:
+  run_name: qlora
+model:
+  quantization: 4bit

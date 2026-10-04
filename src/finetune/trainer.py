@@ -28,7 +28,7 @@ from src.utils import tracking
 from src.utils.files import write_json
 from src.utils.hardware import peak_memory_gib, reset_peak_memory
 from src.utils.logger import Logger
-from src.utils.runs import RUN_INFO_FILE, library_versions, run_dir
+from src.utils.runs import RUN_INFO_FILE, library_versions, run_dir, variant_name
 
 ADAPTER_DIR = "adapter"
 CHECKPOINT_DIR = "checkpoints"
@@ -132,7 +132,7 @@ class PEFTTrainer:
         self.wandb_cfg = wandb_cfg
         self.logger = logger
         self.model = Model(model_cfg, logger)
-        self.run_dir = run_dir(cfg.out_dir, cfg.condition, str(cfg.run_name))
+        self.run_dir = run_dir(cfg.out_dir, cfg.condition, variant_name(str(cfg.run_name), cfg))
 
         if cfg.checkpoint_metric not in CHECKPOINT_METRICS:
             raise ValueError(
@@ -165,15 +165,7 @@ class PEFTTrainer:
 
         cfg = self.cfg
         langs = condition_languages(cfg.condition, cfg.target_lang)
-        train_examples = load_examples(
-            cfg.data_dir,
-            cfg.target_lang,
-            langs,
-            TRAIN,
-            self.logger,
-            cfg.max_train_samples,
-            cfg.seed,
-        )
+        train_examples = self._train_examples(langs)
         dev_examples = load_examples(
             cfg.data_dir, cfg.target_lang, langs, DEV, self.logger, cfg.max_eval_samples, cfg.seed
         )
@@ -205,7 +197,7 @@ class PEFTTrainer:
         wandb_run = tracking.start_finetune(
             self.wandb_cfg,
             cfg.condition,
-            str(cfg.run_name),
+            self.run_dir.name,
             self.run_dir,
             config={
                 "finetune": OmegaConf.to_container(cfg, resolve=True),
@@ -274,6 +266,45 @@ class PEFTTrainer:
         self.model.unload()
 
         return summary
+
+    def _train_examples(self, langs: list[str]) -> list[dict]:
+        """Train on the target language, plus the other languages of the condition, with a limit on
+        the number of target-language examples.
+
+        Args:
+            langs (list[str]): The languages the condition trains on.
+
+        Returns:
+            list[dict]: A list of conversational examples.
+        """
+        cfg = self.cfg
+
+        if cfg.max_target_samples is None or cfg.target_lang not in langs:
+            return load_examples(
+                cfg.data_dir,
+                cfg.target_lang,
+                langs,
+                TRAIN,
+                self.logger,
+                cfg.max_train_samples,
+                cfg.seed,
+            )
+
+        target = load_examples(
+            cfg.data_dir,
+            cfg.target_lang,
+            [cfg.target_lang],
+            TRAIN,
+            self.logger,
+            cfg.max_target_samples,
+            cfg.seed,
+        )
+        others = [lang for lang in langs if lang != cfg.target_lang]
+
+        if not others:
+            return target
+
+        return load_examples(cfg.data_dir, cfg.target_lang, others, TRAIN, self.logger) + target
 
     def _dev_metrics(self, examples: dict[str, list[dict]]) -> dict[str, float]:
         """Get the dev metrics, scored on a fixed subset of each language, or nothing when scoring

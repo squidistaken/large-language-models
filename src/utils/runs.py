@@ -79,6 +79,41 @@ def run_dir(out_dir: str, condition: str, run_name: str) -> Path:
     return Path(out_dir) / condition / run_name
 
 
+def variant(config: Any) -> str | None:
+    """Get a variant of a run.
+
+    Args:
+        config (Any): The run's finetune config.
+
+    Returns:
+        str | None: A variant, or None if the run has no variant.
+    """
+    parts = []
+
+    if config.get("main_seed") is not None and config["seed"] != config["main_seed"]:
+        parts.append(f"seed{config['seed']}")
+
+    if config.get("max_target_samples") is not None:
+        parts.append(f"n{config['max_target_samples']}")
+
+    return ".".join(parts) or None
+
+
+def variant_name(run_name: str, config: Any) -> str:
+    """Get a folder name for a run variant.
+
+    Args:
+        run_name (str): The run name of the configuration.
+        config (Any): The run's finetune config.
+
+    Returns:
+        str: A folder name.
+    """
+    name = variant(config)
+
+    return f"{run_name}.{name}" if name else run_name
+
+
 def zero_shot_dir(out_dir: str, model_name: str) -> Path:
     """Get the folder holding the zero-shot scores of one model.
 

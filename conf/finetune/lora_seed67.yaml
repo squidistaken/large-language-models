@@ -1,0 +1,8 @@
+# @package _global_
+# A seed repetition of lora, saved in lora.seed67.
+defaults:
+  - lora
+  - _self_
+
+finetune:
+  seed: 67

@@ -1,0 +1,11 @@
+# @package _global_
+# QLoRA at half the default learning rate.
+defaults:
+  - default@finetune
+  - _self_
+
+finetune:
+  run_name: qlora_lr1e-4
+  learning_rate: 1.0e-4
+model:
+  quantization: 4bit

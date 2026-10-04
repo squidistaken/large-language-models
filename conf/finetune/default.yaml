@@ -27,10 +27,12 @@ gradient_checkpointing: true # recompute activations in the backward pass to sav
 full_determinism: true # identical GPU runs for the same seed; false can be faster on large models
 
 # Output
-seed: ${seed}
+seed: ${seed} # another seed saves the run as a repetition, in <run_name>.seed<seed>
+main_seed: ${seed} # the seed of the main runs, which the dev-set selection compares
 out_dir: ${out_dir}/finetune
 run_name: ${now:%Y%m%d_%H%M%S}
 max_train_samples: null
+max_target_samples: null # cap the target-language training lines, saved in <run_name>.n<lines>
 max_eval_samples: null
 overwrite: false # true = replace an existing run folder
 

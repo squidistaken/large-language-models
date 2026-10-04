@@ -9,7 +9,14 @@ from src.constants import DEV, SOURCE_LANG
 from src.finetune.conditions import conditions, evaluation_languages
 from src.utils.files import read_json, write_json
 from src.utils.logger import Logger
-from src.utils.runs import SCORES_DIR, read_run_info, run_dir, scores_path, scores_stem
+from src.utils.runs import (
+    SCORES_DIR,
+    read_run_info,
+    run_dir,
+    scores_path,
+    scores_stem,
+    variant,
+)
 
 SELECTION_FILE = "selection.json"
 DEV_SCORES_FILE = f"{scores_stem(DEV, None)}.json"
@@ -26,6 +33,7 @@ FIXED_KEYS = (
     "data_dir",
     "target_lang",
     "max_train_samples",
+    "max_target_samples",
     "max_eval_samples",
     "max_length",
     "seed",
@@ -165,6 +173,7 @@ class ConfigSelector:
                 {
                     path.parent.parent.name
                     for path in (self.out_dir / condition).glob(f"*/{SCORES_DIR}/{DEV_SCORES_FILE}")
+                    if variant(read_run_info(path.parent.parent)["config"]) is None
                 }
                 for condition in self.conditions
             )

@@ -46,7 +46,7 @@ The CLI is run through [main.py](main.py) with [Hydra](https://hydra.cc). Runnin
 | [`data`](conf/data/default.yaml) | Languages to download, and where to. |
 | [`prepare`](conf/prepare/default.yaml) | Target language, split ratios, split seed. |
 | [`model`](conf/model) | The model: Hugging Face id, pinned revision, dtype, quantization, decoding. |
-| [`finetune`](conf/finetune/default.yaml) | LoRA and training hyperparameters, scoring, selection. |
+| [`finetune`](conf/finetune) | LoRA and training hyperparameters, scoring, selection; plus named PEFT configurations. |
 | [`analysis`](conf/analysis/default.yaml) | Comparing two systems' predictions. |
 | [`wandb`](conf/wandb/default.yaml) | Weights & Biases project and mode. |
 | [`logging`](conf/logging/default.yaml) | Log folder and level. |
@@ -127,7 +127,9 @@ Slurm:
 
 The defaults are rank 16, alpha 32, dropout 0.05 on all linear layers; learning rate 2e-4, 3 epochs, batch 8 with 2 accumulation steps, maximum length 256 tokens, 3% warm-up, seed 42. The model is evaluated on dev twice per epoch; the checkpoint with the highest dev micro-F1 is kept, and training stops after one epoch without improvement. On a small GPU, keep the effective batch the same with smaller steps. For a quick test, limit the data with `finetune.max_train_samples=64 finetune.max_eval_samples=32 finetune.score.max_samples=32`.
 
-Output: `outputs/hr/finetune/<condition>/<run_name>/`, with the adapter and a `run_info.json` recording every hyperparameter, the model revision, library versions, hardware, peak GPU memory and the training log.
+Named configurations are saved as presets next to the defaults in [conf/finetune](conf/finetune) and chosen with `finetune=<preset>`.
+
+Output: `outputs/hr/finetune/<condition>/<run folder>/`, with the adapter and a `run_info.json` recording every hyperparameter, the model revision, library versions, hardware, peak GPU memory and the training log.
 
 ### Scoring and Configuration Selection
 
@@ -182,7 +184,7 @@ data/
 └── processed/xed/en-hr/              splits, conversational splits, split_manifest.json
 outputs/<lang>/                       one folder per target language (out_dir)
 ├── finetune/
-│   ├── <condition>/<run_name>/
+│   ├── <condition>/<run_name>[.seed<seed>|.n<lines>]/
 │   │   ├── adapter/                  the kept LoRA adapter
 │   │   ├── run_info.json             settings, versions, hardware, training log
 │   │   └── scores/                   <split>.json and <split>.<lang>.predictions.jsonl

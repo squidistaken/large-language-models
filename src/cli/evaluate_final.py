@@ -31,9 +31,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
 
 
 def run(cfg: DictConfig, logger: Logger) -> None:
-    """Run the action: score what is missing, write the results, draw the report figures, and
-    compare zero-shot with the bilingual run. Already-scored runs are reused, so running it again
-    only redraws the figures.
+    """Run the action.
 
     Args:
         cfg (DictConfig): The dictionary object override.
@@ -50,7 +48,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
 
     try:
         summary = FinalEvaluator(cfg, logger).evaluate()
-        figures = make_figures(cfg, logger, summary.run_name, summary.rows, summary.per_emotion)
+        figures = make_figures(cfg, logger, summary.run_name, summary)
         comparison = (
             PredictionComparer(cfg, logger, summary.run_name).compare()
             if cfg.evaluate.include_zero_shot

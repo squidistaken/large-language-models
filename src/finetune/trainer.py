@@ -16,9 +16,17 @@ from transformers import (
     TrainingArguments,
 )
 
-from src.constants import DEV, TRAIN
+from src.constants import (
+    ADAPTER_DIR,
+    AGGREGATE_METRICS,
+    CHECKPOINT_DIR,
+    CHECKPOINT_METRICS,
+    DEV,
+    RUN_INFO_FILE,
+    TRAIN,
+)
 from src.data.loading import load_examples
-from src.evaluation.metrics import AGGREGATE_METRICS
+from src.evaluation.metrics import eval_key
 from src.evaluation.scoring import score_examples
 from src.finetune.conditions import condition_languages
 from src.finetune.data import tokenise_examples
@@ -28,12 +36,7 @@ from src.utils import tracking
 from src.utils.files import write_json
 from src.utils.hardware import peak_memory_gib, reset_peak_memory
 from src.utils.logger import Logger
-from src.utils.runs import RUN_INFO_FILE, library_versions, run_dir, variant_name
-
-ADAPTER_DIR = "adapter"
-CHECKPOINT_DIR = "checkpoints"
-# The metrics that can pick the kept epoch, and whether higher is better.
-CHECKPOINT_METRICS = {"loss": False, "micro_f1": True}
+from src.utils.runs import RunVariant, library_versions, run_dir
 
 
 @dataclass
@@ -101,7 +104,7 @@ class MetricTrainer(Trainer):
             # The best score so far is updated only after this returns, so it is the previous one.
             key = str(self.args.metric_for_best_model)
             value, best = (
-                metrics[key if key.startswith("eval_") else f"eval_{key}"],
+                metrics[eval_key(key.removeprefix("eval_"))],
                 self.state.best_metric,
             )
             better = best is None or (value > best if self.args.greater_is_better else value < best)
@@ -132,7 +135,9 @@ class PEFTTrainer:
         self.wandb_cfg = wandb_cfg
         self.logger = logger
         self.model = Model(model_cfg, logger)
-        self.run_dir = run_dir(cfg.out_dir, cfg.condition, variant_name(str(cfg.run_name), cfg))
+        self.run_dir = run_dir(
+            cfg.out_dir, cfg.condition, RunVariant.of(cfg).folder(str(cfg.run_name))
+        )
 
         if cfg.checkpoint_metric not in CHECKPOINT_METRICS:
             raise ValueError(
@@ -322,10 +327,12 @@ class PEFTTrainer:
 
         for lang, lines in examples.items():
             scores, _ = score_examples(self.model, lines, lang)
-            metrics.update({f"eval_{lang}_{key}": scores[key] for key in AGGREGATE_METRICS})
+            metrics.update({eval_key(key, lang): scores[key] for key in AGGREGATE_METRICS})
 
         if examples:
-            metrics["eval_micro_f1"] = mean(metrics[f"eval_{lang}_micro_f1"] for lang in examples)
+            metrics[eval_key("micro_f1")] = mean(
+                metrics[eval_key("micro_f1", lang)] for lang in examples
+            )
 
         return metrics
 

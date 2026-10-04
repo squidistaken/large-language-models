@@ -1,3 +1,5 @@
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from typing import Any
 
 from matplotlib.figure import Figure
@@ -19,6 +21,40 @@ def hours(run_info: dict[str, Any]) -> float:
         float: A training time in hours.
     """
     return sum(entry.get("train_runtime", 0.0) for entry in run_info["log_history"]) / 3600
+
+
+@dataclass(frozen=True)
+class CostMeasure:
+    """The training cost to compare in the figures."""
+
+    title: str
+    axis_label: str
+    limits: tuple[float, float]
+    value: Callable[[dict[str, Any]], float]
+    label: str
+
+
+def cost_measures(run_infos: Iterable[dict[str, Any]]) -> dict[str, CostMeasure]:
+    """Get the training costs to compare in the figures.
+
+    Args:
+        run_infos (Iterable[dict[str, Any]]): The run infos of the compared runs.
+
+    Returns:
+        dict[str, CostMeasure]: A mapping from cost to measure.
+    """
+    vram = max(info["model"].get("vram_gb") or DEFAULT_VRAM_GIB for info in run_infos)
+
+    return {
+        "memory": CostMeasure(
+            "Peak GPU memory",
+            "Peak GPU memory (GiB)",
+            (0.0, vram),
+            lambda info: info["summary"]["peak_gpu_memory_gib"],
+            "{:.1f} GiB",
+        ),
+        "time": CostMeasure("Training time", "Training time (h)", HOURS, hours, "{:.2f} h"),
+    }
 
 
 class Compute(BaseFigure):
@@ -51,31 +87,20 @@ class Compute(BaseFigure):
         run_infos = self.data.run_infos
         names = {system_name(condition): info for condition, info in run_infos.items()}
         colors = self.data.colors(list(names))
-        # Memory runs up to the GPU's own capacity, as recorded with the run.
-        vram = max(info["model"].get("vram_gb") or DEFAULT_VRAM_GIB for info in run_infos.values())
-        measures = {
-            "Training time (h)": (HOURS, hours, "{:.2f} h"),
-            "Peak GPU memory (GiB)": (
-                (0.0, vram),
-                lambda info: info["summary"]["peak_gpu_memory_gib"],
-                "{:.1f} GiB",
-            ),
-        }
+        measures = cost_measures(run_infos.values())
         fig, axes = panels(1, len(measures), 0.45 * len(names) + 1.2, sharey=True)
 
-        for ax, (axis_label, (limits, measure, label)) in zip(
-            axes[0], measures.items(), strict=True
-        ):
+        for ax, measure in zip(axes[0], measures.values(), strict=True):
             bars(
                 ax,
                 list(names),
                 colors,
-                lambda name, row, measure=measure: measure(names[row]) if name == row else None,
+                lambda name, row, value=measure.value: value(names[row]) if name == row else None,
                 horizontal=True,
-                label=label,
+                label=measure.label,
             )
-            ax.set_xlim(*limits)
-            ax.set_xlabel(axis_label)
+            ax.set_xlim(*measure.limits)
+            ax.set_xlabel(measure.axis_label)
 
         axes[0][0].set_ylabel("PEFT condition")
 

@@ -2,9 +2,9 @@ from typing import Any
 
 from matplotlib.figure import Figure
 
+from src.constants import HEADLINE_METRICS
 from src.evaluation.metrics import metric_label
 from src.plotting.figures.base import BaseFigure
-from src.plotting.figures.metrics import HEADLINE_METRICS
 from src.plotting.style import UNIT, bars, color_keys, legend, panels
 
 
@@ -18,7 +18,7 @@ class SeedVariation(BaseFigure):
         Returns:
             list[dict[str, Any]]: A list of rows, empty without seed repetitions.
         """
-        return self.data.results.get("seeds", [])
+        return self.data.results.seeds
 
     @property
     def name(self) -> str:
@@ -27,7 +27,7 @@ class SeedVariation(BaseFigure):
         Returns:
             str: A file name stem.
         """
-        return f"seeds.{self.data.split}.{self.data.run_name}"
+        return f"seeds.{self.data.stem}"
 
     @property
     def title(self) -> str:

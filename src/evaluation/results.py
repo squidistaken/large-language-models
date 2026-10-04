@@ -6,10 +6,9 @@ from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
-from src.constants import EMOTIONS, TRAIN, ZERO_SHOT
-from src.data.prepare_data import pair_name
+from src.constants import AGGREGATE_METRICS, RUN_INFO_FILE, TRAIN, ZERO_SHOT
 from src.data.writing import SplitWriter
-from src.evaluation.metrics import AGGREGATE_METRICS, bootstrap_intervals, metrics_info
+from src.evaluation.metrics import bootstrap_intervals, metrics_info, per_emotion_rows
 from src.evaluation.scoring import ScoreSummary
 from src.finetune.conditions import (
     condition_languages,
@@ -24,17 +23,17 @@ from src.utils import tracking
 from src.utils.files import read_json, read_jsonl, write_json
 from src.utils.logger import Logger
 from src.utils.runs import (
-    RUN_INFO_FILE,
+    RunVariant,
     pinned_model_cfg,
     predictions_path,
     read_run_info,
-    results_stem,
+    results_path,
     run_dir,
     scores_path,
-    variant,
 )
 
 Scores = dict[str, dict[str, Any]]
+Variants = dict[str, list[tuple[Path, RunVariant]]]
 
 
 @dataclass
@@ -50,12 +49,49 @@ class ResultsSummary:
     curve: list[dict[str, Any]] = field(default_factory=list)
     files: list[str] = field(default_factory=list)
 
+    def to_json(self) -> dict[str, Any]:
+        """Get the results as they are saved.
+
+        Returns:
+            dict[str, Any]: A mapping with the settings, the metric definitions, and every table.
+        """
+        return {
+            "run_name": self.run_name,
+            "split": self.split,
+            "max_samples": self.max_samples,
+            "metrics": metrics_info(),
+            "results": self.rows,
+            "per_emotion": self.per_emotion,
+            "seeds": self.seeds,
+            "learning_curve": self.curve,
+        }
+
+    @classmethod
+    def load(cls, path: Path) -> "ResultsSummary":
+        """Load saved results.
+
+        Args:
+            path (Path): The results file.
+
+        Returns:
+            ResultsSummary: A summary of the results.
+        """
+        saved = read_json(path)
+
+        return cls(
+            saved["run_name"],
+            saved["split"],
+            saved["max_samples"],
+            saved["results"],
+            saved["per_emotion"],
+            saved.get("seeds", []),
+            saved.get("learning_curve", []),
+            [str(path)],
+        )
+
 
 class FinalEvaluator:
-    """Class that scores the selected PEFT configuration and the zero-shot baseline on one
-    partition, and gathers every score into one results table. Runs of the configuration with
-    another seed (<run_name>.seed<seed>) or capped target-language training lines
-    (<run_name>.n<lines>) add a seed summary and a learning curve."""
+    """Class that scores every system on a partition and writes the results table."""
 
     def __init__(self, cfg: DictConfig, logger: Logger) -> None:
         """Initialise the class.
@@ -107,35 +143,18 @@ class FinalEvaluator:
                     self._row(system_name(condition), folders[condition], lang, metrics)
                 )
                 summary.per_emotion.extend(
-                    {
-                        "system": system_name(condition),
-                        "eval_lang": lang,
-                        "emotion": emotion,
-                        **metrics["per_emotion"][emotion],
-                    }
-                    for emotion in EMOTIONS
+                    {"system": system_name(condition), "eval_lang": lang, **row}
+                    for row in per_emotion_rows(metrics)
                 )
 
         repetitions, capped = self._variants()
-        summary.seeds = self._seeds(runs, repetitions)
-        summary.curve = self._curve(runs, capped, summary.rows)
+        summary.seeds = self._seeds(runs, scores, repetitions)
+        summary.curve = self._curve(capped, summary.rows)
 
-        stem = results_stem(self.split, self.max_samples, self.run_name)
-        summary.files = [str(Path(self.cfg.evaluate.out_dir) / f"{stem}.json")]
+        path = results_path(self.cfg.evaluate.out_dir, self.split, self.max_samples, self.run_name)
+        summary.files = [str(path)]
 
-        write_json(
-            Path(summary.files[0]),
-            {
-                "run_name": summary.run_name,
-                "split": summary.split,
-                "max_samples": summary.max_samples,
-                "metrics": metrics_info(),
-                "results": summary.rows,
-                "per_emotion": summary.per_emotion,
-                "seeds": summary.seeds,
-                "learning_curve": summary.curve,
-            },
-        )
+        write_json(path, summary.to_json())
 
         self._log(summary)
         self.logger.info(f"Wrote the {self.split} results to {', '.join(summary.files)}")
@@ -169,43 +188,44 @@ class FinalEvaluator:
             "count": metrics["count"],
         }
 
-    def _variants(self) -> tuple[dict[str, list[Path]], dict[str, list[Path]]]:
+    def _variants(self) -> tuple[Variants, Variants]:
         """Get the repetitions and capped runs of the selected configuration.
 
         Returns:
-            tuple[dict[str, list[Path]], dict[str, list[Path]]]: A dictionary of repetitions and a
-                                                                 dictionary of capped runs, keyed by
-                                                                 condition.
+            tuple[Variants, Variants]: A dictionary of repetitions and a dictionary of capped runs,
+                                       keyed by condition, each run with its variant.
         """
-        repetitions: dict[str, list[Path]] = {}
-        capped: dict[str, list[Path]] = {}
+        repetitions: Variants = {}
+        capped: Variants = {}
 
         for condition in conditions(self.cfg.finetune.target_lang):
             for info in sorted(
                 Path(self.cfg.finetune.out_dir, condition).glob(f"*/{RUN_INFO_FILE}")
             ):
                 config = read_run_info(info.parent)["config"]
-                name = variant(config)
+                kind = RunVariant.of(config)
 
-                if config["run_name"] != self.run_name or name is None:
+                if config["run_name"] != self.run_name:
                     continue
 
-                if name.startswith("seed") and config.get("max_target_samples") is None:
-                    repetitions.setdefault(condition, []).append(info.parent)
-                elif name.startswith("n"):
-                    capped.setdefault(condition, []).append(info.parent)
+                # A run with both another seed and a cap fits neither experiment.
+                if kind.is_repetition:
+                    repetitions.setdefault(condition, []).append((info.parent, kind))
+                elif kind.is_capped:
+                    capped.setdefault(condition, []).append((info.parent, kind))
 
         return repetitions, capped
 
     def _seeds(
-        self, runs: dict[str, Path], repetitions: dict[str, list[Path]]
+        self, runs: dict[str, Path], scores: dict[str, Scores], repetitions: Variants
     ) -> list[dict[str, Any]]:
         """Get the mean, standard deviation and values of every metric for every system and
         language, across the main run and its repetitions.
 
         Args:
             runs (dict[str, Path]): The main run of every condition.
-            repetitions (dict[str, list[Path]]): The repetitions per condition.
+            scores (dict[str, Scores]): The scores of the main run of every condition.
+            repetitions (Variants): The repetitions per condition.
 
         Returns:
             list[dict[str, Any]]: A list of results rows, one per system and evaluation language,
@@ -215,9 +235,13 @@ class FinalEvaluator:
         rows = []
 
         for condition, others in repetitions.items():
+            main_seed = read_run_info(runs[condition])["config"]["seed"]
             seeded = sorted(
-                (read_run_info(run)["config"]["seed"], self._adapter_scores(run))
-                for run in [runs[condition], *others]
+                [
+                    (main_seed, scores[condition]),
+                    *((kind.seed, self._adapter_scores(run)) for run, kind in others),
+                ],
+                key=lambda pair: pair[0],
             )
 
             for lang in evaluation_languages(condition, self.cfg.finetune.target_lang):
@@ -239,15 +263,12 @@ class FinalEvaluator:
 
         return rows
 
-    def _curve(
-        self, runs: dict[str, Path], capped: dict[str, list[Path]], rows: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def _curve(self, capped: Variants, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Get the learning curve of the selected configuration, across the main run and its capped
         runs.
 
         Args:
-            runs (dict[str, Path]): The main run of every condition.
-            capped (dict[str, list[Path]]): The capped runs per condition.
+            capped (Variants): The capped runs per condition.
             rows (list[dict[str, Any]]): The results rows of the main runs and zero-shot.
 
         Returns:
@@ -265,10 +286,9 @@ class FinalEvaluator:
             return []
 
         main = {row["system"]: row for row in rows if row["eval_lang"] == target}
-        writer = SplitWriter(
-            Path(self.cfg.prepare.out_dir) / pair_name(target), target, self.logger
-        )
-        full = len(read_jsonl(writer.canonical_path(target, TRAIN)))
+        writer = SplitWriter.for_pair(self.cfg.prepare.out_dir, target, self.logger)
+        with writer.canonical_path(target, TRAIN).open() as lines:
+            full = sum(1 for _ in lines)
         curve = (
             [{**main[system_name(ZERO_SHOT)], "lines": 0}] if system_name(ZERO_SHOT) in main else []
         )
@@ -279,9 +299,9 @@ class FinalEvaluator:
             curve.extend(
                 {
                     **self._row(system, run, target, self._adapter_scores(run)[target]),
-                    "lines": read_run_info(run)["config"]["max_target_samples"],
+                    "lines": kind.target_lines,
                 }
-                for run in others
+                for run, kind in others
             )
 
         return curve
@@ -325,11 +345,7 @@ class FinalEvaluator:
         Returns:
             ScoreSummary: The scores.
         """
-        score_cfg = OmegaConf.create(
-            {"run_dir": str(run), "split": self.split, "max_samples": self.max_samples}
-        )
-
-        return AdapterScorer(score_cfg, self.cfg.wandb, self.logger).score()
+        return AdapterScorer(run, self.split, self.max_samples, self.cfg.wandb, self.logger).score()
 
     def _zero_shot_scorer(self, peft_run: Path) -> PromptScorer:
         """Set up zero-shot scoring of the base model a PEFT run started from.
@@ -368,18 +384,7 @@ class FinalEvaluator:
             tracking.log_table(
                 wandb_run,
                 "selection/ranking",
-                [
-                    {
-                        "rank": rank,
-                        "run_name": result.run_name,
-                        **{
-                            f"{lang}_mean": result.language_scores.get(lang)
-                            for lang in self.selection.langs
-                        },
-                        "selection_score": result.selection_score,
-                    }
-                    for rank, result in enumerate(self.selection.results, start=1)
-                ],
+                self.selection.ranking(),
             )
 
         tracking.finish(wandb_run)

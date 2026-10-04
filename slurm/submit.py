@@ -13,6 +13,7 @@ PROJECT_ROOT = SLURM_DIR.parent
 PROFILE_DIR = SLURM_DIR / "conf"
 JOB_SCRIPT = SLURM_DIR / "run_job.sh"
 RTX_GPU = "rtx_pro_6000"
+RTX_ENV = ".venv-rtx"
 NO_GPU = "none"
 
 SBATCH_OPTIONS = {
@@ -105,7 +106,7 @@ def setup_command(environment: str) -> str:
     Returns:
         str: A shell command.
     """
-    return f"./slurm/setup_uv.sh{' --use-rtx' if environment == '.venv-rtx' else ''}"
+    return f"./slurm/setup_uv.sh{' --use-rtx' if environment == RTX_ENV else ''}"
 
 
 def uv_environment(gpu_type: str) -> str:
@@ -121,7 +122,7 @@ def uv_environment(gpu_type: str) -> str:
         FileNotFoundError: If the environment is missing.
         RuntimeError: If the environment cannot import the project.
     """
-    name = ".venv-rtx" if gpu_type == RTX_GPU else ".venv"
+    name = RTX_ENV if gpu_type == RTX_GPU else ".venv"
     python = PROJECT_ROOT / name / "bin" / "python"
 
     if not python.is_file():

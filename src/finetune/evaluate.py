@@ -1,80 +1,101 @@
 from pathlib import Path
+from typing import Any
 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
-from src.evaluation.scoring import ScoreSummary, check_eval_split, score_languages
+from src.constants import ADAPTER_DIR
+from src.evaluation.scoring import BaseScorer
 from src.finetune.conditions import evaluation_languages
 from src.finetune.lora import load_adapter
-from src.finetune.trainer import ADAPTER_DIR
 from src.models.base import Model
 from src.utils import tracking
 from src.utils.logger import Logger
 from src.utils.runs import pinned_model_cfg, read_run_info
 
 
-class AdapterScorer:
+class AdapterScorer(BaseScorer):
     """Class that scores a fine-tuned run by letting the model answer one partition."""
 
-    def __init__(self, cfg: DictConfig, wandb_cfg: DictConfig, logger: Logger) -> None:
+    def __init__(
+        self,
+        run_dir: str | Path | None,
+        split: str,
+        max_samples: int | None,
+        wandb_cfg: DictConfig,
+        logger: Logger,
+    ) -> None:
         """Initialise the class.
 
         Args:
-            cfg (DictConfig): The finetune score config.
+            run_dir (str | Path | None): The run folder, or None if there is none.
+            split (str): The partition name.
+            max_samples (int | None): The number of lines scored per language, or None for all.
             wandb_cfg (DictConfig): The wandb config.
             logger (Logger): The logger.
 
         Raises:
             ValueError: If no run folder is set or the split is not dev or test.
         """
-        if not cfg.run_dir:
+        if not run_dir:
             raise ValueError(
                 "No finished run to score. Train one first, or pass its folder, e.g. "
                 "finetune.score.run_dir=outputs/<lang>/finetune/bilingual/<run_name>."
             )
 
-        check_eval_split(cfg.split)
+        run_info = read_run_info(Path(run_dir))
+        self.run_cfg = run_info["config"]
 
-        self.cfg = cfg
-        self.wandb_cfg = wandb_cfg
-        self.logger = logger
-        self.run_dir = Path(cfg.run_dir)
-        run_info = read_run_info(self.run_dir)
-        self.run_cfg = OmegaConf.create(run_info["config"])
-        self.model = Model(pinned_model_cfg(run_info), logger)
+        super().__init__(
+            Model(pinned_model_cfg(run_info), logger),
+            Path(run_dir),
+            split,
+            max_samples,
+            wandb_cfg,
+            logger,
+        )
 
-    def score(self) -> ScoreSummary:
-        """Score a fine-tuned run by letting the model answer one partition.
+    @property
+    def condition(self) -> str:
+        """Get the name of the scored condition.
 
         Returns:
-            ScoreSummary: A summary of the scores.
+            str: A condition.
+        """
+        return str(self.run_cfg["condition"])
+
+    @property
+    def langs(self) -> list[str]:
+        """Get the languages to score.
+
+        Returns:
+            list[str]: A list of language codes.
+        """
+        return evaluation_languages(self.condition, self.run_cfg["target_lang"])
+
+    @property
+    def data(self) -> tuple[str, str, int]:
+        """Get where the scored lines come from.
+
+        Returns:
+            tuple[str, str, int]: A tuple with the data folder, the target language and the seed.
         """
         run = self.run_cfg
 
-        self.model.load()
+        return run["data_dir"], run["target_lang"], run["seed"]
+
+    def _attach(self) -> None:
+        """Attach the run's adapter to the loaded base model."""
         load_adapter(self.model, str(self.run_dir / ADAPTER_DIR))
 
-        try:
-            summary = score_languages(
-                self.model,
-                run.condition,
-                run.data_dir,
-                run.target_lang,
-                evaluation_languages(run.condition, run.target_lang),
-                self.cfg.split,
-                self.cfg.max_samples,
-                run.seed,
-                self.run_dir,
-                self.logger,
-            )
+    def _tracking_run(self, model_info: dict[str, Any]) -> Any:
+        """Get a W&B run for the scoring, or None if W&B is switched off.
 
-        finally:
-            self.model.unload()
+        Args:
+            model_info (dict[str, Any]): The model's info.
 
-        wandb_run = tracking.start_finetune(
-            self.wandb_cfg, run.condition, self.run_dir.name, self.run_dir
+        Returns:
+            Any: A W&B run, or None if W&B is switched off.
+        """
+        return tracking.start_finetune(
+            self.wandb_cfg, self.condition, self.run_dir.name, self.run_dir
         )
-
-        tracking.log_scores(wandb_run, summary.split, summary.scores, summary.predictions)
-        tracking.finish(wandb_run)
-
-        return summary

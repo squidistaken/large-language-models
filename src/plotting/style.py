@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
-from src.finetune.conditions import system_name, systems
+from src.finetune.conditions import systems
 
 TEXT_WIDTH_IN = 17 / 2.54
 CATEGORICAL = ("tab:blue", "tab:orange", "tab:green", "tab:red")
@@ -51,19 +51,6 @@ def system_markers(target_lang: str) -> dict[str, str]:
         dict[str, str]: A mapping from system name to marker shape.
     """
     return dict(zip(systems(target_lang), MARKERS, strict=True))
-
-
-def condition_color(condition: str, target_lang: str) -> str:
-    """Get the colour of a PEFT condition.
-
-    Args:
-        condition (str): The PEFT condition.
-        target_lang (str): The assigned target language.
-
-    Returns:
-        str: A hex colour.
-    """
-    return system_colors(target_lang)[system_name(condition)]
 
 
 def apply_style() -> None:

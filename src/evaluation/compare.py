@@ -5,13 +5,12 @@ from typing import Any
 from omegaconf import DictConfig
 
 from src.constants import BILINGUAL, SOURCE_LANG
-from src.data.prepare_data import pair_name
 from src.data.writing import SplitWriter
 from src.evaluation.metrics import example_jaccard
-from src.finetune.selection import selected_run
+from src.finetune.selection import resolve_run_name
 from src.utils.files import read_jsonl, write_jsonl
 from src.utils.logger import Logger
-from src.utils.runs import predictions_path, read_run_info, run_dir, zero_shot_dir
+from src.utils.runs import predictions_path, run_dir, zero_shot_dir_of
 
 IMPROVED = "improved"
 WORSENED = "worsened"
@@ -166,17 +165,10 @@ class PredictionComparer:
         Raises:
             FileNotFoundError: If no configuration is given and none has been selected yet.
         """
-        run_name = run_name or self.cfg.evaluate.run_name or selected_run(self.cfg.finetune.out_dir)
-
-        if run_name is None:
-            raise FileNotFoundError(
-                "No configuration selected yet. Pass analysis.baseline and analysis.candidate, "
-                "or evaluate.run_name=<run_name>."
-            )
-
-        bilingual = run_dir(self.cfg.finetune.out_dir, BILINGUAL, str(run_name))
-        model_name = read_run_info(bilingual)["model"]["name"]
-        zero_shot = zero_shot_dir(self.cfg.prompting.out_dir, model_name)
+        bilingual = run_dir(
+            self.cfg.finetune.out_dir, BILINGUAL, resolve_run_name(self.cfg, run_name)
+        )
+        zero_shot = zero_shot_dir_of(self.cfg.prompting.out_dir, bilingual)
 
         return (
             predictions_path(zero_shot, self.split, self.cfg.evaluate.max_samples, self.lang),
@@ -193,9 +185,8 @@ class PredictionComparer:
             dict[str, dict]: A mapping from alignment identifier to the record, or an empty mapping
                              if the file is missing.
         """
-        target = self.cfg.prepare.target_lang
-        writer = SplitWriter(
-            Path(self.cfg.prepare.out_dir) / pair_name(target), target, self.logger
+        writer = SplitWriter.for_pair(
+            self.cfg.prepare.out_dir, self.cfg.prepare.target_lang, self.logger
         )
         path = writer.canonical_path(lang, self.split)
 

@@ -2,11 +2,11 @@ import math
 
 from matplotlib.figure import Figure
 
-from src.evaluation.metrics import AGGREGATE_METRICS, metric_label
+from src.constants import AGGREGATE_METRICS, HEADLINE_METRICS
+from src.evaluation.metrics import metric_label
 from src.plotting.figures.base import BaseFigure
 from src.plotting.style import UNIT, bars, color_keys, legend, panels
 
-HEADLINE_METRICS = ("micro_f1", "jaccard_samples", "macro_f1")
 APPENDIX_METRICS = tuple(key for key in AGGREGATE_METRICS if key not in HEADLINE_METRICS)
 PANEL_COLUMNS = 3
 

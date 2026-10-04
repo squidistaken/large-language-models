@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from omegaconf import DictConfig
 
-from src.finetune.selection import selected_run
+from src.finetune.selection import resolve_run_name
 from src.plotting.figures.alignment import Alignment
 from src.plotting.figures.base import BaseFigure, FigureData
 from src.plotting.figures.compute import Compute
@@ -64,14 +64,9 @@ def make_figures(
     Raises:
         FileNotFoundError: If no configuration is given and none has been selected yet.
     """
-    run_name = run_name or cfg.evaluate.run_name or selected_run(cfg.finetune.out_dir)
-
-    if run_name is None:
-        raise FileNotFoundError("No configuration selected yet. Pass evaluate.run_name=<name>.")
-
     apply_style()
 
-    data = FigureData(cfg, logger, str(run_name), summary)
+    data = FigureData(cfg, logger, resolve_run_name(cfg, run_name), summary)
     out_dir = Path(cfg.plot.out_dir)
     formats = [str(fmt) for fmt in cfg.plot.formats]
     files = [

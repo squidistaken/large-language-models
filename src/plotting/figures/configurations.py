@@ -4,18 +4,15 @@ from matplotlib.figure import Figure
 from src.constants import DEV
 from src.finetune.conditions import evaluation_languages, system_name
 from src.plotting.figures.base import BaseFigure
-from src.plotting.figures.compute import DEFAULT_VRAM_GIB, hours
+from src.plotting.figures.compute import cost_measures
 from src.plotting.style import (
     CONFIGURATION_COLORS,
-    HOURS,
     TEXT_WIDTH_IN,
     UNIT,
     bars,
     color_keys,
     legend,
 )
-from src.utils.files import read_json
-from src.utils.runs import run_dir, scores_path
 
 
 class Configurations(BaseFigure):
@@ -56,9 +53,7 @@ class Configurations(BaseFigure):
         colors = dict(zip(candidates, CONFIGURATION_COLORS, strict=False))
         conditions = list(infos[candidates[0]])
         dev = {
-            (run, condition): read_json(
-                scores_path(run_dir(self.data.cfg.finetune.out_dir, condition, run), DEV, None)
-            )["scores"]
+            (run, condition): self.data.scores(run, condition, DEV)
             for run in candidates
             for condition in conditions
         }
@@ -68,10 +63,8 @@ class Configurations(BaseFigure):
             for lang in evaluation_languages(condition, target)
         }
         names = {system_name(condition): condition for condition in conditions}
-        vram = max(
-            info["model"].get("vram_gb") or DEFAULT_VRAM_GIB
-            for by_condition in infos.values()
-            for info in by_condition.values()
+        measures = cost_measures(
+            info for by_condition in infos.values() for info in by_condition.values()
         )
         fig = plt.figure(figsize=(TEXT_WIDTH_IN, 4.8), layout="constrained")
         axes = fig.subplot_mosaic([["scores", "scores"], ["memory", "time"]])
@@ -88,27 +81,18 @@ class Configurations(BaseFigure):
         axes["scores"].set_xlabel("Dev micro-F1")
         axes["scores"].set_title("(a) Dev micro-F1")
 
-        for key, (title, axis_label, limits, measure, label) in {
-            "memory": (
-                "(b) Peak GPU memory",
-                "Peak GPU memory (GiB)",
-                (0.0, vram),
-                lambda info: info["summary"]["peak_gpu_memory_gib"],
-                "{:.1f}",
-            ),
-            "time": ("(c) Training time", "Training time (h)", HOURS, hours, "{:.2f}"),
-        }.items():
+        for (key, measure), letter in zip(measures.items(), "bc", strict=True):
             bars(
                 axes[key],
                 list(names),
                 colors,
-                lambda run, row, measure=measure: measure(infos[run][names[row]]),
+                lambda run, row, value=measure.value: value(infos[run][names[row]]),
                 horizontal=True,
-                label=label,
+                label=measure.label,
             )
-            axes[key].set_xlim(*limits)
-            axes[key].set_xlabel(axis_label)
-            axes[key].set_title(title)
+            axes[key].set_xlim(*measure.limits)
+            axes[key].set_xlabel(measure.axis_label)
+            axes[key].set_title(f"({letter}) {measure.title}")
 
         axes["time"].tick_params(labelleft=False)
         legend(fig, color_keys(colors))

@@ -3,14 +3,13 @@ from typing import Any
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
-from src.evaluation.metrics import SHORT_NAMES
+from src.constants import HEADLINE_METRICS, SHORT_NAMES
+from src.evaluation.metrics import eval_key
 from src.finetune.conditions import condition_languages, system_name
 from src.plotting.figures.base import BaseFigure, FigureData, kept_epoch, series
-from src.plotting.figures.metrics import HEADLINE_METRICS
 from src.plotting.style import CATEGORICAL, NEUTRAL, legend, panels
 
 LANGUAGE_STYLES = ("-", "--")
-# The loss panel stays neutral, so its lines never share a colour with a metric.
 DEV_LOSS = "0.55"
 
 
@@ -73,12 +72,12 @@ class TrainingHistory(BaseFigure):
         info = self.data.candidate_infos(self.run_name)[self.condition]
         history = info["log_history"]
         langs = condition_languages(self.condition, self.data.target)
-        scored = any(series(history, f"eval_{lang}_micro_f1")[0] for lang in langs)
+        scored = any(series(history, eval_key("micro_f1", lang))[0] for lang in langs)
         kept = kept_epoch(info)
         fig, axes = panels(1, 2 if scored else 1, 2.6)
         loss = axes[0][0]
         epochs, train = series(history, "loss")
-        dev_epochs, dev = series(history, "eval_loss")
+        dev_epochs, dev = series(history, eval_key("loss"))
 
         loss.plot(epochs, train, color=NEUTRAL, linewidth=1)
         loss.plot(dev_epochs, dev, color=DEV_LOSS, marker="o")
@@ -100,7 +99,7 @@ class TrainingHistory(BaseFigure):
 
             for metric, color in colors.items():
                 for lang, style in styles.items():
-                    points, values = series(history, f"eval_{lang}_{metric}")
+                    points, values = series(history, eval_key(metric, lang))
                     metrics.plot(points, values, color=color, linestyle=style, marker="o")
 
             metrics.set_xlabel("Epoch")

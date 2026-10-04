@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from rich.console import Console
 from rich.table import Table
 
-from src.constants import EMOTIONS
+from src.constants import AGGREGATE_METRICS, EMOTIONS, PRIMARY_METRICS
 
 if TYPE_CHECKING:
     from src.evaluation.compare import ComparisonSummary
@@ -25,7 +25,7 @@ def _metrics_table(title: str, columns: list[str], values: list[dict]) -> Table:
     Returns:
         Table: A table.
     """
-    from src.evaluation.metrics import AGGREGATE_METRICS, PRIMARY_METRICS, metric_label
+    from src.evaluation.metrics import metric_label
 
     table = Table(title=title)
 
@@ -99,12 +99,12 @@ def render_selection(console: Console, summary: SelectionSummary) -> None:
 
     table.add_column("Selection score", justify="right", style="bold")
 
-    for rank, result in enumerate(summary.results, start=1):
+    for row in summary.ranking():
         table.add_row(
-            str(rank),
-            result.run_name,
-            *[f"{result.language_scores.get(lang, 0.0):.4f}" for lang in summary.langs],
-            f"{result.selection_score:.4f}",
+            str(row["rank"]),
+            row["run_name"],
+            *[f"{row[f'{lang}_mean'] or 0.0:.4f}" for lang in summary.langs],
+            f"{row['selection_score']:.4f}",
         )
 
     console.print(table)
@@ -165,7 +165,7 @@ def _experiment_tables(console: Console, summary: ResultsSummary) -> None:
         console (Console): The console.
         summary (ResultsSummary): The summary to render.
     """
-    from src.evaluation.metrics import PRIMARY_METRICS, metric_label
+    from src.evaluation.metrics import metric_label
 
     if summary.seeds:
         seeds = ", ".join(str(seed) for seed in summary.seeds[0]["seeds"])

@@ -4,7 +4,7 @@ from typing import Any, Literal, cast
 import wandb
 from omegaconf import DictConfig
 
-from src.constants import EMOTIONS
+from src.evaluation.metrics import per_emotion_rows
 
 DISABLED_MODES = {"", "disabled", "none", "off", "false"}
 ENABLED_MODES = {"online", "offline"}
@@ -148,7 +148,7 @@ def log_scores(
         log_table(
             run,
             f"{prefix}/per_emotion",
-            [{"emotion": emotion, **metrics["per_emotion"][emotion]} for emotion in EMOTIONS],
+            per_emotion_rows(metrics),
         )
         log_table(
             run,

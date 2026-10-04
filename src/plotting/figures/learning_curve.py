@@ -3,8 +3,8 @@ from typing import Any
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
-from src.constants import ZERO_SHOT
-from src.evaluation.metrics import PRIMARY_METRICS, metric_label
+from src.constants import PRIMARY_METRICS, ZERO_SHOT
+from src.evaluation.metrics import metric_label
 from src.finetune.conditions import system_name
 from src.plotting.figures.base import BaseFigure
 from src.plotting.style import NEUTRAL, legend, marker_keys, panels
@@ -21,7 +21,7 @@ class LearningCurve(BaseFigure):
         Returns:
             list[dict[str, Any]]: A list of rows, empty without downsampled runs.
         """
-        return self.data.results.get("learning_curve", [])
+        return self.data.results.curve
 
     @property
     def name(self) -> str:
@@ -30,7 +30,7 @@ class LearningCurve(BaseFigure):
         Returns:
             str: A file name stem.
         """
-        return f"learning_curve.{self.data.split}.{self.data.run_name}"
+        return f"learning_curve.{self.data.stem}"
 
     @property
     def title(self) -> str:

@@ -9,20 +9,26 @@ from typing import TYPE_CHECKING, Any
 from matplotlib.figure import Figure
 from omegaconf import DictConfig
 
-from src.constants import SOURCE_LANG, ZERO_SHOT
-from src.data.prepare_data import pair_name
+from src.constants import CHECKPOINT_METRICS, SOURCE_LANG, ZERO_SHOT
 from src.data.writing import SplitWriter
+from src.evaluation.metrics import eval_key
 from src.finetune.conditions import conditions, system_name
-from src.finetune.selection import SELECTION_FILE
+from src.finetune.selection import read_selection
 from src.plotting.style import save, system_colors, system_markers
 from src.utils.files import read_json, read_jsonl
 from src.utils.logger import Logger
-from src.utils.runs import predictions_path, read_run_info, results_stem, run_dir, zero_shot_dir
+from src.utils.runs import (
+    predictions_path,
+    read_run_info,
+    results_path,
+    results_stem,
+    run_dir,
+    scores_path,
+    zero_shot_dir_of,
+)
 
 if TYPE_CHECKING:
     from src.evaluation.results import ResultsSummary
-
-CHECKPOINT_METRICS = {"loss": False, "micro_f1": True}
 
 
 class FigureData:
@@ -51,33 +57,32 @@ class FigureData:
         self.split = str(cfg.evaluate.split)
         self.max_samples = cfg.evaluate.max_samples
         self.stem = results_stem(self.split, self.max_samples, run_name)
-
-        if summary is not None:
-            self.__dict__["results"] = {
-                "results": summary.rows,
-                "per_emotion": summary.per_emotion,
-                "seeds": summary.seeds,
-                "learning_curve": summary.curve,
-            }
+        self.summary = summary
+        self._infos: dict[str, dict[str, dict[str, Any]]] = {}
 
     @cached_property
-    def results(self) -> dict[str, Any]:
+    def results(self) -> ResultsSummary:
         """Get the final results of the configuration.
 
         Returns:
-            dict[str, Any]: A mapping with the aggregate results and the per-emotion results.
+            ResultsSummary: The results.
 
         Raises:
             FileNotFoundError: If the results are missing.
         """
-        path = Path(self.cfg.evaluate.out_dir) / f"{self.stem}.json"
+        if self.summary is not None:
+            return self.summary
+
+        from src.evaluation.results import ResultsSummary
+
+        path = results_path(self.cfg.evaluate.out_dir, self.split, self.max_samples, self.run_name)
 
         if not path.exists():
             raise FileNotFoundError(
                 f"Missing {path}. Run `uv run main.py action=evaluate_final` first."
             )
 
-        return read_json(path)
+        return ResultsSummary.load(path)
 
     @property
     def rows(self) -> list[dict[str, Any]]:
@@ -86,7 +91,7 @@ class FigureData:
         Returns:
             list[dict[str, Any]]: A list of rows.
         """
-        return self.results["results"]
+        return self.results.rows
 
     @property
     def per_emotion(self) -> list[dict[str, Any]]:
@@ -95,7 +100,7 @@ class FigureData:
         Returns:
             list[dict[str, Any]]: A list of rows.
         """
-        return self.results["per_emotion"]
+        return self.results.per_emotion
 
     @cached_property
     def runs(self) -> dict[str, Path]:
@@ -138,10 +143,28 @@ class FigureData:
         Returns:
             dict[str, dict[str, Any]]: A mapping from condition to run info.
         """
-        return {
-            condition: read_run_info(run_dir(self.cfg.finetune.out_dir, condition, run_name))
-            for condition in conditions(self.target)
-        }
+        if run_name not in self._infos:
+            self._infos[run_name] = {
+                condition: read_run_info(run_dir(self.cfg.finetune.out_dir, condition, run_name))
+                for condition in conditions(self.target)
+            }
+
+        return self._infos[run_name]
+
+    def scores(self, run_name: str, condition: str, split: str) -> dict[str, dict[str, Any]]:
+        """Get the scores of one candidate configuration, condition and split.
+
+        Args:
+            run_name (str): The candidate's run name.
+            condition (str): The PEFT condition.
+            split (str): The partition name.
+
+        Returns:
+            dict[str, dict[str, Any]]: A mapping from language to scores.
+        """
+        run = run_dir(self.cfg.finetune.out_dir, condition, run_name)
+
+        return read_json(scores_path(run, split, None))["scores"]
 
     @cached_property
     def predictions(self) -> dict[str, dict[str, list[dict]]]:
@@ -150,8 +173,8 @@ class FigureData:
         Returns:
             dict[str, dict[str, list[dict]]]: A mapping from system to language to lines.
         """
-        model_name = next(iter(self.run_infos.values()))["model"]["name"]
-        folders = {ZERO_SHOT: zero_shot_dir(self.cfg.prompting.out_dir, model_name), **self.runs}
+        main = next(iter(self.runs.values()))
+        folders = {ZERO_SHOT: zero_shot_dir_of(self.cfg.prompting.out_dir, main), **self.runs}
 
         return {
             system_name(condition): {
@@ -169,9 +192,9 @@ class FigureData:
         Returns:
             SplitWriter: A split writer.
         """
-        target = str(self.cfg.prepare.target_lang)
-
-        return SplitWriter(Path(self.cfg.prepare.out_dir) / pair_name(target), target, self.logger)
+        return SplitWriter.for_pair(
+            self.cfg.prepare.out_dir, str(self.cfg.prepare.target_lang), self.logger
+        )
 
     def records(self, lang: str, splits: tuple[str, ...]) -> list[dict]:
         """Read the prepared records of one language.
@@ -194,9 +217,7 @@ class FigureData:
         Returns:
             dict[str, Any] | None: The selection, or None before any selection.
         """
-        path = Path(self.cfg.finetune.out_dir) / SELECTION_FILE
-
-        return read_json(path) if path.exists() else None
+        return read_selection(self.cfg.finetune.out_dir)
 
     def languages(self, present: Iterable[str]) -> list[str]:
         """Get the languages that are present in the results, in display order.
@@ -329,7 +350,7 @@ def kept_epoch(run_info: dict[str, Any]) -> float | None:
         float | None: A kept epoch, or None if the run did not keep any checkpoint.
     """
     metric = run_info["config"].get("checkpoint_metric", "loss")
-    epochs, values = series(run_info["log_history"], f"eval_{metric}")
+    epochs, values = series(run_info["log_history"], eval_key(metric))
 
     if not values:
         return None

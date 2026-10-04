@@ -12,6 +12,18 @@ from src.utils.logger import Logger
 MANIFEST_FILE = "split_manifest.json"
 
 
+def pair_name(target_lang: str) -> str:
+    """Get the name of the directory holding one source-target pair's splits.
+
+    Args:
+        target_lang (str): The target language.
+
+    Returns:
+        str: A pair name.
+    """
+    return f"{SOURCE_LANG}-{target_lang}"
+
+
 class SplitWriter:
     """Class that writes the canonical and conversational split files, and the reproducibility
     manifest."""
@@ -38,6 +50,20 @@ class SplitWriter:
         self.logger = logger
         self.labels = labels
         self.formatter = formatter or ConversationFormatter(labels)
+
+    @classmethod
+    def for_pair(cls, data_dir: str | Path, target_lang: str, logger: Logger) -> "SplitWriter":
+        """Get the writer of one source-target pair's splits.
+
+        Args:
+            data_dir (str | Path): The folder holding every pair's splits.
+            target_lang (str): The target language.
+            logger (Logger): The logger.
+
+        Returns:
+            SplitWriter: A split writer.
+        """
+        return cls(Path(data_dir) / pair_name(target_lang), target_lang, logger)
 
     @property
     def languages(self) -> tuple[str, str]:

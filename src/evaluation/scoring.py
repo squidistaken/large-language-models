@@ -1,13 +1,17 @@
 import json
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from omegaconf import DictConfig
 
 from src.constants import EVAL_SPLITS
 from src.data.loading import load_examples
 from src.evaluation.metrics import metrics_info, score
 from src.evaluation.parsing import parse_labels
 from src.models.base import Model
+from src.utils import tracking
 from src.utils.files import write_json, write_jsonl
 from src.utils.logger import Logger
 from src.utils.runs import predictions_path, scores_path
@@ -79,58 +83,152 @@ def score_examples(
     return score(gold, parsed), rows
 
 
-def score_languages(
-    model: Model,
-    condition: str,
-    data_dir: str,
-    target_lang: str,
-    langs: list[str],
-    split: str,
-    max_samples: int | None,
-    seed: int,
-    run: Path,
-    logger: Logger,
-) -> ScoreSummary:
-    """Score a loaded model on one partition of every given language and save the scores.
+class BaseScorer(ABC):
+    """Class that scores a model on one partition of one condition and saves the scores and predictions."""
 
-    Args:
-        model (Model): The loaded model, with any adapter already attached.
-        condition (str): The name of the condition.
-        data_dir (str): The base directory of the processed splits.
-        target_lang (str): The assigned target language.
-        langs (list[str]): The languages to score.
-        split (str): The partition name.
-        max_samples (int | None): The number of lines scored per language, or None for all.
-        seed (int): The seed of the random subset.
-        run (Path): The run folder to save the scores and predictions in.
-        logger (Logger): The logger.
+    def __init__(
+        self,
+        model: Model,
+        run_dir: Path,
+        split: str,
+        max_samples: int | None,
+        wandb_cfg: DictConfig,
+        logger: Logger,
+    ) -> None:
+        """Initialise the class.
 
-    Returns:
-        ScoreSummary: A summary of the scores and predictions of the partition.
-    """
-    summary = ScoreSummary(
-        condition=condition,
-        split=split,
-        scores_file=str(scores_path(run, split, max_samples)),
-    )
+        Args:
+            model (Model): The model.
+            run_dir (Path): The run folder to save the scores and predictions in.
+            split (str): The partition name.
+            max_samples (int | None): The number of lines scored per language, or None for all.
+            wandb_cfg (DictConfig): The wandb config.
+            logger (Logger): The logger.
 
-    for lang in langs:
-        examples = load_examples(data_dir, target_lang, [lang], split, logger, max_samples, seed)
-        summary.scores[lang], summary.predictions[lang] = score_examples(
-            model, examples, lang, predictions_path(run, split, max_samples, lang)
+        Raises:
+            ValueError: If the split is not dev or test.
+        """
+        check_eval_split(split)
+
+        self.model = model
+        self.run_dir = run_dir
+        self.split = split
+        self.max_samples = max_samples
+        self.wandb_cfg = wandb_cfg
+        self.logger = logger
+
+    @property
+    @abstractmethod
+    def condition(self) -> str:
+        """Get the name of the scored condition.
+
+        Returns:
+            str: A condition.
+        """
+
+    @property
+    @abstractmethod
+    def langs(self) -> list[str]:
+        """Get the languages to score.
+
+        Returns:
+            list[str]: A list of language codes.
+        """
+
+    @property
+    @abstractmethod
+    def data(self) -> tuple[str, str, int]:
+        """Get where the scored lines come from.
+
+        Returns:
+            tuple[str, str, int]: The processed-splits folder, the target language, and the seed
+                                  of the random subset.
+        """
+
+    @abstractmethod
+    def _tracking_run(self, model_info: dict[str, Any]) -> Any:
+        """Start or resume the W&B run the scores are logged to.
+
+        Args:
+            model_info (dict[str, Any]): The model's info.
+
+        Returns:
+            Any: A W&B run, or None if W&B is switched off.
+        """
+
+    def _attach(self) -> None:
+        """Prepare the loaded model before it answers, e.g. by attaching an adapter. Nothing by
+        default."""
+        return None
+
+    def _save(self, model_info: dict[str, Any]) -> None:
+        """Save anything else about the run after it has been scored. Nothing by default.
+
+        Args:
+            model_info (dict[str, Any]): The model's info.
+        """
+        return None
+
+    def score(self) -> ScoreSummary:
+        """Let the model answer the partition in every language, then save and log the scores.
+
+        Returns:
+            ScoreSummary: A summary of the scores and predictions of the partition.
+        """
+        self.model.load()
+
+        try:
+            self._attach()
+            summary = self._score_languages()
+            model_info = self.model.info()
+
+        finally:
+            self.model.unload()
+
+        self._save(model_info)
+
+        wandb_run = self._tracking_run(model_info)
+
+        tracking.log_scores(wandb_run, summary.split, summary.scores, summary.predictions)
+        tracking.finish(wandb_run)
+
+        return summary
+
+    def _score_languages(self) -> ScoreSummary:
+        """Score the loaded model on the partition of every language and save the scores.
+
+        Returns:
+            ScoreSummary: A summary of the scores and predictions of the partition.
+        """
+        data_dir, target_lang, seed = self.data
+        summary = ScoreSummary(
+            condition=self.condition,
+            split=self.split,
+            scores_file=str(scores_path(self.run_dir, self.split, self.max_samples)),
         )
 
-        logger.info(f"{lang} {split}: {summary.scores[lang]}")
+        for lang in self.langs:
+            examples = load_examples(
+                data_dir, target_lang, [lang], self.split, self.logger, self.max_samples, seed
+            )
+            summary.scores[lang], summary.predictions[lang] = score_examples(
+                self.model,
+                examples,
+                lang,
+                predictions_path(self.run_dir, self.split, self.max_samples, lang),
+            )
 
-    write_json(
-        Path(summary.scores_file),
-        {
-            "split": split,
-            "max_samples": max_samples,
-            "model": model.info(),
-            "metrics": metrics_info(),
-            "scores": summary.scores,
-        },
-    )
+            self.logger.info(f"{lang} {self.split}: {summary.scores[lang]}")
 
-    return summary
+        write_json(
+            Path(summary.scores_file),
+            {
+                "split": self.split,
+                "max_samples": self.max_samples,
+                "model": self.model.info(),
+                "metrics": metrics_info(),
+                "scores": summary.scores,
+            },
+        )
+
+        return summary

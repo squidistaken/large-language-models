@@ -12,44 +12,48 @@ from sklearn.metrics import (
     recall_score,
 )
 
-from src.constants import EMOTIONS
+from src.constants import EMOTIONS, LOWER_IS_BETTER, SHORT_NAMES
 from src.evaluation.parsing import ParsedOutput
 
 # A metric that divides by zero counts as 0.
 ZERO_DIVISION = 0.0
 
-PRIMARY_METRICS = ("micro_f1", "jaccard_samples")
-SECONDARY_METRICS = ("macro_f1", "micro_precision", "micro_recall", "hamming_loss")
-DIAGNOSTIC_METRICS = ("exact_match", "malformed_rate", "empty_rate")
-AGGREGATE_METRICS = (*PRIMARY_METRICS, *SECONDARY_METRICS, *DIAGNOSTIC_METRICS)
 
-SHORT_NAMES = {
-    "micro_f1": "micro-F1",
-    "jaccard_samples": "Jaccard",
-    "macro_f1": "macro-F1",
-    "micro_precision": "micro-P",
-    "micro_recall": "micro-R",
-    "hamming_loss": "Hamming",
-    "exact_match": "Exact",
-    "malformed_rate": "Malformed",
-    "empty_rate": "Empty",
-}
-
-LOWER_IS_BETTER = {"hamming_loss", "malformed_rate", "empty_rate"}
-
-
-def metric_label(key: str, short: bool = True) -> str:
-    """Get a label for a metric, optionally using the short name and indicating whether
-    lower is better.
+def metric_label(key: str) -> str:
+    """Get the short label of a metric, indicating whether lower is better.
 
     Args:
         key (str): The metric key.
-        short (bool): Whether to use the short name instead of the key.
 
     Returns:
         str: A label.
     """
-    return f"{SHORT_NAMES[key] if short else key}{' ↓' if key in LOWER_IS_BETTER else ''}"
+    return f"{SHORT_NAMES[key]}{' ↓' if key in LOWER_IS_BETTER else ''}"
+
+
+def eval_key(metric: str, lang: str | None = None) -> str:
+    """Get the key of a metric in the evaluation dictionary, optionally for a specific language.
+
+    Args:
+        metric (str): The metric, or loss.
+        lang (str | None): The language, or None for the mean over the languages. Defaults to None.
+
+    Returns:
+        str: A key.
+    """
+    return f"eval_{lang}_{metric}" if lang else f"eval_{metric}"
+
+
+def per_emotion_rows(metrics: dict[str, Any]) -> list[dict[str, Any]]:
+    """Get the per-emotion rows of a metrics dictionary.
+
+    Args:
+        metrics (dict[str, Any]): The metrics, with the per-emotion scores.
+
+    Returns:
+        list[dict[str, Any]]: A list of dictionaries, one per emotion, with the metrics.
+    """
+    return [{"emotion": emotion, **metrics["per_emotion"][emotion]} for emotion in EMOTIONS]
 
 
 def binarise(label_sets: list[list[str]]) -> np.ndarray:
@@ -145,8 +149,42 @@ def example_jaccard(gold: list[str], predicted: list[str]) -> float:
     return len(set(gold) & set(predicted)) / len(union) if union else ZERO_DIVISION
 
 
-INTERVAL_METRICS = ("micro_f1", "jaccard_samples", "macro_f1")
 BOOTSTRAP_SAMPLES = 1000
+
+
+def percentile_interval(estimates: np.ndarray, level: float) -> list[float]:
+    """Get the percentile bootstrap confidence interval of a set of estimates.
+
+    Args:
+        estimates (np.ndarray): The estimate of each bootstrap sample.
+        level (float): The confidence level.
+
+    Returns:
+        list[float]: A list with the lower and upper bounds of the confidence interval.
+    """
+    tail = (1 - level) / 2 * 100
+
+    return [float(np.percentile(estimates, tail)), float(np.percentile(estimates, 100 - tail))]
+
+
+def bootstrap_mean(
+    values: list[float], seed: int, level: float = 0.95, samples: int = BOOTSTRAP_SAMPLES
+) -> list[float]:
+    """Get the percentile bootstrap confidence interval of the mean of a set of values.
+
+    Args:
+        values (list[float]): The values.
+        seed (int): The seed of the resampling.
+        level (float): The confidence level.
+        samples (int): The number of bootstrap samples.
+
+    Returns:
+        list[float]: A list with the lower and upper bounds of the confidence interval.
+    """
+    data = np.asarray(values)
+    resamples = np.random.default_rng(seed).integers(0, len(data), (samples, len(data)))
+
+    return percentile_interval(data[resamples].mean(axis=1), level)
 
 
 def bootstrap_intervals(
@@ -189,9 +227,4 @@ def bootstrap_intervals(
         "jaccard_samples": line_jaccard[resamples].mean(axis=1),
         "macro_f1": f1(tp, fp, fn).mean(axis=1),
     }
-    tail = (1 - level) / 2 * 100
-
-    return {
-        metric: [float(np.percentile(values, tail)), float(np.percentile(values, 100 - tail))]
-        for metric, values in estimates.items()
-    }
+    return {metric: percentile_interval(values, level) for metric, values in estimates.items()}

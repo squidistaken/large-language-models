@@ -1,7 +1,7 @@
 from matplotlib.figure import Figure
 
 from src.constants import EMOTIONS, SPLIT_NAMES
-from src.data.prepare_data import pair_name
+from src.data.writing import pair_name
 from src.plotting.figures.base import BaseFigure
 from src.plotting.style import LANGUAGE_COLORS, SHARE, bars, color_keys, panels
 

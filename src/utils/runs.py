@@ -1,15 +1,14 @@
 import platform
+from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
-from src.constants import ZERO_SHOT
+from src.constants import RUN_INFO_FILE, SCORES_DIR, ZERO_SHOT
 from src.utils.files import read_json
 
-RUN_INFO_FILE = "run_info.json"
-SCORES_DIR = "scores"
 LIBRARIES = ("torch", "transformers", "peft", "scikit-learn")
 
 
@@ -79,39 +78,83 @@ def run_dir(out_dir: str, condition: str, run_name: str) -> Path:
     return Path(out_dir) / condition / run_name
 
 
-def variant(config: Any) -> str | None:
-    """Get a variant of a run.
+@dataclass(frozen=True)
+class RunVariant:
+    """The variant of a run, if it differs from the main run of its configuration."""
+
+    seed: int | None = None
+    target_lines: int | None = None
+
+    @classmethod
+    def of(cls, config: Any) -> "RunVariant":
+        """Get the variant of a run, if it differs from the main run of its configuration.
+
+        Args:
+            config (Any): The run's finetune config.
+
+        Returns:
+            RunVariant: A run variant.
+        """
+        main_seed = config.get("main_seed")
+        repeated = main_seed is not None and config["seed"] != main_seed
+
+        return cls(config["seed"] if repeated else None, config.get("max_target_samples"))
+
+    @property
+    def is_main(self) -> bool:
+        """Get whether the run is the main run of its configuration.
+
+        Returns:
+            bool: True if the run is the main run, False if it is a repetition or a capped run.
+        """
+        return self.seed is None and self.target_lines is None
+
+    @property
+    def is_repetition(self) -> bool:
+        """Get whether the run repeats its configuration with only another seed.
+
+        Returns:
+            bool: True if the run is a repetition, False if it is the main run or a capped run.
+        """
+        return self.seed is not None and self.target_lines is None
+
+    @property
+    def is_capped(self) -> bool:
+        """Get whether the run trains its configuration on only fewer target-language lines.
+
+        Returns:
+            bool: True if the run is a capped run, False if it is the main run or a repetition.
+        """
+        return self.target_lines is not None and self.seed is None
+
+    def folder(self, run_name: str) -> str:
+        """Get the folder name of a run variant.
+
+        Args:
+            run_name (str): The run name of the configuration.
+
+        Returns:
+            str: A folder name.
+        """
+        parts = [f"seed{self.seed}"] if self.seed is not None else []
+
+        if self.target_lines is not None:
+            parts.append(f"n{self.target_lines}")
+
+        return ".".join([run_name, *parts])
+
+
+def zero_shot_dir_of(out_dir: str, peft_run: Path) -> Path:
+    """Get the folder holding the zero-shot scores of one PEFT run.
 
     Args:
-        config (Any): The run's finetune config.
+        out_dir (str): The base folder of the prompting runs.
+        peft_run (Path): The PEFT run folder.
 
     Returns:
-        str | None: A variant, or None if the run has no variant.
+        Path: A path.
     """
-    parts = []
-
-    if config.get("main_seed") is not None and config["seed"] != config["main_seed"]:
-        parts.append(f"seed{config['seed']}")
-
-    if config.get("max_target_samples") is not None:
-        parts.append(f"n{config['max_target_samples']}")
-
-    return ".".join(parts) or None
-
-
-def variant_name(run_name: str, config: Any) -> str:
-    """Get a folder name for a run variant.
-
-    Args:
-        run_name (str): The run name of the configuration.
-        config (Any): The run's finetune config.
-
-    Returns:
-        str: A folder name.
-    """
-    name = variant(config)
-
-    return f"{run_name}.{name}" if name else run_name
+    return zero_shot_dir(out_dir, read_run_info(peft_run)["model"]["name"])
 
 
 def zero_shot_dir(out_dir: str, model_name: str) -> Path:
@@ -181,6 +224,21 @@ def results_stem(split: str, max_samples: int | None, run_name: str) -> str:
         str: A file name stem.
     """
     return f"{scores_stem(split, max_samples)}.{run_name}"
+
+
+def results_path(out_dir: str, split: str, max_samples: int | None, run_name: str) -> Path:
+    """Get the final results file of one configuration.
+
+    Args:
+        out_dir (str): The folder holding the results.
+        split (str): The partition name.
+        max_samples (int | None): The number of lines scored per language, or None for all.
+        run_name (str): The run name of the configuration.
+
+    Returns:
+        Path: A path.
+    """
+    return Path(out_dir) / f"{results_stem(split, max_samples, run_name)}.json"
 
 
 def pinned_model_cfg(run_info: dict[str, Any]) -> DictConfig:

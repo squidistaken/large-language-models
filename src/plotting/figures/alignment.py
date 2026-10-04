@@ -1,29 +1,11 @@
 from collections import defaultdict
 from statistics import mean
 
-import numpy as np
 from matplotlib.figure import Figure
 
-from src.evaluation.metrics import BOOTSTRAP_SAMPLES, example_jaccard
+from src.evaluation.metrics import bootstrap_mean, example_jaccard
 from src.plotting.figures.base import BaseFigure
 from src.plotting.style import UNIT, bars, color_keys, panels
-
-
-def bootstrap_mean(values: list[float], seed: int) -> list[float]:
-    """Get the 95% confidence interval of the mean of a list of values by bootstrapping.
-
-    Args:
-        values (list[float]): The values.
-        seed (int): The seed of the resampling.
-
-    Returns:
-        list[float]: A list of the [lower, upper] bounds.
-    """
-    data = np.asarray(values)
-    resamples = np.random.default_rng(seed).integers(0, len(data), (BOOTSTRAP_SAMPLES, len(data)))
-    means = data[resamples].mean(axis=1)
-
-    return [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]
 
 
 class Alignment(BaseFigure):

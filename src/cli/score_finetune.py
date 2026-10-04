@@ -86,8 +86,9 @@ def score_and_select(cfg: DictConfig, console: Console, logger: Logger) -> None:
     Raises:
         SystemExit: If the settings are invalid or a required file is missing.
     """
+    from src.constants import SELECTION_FILE
     from src.finetune.evaluate import AdapterScorer
-    from src.finetune.selection import SELECTION_FILE, ConfigSelector
+    from src.finetune.selection import ConfigSelector
 
     score_cfg = cfg.finetune.score
     score_cfg.run_dir = _run_dir(cfg)
@@ -96,7 +97,9 @@ def score_and_select(cfg: DictConfig, console: Console, logger: Logger) -> None:
         _warn_if_not_selected(cfg, console, logger)
 
     try:
-        scores = AdapterScorer(score_cfg, cfg.wandb, logger).score()
+        scores = AdapterScorer(
+            score_cfg.run_dir, score_cfg.split, score_cfg.max_samples, cfg.wandb, logger
+        ).score()
 
     except (FileNotFoundError, ValueError, TypeError) as e:
         raise SystemExit(str(e)) from e

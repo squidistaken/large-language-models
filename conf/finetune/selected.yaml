@@ -1,0 +1,5 @@
+# @package _global_
+# The configuration the dev-set selection picked; the seed and size runs repeat it.
+defaults:
+  - qlora_lr1e-4
+  - _self_

@@ -16,11 +16,19 @@ from src.finetune.conditions import systems
 
 TEXT_WIDTH_IN = 17 / 2.54
 CATEGORICAL = ("tab:blue", "tab:orange", "tab:green", "tab:red")
-# A marker shape per system as well as a colour, so the figures also read in black and white.
 MARKERS = ("o", "s", "^", "D")
 NEUTRAL = "black"
 LANGUAGE_COLORS = ("tab:purple", "tab:brown")
-CONFIGURATION_COLORS = ("tab:cyan", "tab:olive", "tab:pink", "tab:gray")
+CONFIGURATION_COLORS = (
+    "#1b9e77",
+    "#d95f02",
+    "#7570b3",
+    "#e7298a",
+    "#66a61e",
+    "#e6ab02",
+    "#a6761d",
+    "#666666",
+)
 
 UNIT = (0.0, 1.0)  # every metric and share bounded by 0 and 1
 GAIN = (-0.3, 0.3)  # difference in F1

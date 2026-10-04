@@ -14,6 +14,8 @@ from src.plotting.style import (
     legend,
 )
 
+LABELLED_CANDIDATES = 3
+
 
 class Configurations(BaseFigure):
     """Class for the comparison of the candidate configurations on dev and in training cost."""
@@ -50,7 +52,7 @@ class Configurations(BaseFigure):
 
         target = self.data.target
         infos = {run: self.data.candidate_infos(run) for run in candidates}
-        colors = dict(zip(candidates, CONFIGURATION_COLORS, strict=False))
+        colors = dict(zip(candidates, CONFIGURATION_COLORS[: len(candidates)], strict=True))
         conditions = list(infos[candidates[0]])
         dev = {
             (run, condition): self.data.scores(run, condition, DEV)
@@ -66,7 +68,7 @@ class Configurations(BaseFigure):
         measures = cost_measures(
             info for by_condition in infos.values() for info in by_condition.values()
         )
-        fig = plt.figure(figsize=(TEXT_WIDTH_IN, 4.8), layout="constrained")
+        fig = plt.figure(figsize=(TEXT_WIDTH_IN, 3.2 + 0.4 * len(candidates)), layout="constrained")
         axes = fig.subplot_mosaic([["scores", "scores"], ["memory", "time"]])
 
         bars(
@@ -75,7 +77,7 @@ class Configurations(BaseFigure):
             colors,
             lambda run, row: dev[(run, rows[row][0])][rows[row][1]]["micro_f1"],
             horizontal=True,
-            label="{:.3f}",
+            label="{:.3f}" if len(candidates) <= LABELLED_CANDIDATES else None,
         )
         axes["scores"].set_xlim(*UNIT)
         axes["scores"].set_xlabel("Dev micro-F1")

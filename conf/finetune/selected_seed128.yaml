@@ -1,0 +1,8 @@
+# @package _global_
+# A seed repetition of the selected configuration, saved in <run_name>.seed128.
+defaults:
+  - selected
+  - _self_
+
+finetune:
+  seed: 128

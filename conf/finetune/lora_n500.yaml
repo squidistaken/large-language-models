@@ -1,8 +1,0 @@
-# @package _global_
-# lora on 500 target-language training lines, for the learning curve; saved in lora.n500.
-defaults:
-  - lora
-  - _self_
-
-finetune:
-  max_target_samples: 500

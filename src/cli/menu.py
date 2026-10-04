@@ -12,6 +12,7 @@ from src.cli import (
     evaluate_final,
     finetune,
     prepare_data,
+    select_demos,
     score_finetune,
     zero_shot,
 )
@@ -38,6 +39,7 @@ class CLIAction(Protocol):
 ACTIONS: dict[str, CLIAction] = {
     "download_data": download_data,
     "prepare_data": prepare_data,
+    "select_demos": select_demos,
     "finetune": finetune,
     "score_finetune": score_finetune,
     "zero_shot": zero_shot,

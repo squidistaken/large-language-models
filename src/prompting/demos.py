@@ -1,8 +1,34 @@
 import random
 
+from src.constants import TRAIN
+from src.data.writing import SplitWriter
 from src.utils.files import read_jsonl
+from src.utils.logger import Logger
 
 MAX_DEMO_CHARS = 80
+
+def load_train_rows(data_dir: str, target_lang: str, lang: str, logger: Logger) -> list[dict]:
+    """Load the canonical train rows of one language of a language pair.
+
+    Args:
+        data_dir (str): The folder holding every pair's splits.
+        target_lang (str): The assigned target language.
+        lang (str): The language to load.
+        logger (Logger): The logger.
+
+    Returns:
+        list[dict]: A list of canonical rows.
+
+    Raises:
+        FileNotFoundError: If the split file is missing.
+    """
+    path = SplitWriter.for_pair(data_dir, target_lang, logger).canonical_path(lang, TRAIN)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Missing {path}. Run `uv run main.py action=prepare_data` first.")
+
+    return read_jsonl(path)
+
 
 def filter_candidates(rows: list[dict], max_chars: int = MAX_DEMO_CHARS) -> list[dict]:
     """Keep the rows suitable as demonstrations: gold English labels, a direct alignment and a

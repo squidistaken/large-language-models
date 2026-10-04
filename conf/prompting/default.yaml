@@ -3,4 +3,6 @@ target_lang: ${prepare.target_lang}
 out_dir: ${out_dir}/prompting
 split: dev
 max_samples: null # null = every line; an integer scores a seeded random subset per language
+shots: 0          # 0 for zero-shot prompting; 5 for five-shot prompting
+align_ids: null   # the 5 align_id's for five-shot prompting 
 seed: ${seed}

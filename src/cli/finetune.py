@@ -7,10 +7,10 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
-from src.cli.prompts import ask_model, ask_until, parse_choice
+from src.cli.prompts import ask_model, ask_target_lang, ask_until, parse_choice
 from src.cli.score_finetune import score_and_select
-from src.constants import DEV
-from src.finetune.conditions import conditions
+from src.constants import DEV, LANGUAGE_NAMES
+from src.finetune.conditions import condition_languages, conditions, evaluation_languages
 from src.utils.logger import Logger
 
 # The trainer loads torch and transformers, so it is imported only when the action runs; the
@@ -22,6 +22,31 @@ LABEL = "Fine-tune (PEFT)"
 TITLE = "Parameter-Efficient Fine-Tuning"
 
 
+def _render_conditions(console: Console, target_lang: str) -> None:
+    """Render what each PEFT condition trains and is evaluated on, for a target language.
+
+    Args:
+        console (Console): The console.
+        target_lang (str): The assigned target language.
+    """
+    table = Table(title=f"PEFT conditions for {LANGUAGE_NAMES[target_lang]}")
+
+    table.add_column("Condition", style="cyan")
+    table.add_column("Trains on")
+    table.add_column("Evaluated on")
+
+    for condition in conditions(target_lang):
+        trains = condition_languages(condition, target_lang)
+        evaluates = evaluation_languages(condition, target_lang)
+        table.add_row(
+            condition,
+            " + ".join(LANGUAGE_NAMES[lang] for lang in trains),
+            ", ".join(LANGUAGE_NAMES[lang] for lang in evaluates),
+        )
+
+    console.print(table)
+
+
 def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     """Prompt the user for options.
 
@@ -30,7 +55,11 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console (Console): The console.
         logger (Logger): The logger.
     """
-    options = conditions(cfg.finetune.target_lang)
+    target_lang = ask_target_lang(console, cfg)
+    options = conditions(target_lang)
+
+    _render_conditions(console, target_lang)
+
     condition = ask_until(
         console,
         f"Condition ({', '.join(options)})",
@@ -44,7 +73,10 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     cfg.finetune.condition = condition
     cfg.finetune.run_name = run_name
 
-    logger.info(f"finetune config: condition={condition} model={model} run_name={run_name}")
+    logger.info(
+        f"finetune config: target_lang={target_lang} condition={condition} model={model} "
+        f"run_name={run_name}"
+    )
 
 
 def _render(console: Console, summary: FinetuneSummary) -> None:
@@ -59,7 +91,9 @@ def _render(console: Console, summary: FinetuneSummary) -> None:
     table.add_column("Quantity")
     table.add_column("Value", justify="right", style="cyan")
 
-    best = "n/a" if summary.best_dev_loss is None else f"{summary.best_dev_loss:.4f}"
+    best = (
+        "n/a" if summary.best_checkpoint_score is None else f"{summary.best_checkpoint_score:.4f}"
+    )
     peak = "n/a" if summary.peak_gpu_memory_gib is None else f"{summary.peak_gpu_memory_gib} GiB"
 
     table.add_row("Condition", summary.condition)
@@ -69,7 +103,8 @@ def _render(console: Console, summary: FinetuneSummary) -> None:
     table.add_row("Dev examples", str(summary.dev_examples))
     table.add_row("Trainable parameters", f"{summary.trainable_params:,}")
     table.add_row("Total parameters", f"{summary.total_params:,}")
-    table.add_row("Best dev loss", best)
+    table.add_row("Epochs trained", f"{summary.epochs_trained:g}")
+    table.add_row(f"Best {summary.checkpoint_metric}", best)
     table.add_row("Peak GPU memory", peak)
     table.add_row("Device", summary.device)
     table.add_row("Saved to", summary.run_dir)
@@ -92,7 +127,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     console = Console()
 
     try:
-        summary = PEFTTrainer(cfg.finetune, cfg.model, logger).train()
+        summary = PEFTTrainer(cfg.finetune, cfg.model, cfg.wandb, logger).train()
 
     except (FileNotFoundError, ValueError, TypeError) as e:
         raise SystemExit(str(e)) from e

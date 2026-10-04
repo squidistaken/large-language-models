@@ -1,0 +1,10 @@
+# @package _global_
+# LoRA in bfloat16 with the default settings.
+defaults:
+  - default@finetune
+  - _self_
+
+finetune:
+  run_name: lora
+model:
+  quantization: null

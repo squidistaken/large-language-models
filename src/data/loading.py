@@ -1,8 +1,6 @@
 import random
-from pathlib import Path
 
 from src.constants import DEFAULT_SEED
-from src.data.prepare_data import pair_name
 from src.data.writing import SplitWriter
 from src.utils.files import read_jsonl
 from src.utils.logger import Logger
@@ -34,7 +32,7 @@ def load_examples(
     Raises:
         FileNotFoundError: If a split file is missing.
     """
-    writer = SplitWriter(Path(data_dir) / pair_name(target_lang), target_lang, logger)
+    writer = SplitWriter.for_pair(data_dir, target_lang, logger)
     examples = []
 
     for lang in langs:

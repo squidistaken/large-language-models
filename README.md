@@ -2,113 +2,244 @@
 
 Repository for the Large Language Models course (WBAI068-05) at the University of Groningen.
 
+We classify the emotions in movie subtitles from the [XED](https://github.com/Helsinki-NLP/XED)
+dataset with open-weight LLMs, in English and our assigned language, Croatian (`hr`). Each line can carry several of Plutchik's eight emotions. We compare zero-shot prompting with parameter-efficient fine-tuning (LoRA/QLoRA) in three conditions: English only, Croatian only, and bilingual.
+
 ## Team
 
- * Petros Kontopirghos (S5851335)
- * Marcus Harald Olof Persson (S5343798)
- * Julian Wierenga (S5628237)
+- Petros Kontopirghos (S5851335)
+- Marcus Harald Olof Persson (S5343798)
+- Julian Wierenga (S5628237)
 
-## Development
+## Setup
 
-We use [uv](https://docs.astral.sh/uv/) for project management. Installation instructions are found there.
-
-1. Clone the project.
-2. Synchronise the project.
+Requirements: Python 3.13, [uv](https://docs.astral.sh/uv/), and a CUDA GPU for fine-tuning and
+scoring. We run the 9B models on an A100 (40 GB); `model.quantization=4bit` (QLoRA) lowers the
+memory needed.
 
 ```bash
 uv sync
-```
-3. Clone the [environment](.env.example) as `.env` and fill in the necessary blanks.
-4. Run the program.
-
-```bash
-uv run main.py
+cp .env.example .env    # then fill in the values below
+uv run main.py          # opens the interactive menu
 ```
 
-## CLI
+| Variable | Purpose |
+|---|---|
+| `HF_TOKEN` | Hugging Face access token, for downloading the models. |
+| `HF_HOME` | Optional model cache location; on Hábrók, jobs default to `/scratch/$USER/hf-cache`. |
+| `WANDB_MODE` | `online`, `offline` or `disabled` (an empty value counts as disabled). |
+| `WANDB_API_KEY` | Needed for online W&B runs, unless you have run `wandb login`. |
+| `WANDB_ENTITY`, `WANDB_PROJECT` | The W&B team and project to log to; the entity defaults to your own. |
+| `WANDB_DIR`, `UV_CACHE_DIR` | Optional cache locations, e.g. on `/scratch`. |
 
-The project exposes a small Hydra-powered CLI, run via [main.py](main.py). Configuration is split into one group per action under [conf/](conf/), composed by [conf/main.yaml](conf/main.yaml). Override any value on the command line with standard Hydra syntax.
+Model weights, access tokens and the dataset are never committed: `data/`, `outputs/`, `logs/`,
+`wandb/` and `.env` are git-ignored.
 
-Running without an `action` override launches an interactive menu where you can pick an action from a list. To run an action directly, pass it as an override:
+## Configuration
 
-```bash
-uv run main.py action=download_data
-```
+The CLI is run through [main.py](main.py) with [Hydra](https://hydra.cc). Running it without an `action` opens an interactive menu; passing `action=<name>` runs that action directly. Any setting can be overridden on the command line.
+
+[conf/main.yaml](conf/main.yaml) composes one config group per concern:
+
+| Group | Settings |
+|---|---|
+| [`data`](conf/data/default.yaml) | Languages to download, and where to. |
+| [`prepare`](conf/prepare/default.yaml) | Target language, split ratios, split seed. |
+| [`model`](conf/model) | The model: Hugging Face id, pinned revision, dtype, quantization, decoding. |
+| [`finetune`](conf/finetune) | LoRA and training hyperparameters, scoring, selection; plus named PEFT configurations. |
+| [`analysis`](conf/analysis/default.yaml) | Comparing two systems' predictions. |
+| [`wandb`](conf/wandb/default.yaml) | Weights & Biases project and mode. |
+| [`logging`](conf/logging/default.yaml) | Log folder and level. |
+
+Models (`model=<name>`):
+
+| Name | Model |
+|---|---|
+| `eurollm_9b` (default) | [utter-project/EuroLLM-9B-Instruct](https://huggingface.co/utter-project/EuroLLM-9B-Instruct) |
+| `qwen3_5_9b` | [Qwen/Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) |
+| `qwen3_5_0_8b` | [Qwen/Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) |
+
+The global `seed` (42) seeds the data split, training and sampled subsets. Decoding is greedy.
+
+## Actions
 
 ### Downloading Data
 
-Downloads the [XED](https://github.com/Helsinki-NLP/XED) annotated and projection data files for one or more languages.
+Downloads the XED annotated and projected data files for one or more languages. Files that
+already exist are skipped unless `data.force=true`.
 
-Interactively, choose "Download Data" from the menu and you'll be prompted for:
-
-- **Languages:** A comma-separated list of language codes, or `all` for every supported
-  language.
-- **Output directory:** Where the files are saved.
-- **Force re-download:** Whether to overwrite files that already exist locally.
-
-Non-interactively, run it directly with Hydra overrides:
+Interactively you are asked for the languages (comma-separated, or `all`; `en,hr` by default), the
+output folder, and whether to re-download.
 
 ```bash
-uv run main.py action=download_data data.languages=[en,hr] data.out_dir=data/raw/xed data.force=false
+uv run main.py action=download_data data.languages=[en,hr]
 ```
 
-Files that already exist in the output directory are skipped unless `data.force=true`.
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config cpu action=download_data data.languages=[en,hr]
+```
 
 ### Data Preparation
 
-Builds a fixed, leakage-controlled 70/20/10 train/development/test split of **matched
-English–target-language pairs** from the raw XED files, plus conversational variants for
-fine-tuning.
+Builds a fixed, leakage-controlled 70/20/10 train/dev/test split of **matched English–target-language pairs** (English–Croatian by default), plus conversational versions of each split for fine-tuning:
 
-Interactively, choose "Prepare Data" from the menu and you'll be prompted for:
+- the split is made by XED alignment id with multi-label stratification, so parallel versions of a subtitle always land in the same partition;
+- exact duplicates are removed and never cross partitions;
+- target-language labels are projected from English, and are treated as projected reference labels.
 
-- **Target language:** The assigned XED language. English is always the
-  source side of the pair.
-- **Raw data directory:** Where the downloaded XED files live.
-- **Output directory:** The base directory for splits. Each language pair gets its own subdirectory.
-- **Split ratios:** Three comma-separated fractions summing to 1.0.
-- **Random seed:** Seeds the stratified split.
-- **Overwrite existing splits:** Whether to replace split files that already exist.
-
-Non-interactively:
+Interactively you are asked for the target language, folders, split ratios, seed, and whether to overwrite. Existing splits are reused; if they were built with other settings the action stops, and `prepare.overwrite=true` rebuilds them.
 
 ```bash
-uv run main.py action=prepare_data prepare.target_lang=hr prepare.seed=42 prepare.overwrite=true
+uv run main.py action=prepare_data prepare.target_lang=hr
 ```
+
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config cpu action=prepare_data prepare.target_lang=hr
+```
+
+Output: `data/processed/xed/en-hr/`, with a `split_manifest.json` recording every setting.
 
 ### Fine-tuning
 
-Fine-tunes the base model with LoRA on the conversational splits from Data Preparation, in one
-of three conditions: English only, target language only, or both (bilingual).
+Fine-tunes the model with LoRA (QLoRA with `model.quantization=4bit`) in one condition for the target language (`prepare.target_lang`, Croatian by default):
 
-Interactively, choose "Fine-tune (PEFT)" from the menu and you'll be prompted for:
+| Condition | Trains on | Evaluated on |
+|---|---|---|
+| `en` | English | English and the target language |
+| `<target>` | the target language | the target language |
+| `bilingual` | English + the target language | English and the target language |
 
-- **Condition:** `en`, the target language, or `bilingual`.
-- **Model:** One of the configs in [conf/model](conf/model), e.g. `qwen3_5_0_8b` for a quick
-  local test.
-- **Run name:** The name of the output folder.
-
-Non-interactively:
+Interactively you are asked for the target language, then shown what each condition trains and is evaluated on, and asked for the condition, the model, and a run name. Use the same run name for all three conditions of one configuration.
 
 ```bash
-uv run main.py action=finetune model=qwen3_5_9b finetune.condition=bilingual finetune.run_name=base
+uv run main.py action=finetune finetune.condition=bilingual finetune.run_name=base
 ```
 
-On a small GPU, keep the effective batch the same with smaller steps, e.g.
-`finetune.batch_size=2 finetune.grad_accum_steps=8`.
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config a100 action=finetune finetune.condition=bilingual finetune.run_name=base
+```
+
+The defaults are rank 16, alpha 32, dropout 0.05 on all linear layers; learning rate 2e-4, 3 epochs, batch 8 with 2 accumulation steps, maximum length 256 tokens, 3% warm-up, seed 42. The model is evaluated on dev twice per epoch; the checkpoint with the highest dev micro-F1 is kept, and training stops after one epoch without improvement. On a small GPU, keep the effective batch the same with smaller steps. For a quick test, limit the data with `finetune.max_train_samples=64 finetune.max_eval_samples=32 finetune.score.max_samples=32`.
+
+Named configurations are saved as presets next to the defaults in [conf/finetune](conf/finetune) and chosen with `finetune=<preset>`.
+
+Output: `outputs/hr/finetune/<condition>/<run folder>/`, with the adapter and a `run_info.json` recording every hyperparameter, the model revision, library versions, hardware, peak GPU memory and the training log.
 
 ### Scoring and Configuration Selection
 
-Scoring lets a fine-tuned run answer every line of a split and computes all the required metrics for the project. Fine-tuning scores the new run on dev by itself; use
-this action to score a run again, or on the test set.
+Lets a fine-tuned run answer every line of a split and computes all the metrics. Fine-tuning
+already scores each run on dev; use this to score a run again, or on test.
 
-Interactively, choose "Score Fine-tuned Run" from the menu and you'll be prompted for:
+After every full dev scoring, one final PEFT configuration is selected. A configuration is the set of
+fine-tuning choices the three conditions share (LoRA or QLoRA, adapter, optimisation and checkpoint
+settings), trained under one run name; the base model, data split and seed are the same for every
+candidate. Each candidate's dev micro-F1 is averaged per language over the conditions evaluated in
+that language (English: `en` and `bilingual`; the target language: all three), then over the two
+languages with equal weight, and the highest score wins. Only the selected configuration is scored on
+test.
 
-- **Run folder:** A finished fine-tuning run; the latest one by default.
-- **Split:** `dev` or `test`.
-
-Non-interactively:
+Interactively you are asked for the target language, the run folder (the latest of that language by default) and the split.
 
 ```bash
-uv run main.py action=score_finetune finetune.score.run_dir=outputs/finetune/bilingual/base finetune.score.split=dev
+uv run main.py action=score_finetune finetune.score.run_dir=outputs/hr/finetune/bilingual/base finetune.score.split=dev
+```
+
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config a100 action=score_finetune finetune.score.run_dir=outputs/hr/finetune/bilingual/base finetune.score.split=dev
+```
+
+Output: `outputs/hr/finetune/<condition>/<run_name>/scores/`, with `<split>.json` and the per-line predictions `<split>.<lang>.predictions.jsonl`, and the dev-set ranking in `outputs/hr/finetune/selection.json`.
+
+### Comparing Predictions
+
+Compares two systems line by line, for the qualitative analysis. Each line is categorised as improved, worsened, same-correct or same-incorrect by its per-line Jaccard index, and enriched with the aligned English subtitle and its labels, the label source, and the number of alignment hops, to help tell model errors from alignment or projection noise.
+
+Interactively you are asked for the target language and the two prediction files.
+
+```bash
+uv run main.py action=compare_predictions analysis.baseline=outputs/hr/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/hr/finetune/hr/base/scores/test.hr.predictions.jsonl
+```
+
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config cpu action=compare_predictions analysis.baseline=outputs/hr/finetune/en/base/scores/test.hr.predictions.jsonl analysis.candidate=outputs/hr/finetune/hr/base/scores/test.hr.predictions.jsonl
+```
+
+Output: `outputs/hr/analysis/<name>.jsonl`, one row per line.
+
+## Outputs
+
+```text
+data/
+├── raw/xed/                          downloaded XED files
+└── processed/xed/en-hr/              splits, conversational splits, split_manifest.json
+outputs/<lang>/                       one folder per target language (out_dir)
+├── finetune/
+│   ├── <condition>/<run_name>[.seed<seed>|.n<lines>]/
+│   │   ├── adapter/                  the kept LoRA adapter
+│   │   ├── run_info.json             settings, versions, hardware, training log
+│   │   └── scores/                   <split>.json and <split>.<lang>.predictions.jsonl
+│   └── selection.json                the dev-set ranking and the final configuration
+└── analysis/<name>.jsonl             prediction comparisons
+logs/                                 one log file per CLI run
+```
+
+Each target language keeps its own outputs, so runs for different languages never overwrite each
+other: `prepare.target_lang=sv` writes to `outputs/sv/`. Move every output elsewhere, e.g. to
+scratch storage, with `out_dir=/scratch/<s-number>/outputs/hr`.
+
+## Metrics
+
+- **Primary:** micro-averaged F1 and sample-averaged Jaccard index.
+- **Secondary:** macro-averaged F1, micro-averaged precision and recall, Hamming loss (lower is
+  better).
+- **Diagnostic:** per-emotion precision, recall, F1 and support; exact-match ratio; malformed and
+  empty output rates.
+
+Malformed answers, and answers with no permitted label, count as an empty label set, and the malformed rate is reported separately. A metric whose denominator is zero is set to 0.0. 
+
+## Weights & Biases
+
+Set `WANDB_MODE=online` and `WANDB_API_KEY` in `.env` (or run `wandb login`). The project defaults to `large-language-models` under your own entity; set `WANDB_ENTITY` and `WANDB_PROJECT` in `.env` to log to the team's project instead.
+
+Each fine-tuned adapter is one W&B run (`<condition>/<run_name>`, grouped by run name). It holds the training curves, and later scoring jobs resume the same run, adding the metrics, per-emotion tables and predictions.
+
+## Hábrók (Slurm)
+
+Every action can run as a job: replace `uv run main.py` with
+`./slurm/run.sh --slurm-config <profile>` and keep the overrides. Add `--dry-run` to print the
+`sbatch` command without submitting, or `--dependency afterok:<id>:<id>` to start a job only once
+others have succeeded.
+
+| Profile | Resources | For |
+|---|---|---|
+| `cpu` | 4 CPUs, 1 h, no GPU | downloading and preparing data, comparing predictions |
+| `smoke` | A100, 30 min | quick tests with the small model |
+| `a100` | A100 (40 GB), 8 h | fine-tuning and scoring |
+| `rtx` | RTX Pro 6000 (96 GB), 8 h | the same, with more memory; needs `.venv-rtx` |
+
+Profiles live in [slurm/conf/](slurm/conf). Set up the environment once on a login node, and
+again after dependency changes:
+
+```bash
+./slurm/setup_uv.sh                # .venv; add --use-rtx to build .venv-rtx in a GPU job
+```
+
+Follow jobs with `squeue --me`; their logs are in `slurm/logs/`.
+
+## Development
+
+```bash
+uv run ruff check . && uv run ruff format --check .   # lint and format
+uv run ty check                                       # type check
+uv run pre-commit install                             # run both on every commit
 ```

@@ -1,0 +1,9 @@
+slurm:
+  job_name: llm-rtx
+  time: "08:00:00"
+  cpus_per_task: 8
+  mem: 64G
+  partition: gpu
+  gpu_type: rtx_pro_6000
+  output: slurm/logs/%x_%j.out
+  error: slurm/logs/%x_%j.err

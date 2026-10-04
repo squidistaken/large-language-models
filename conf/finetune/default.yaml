@@ -16,14 +16,23 @@ batch_size: 8
 grad_accum_steps: 2
 max_length: 256 # max tokens per example
 warmup_ratio: 0.03
+logging_steps: 10 # optimizer steps between training-loss logs
+
+# Dev evaluation: the loss, plus the metrics of generated answers on a fixed dev subset
+evals_per_epoch: 2 # dev evaluations, and checkpoints, per epoch
+metric_samples: null # dev lines per language scored at every evaluation; null = all, 0 = off
+checkpoint_metric: micro_f1 # what picks the kept checkpoint and drives early stopping: loss | micro_f1
+early_stopping_patience: 2 # stop after this many evaluations without improvement; null = off
 gradient_checkpointing: true # recompute activations in the backward pass to save memory
 full_determinism: true # identical GPU runs for the same seed; false can be faster on large models
 
 # Output
-seed: ${seed}
-out_dir: outputs/finetune
+seed: ${seed} # another seed saves the run as a repetition, in <run_name>.seed<seed>
+main_seed: ${seed} # the seed of the main runs, which the dev-set selection compares
+out_dir: ${out_dir}/finetune
 run_name: ${now:%Y%m%d_%H%M%S}
 max_train_samples: null
+max_target_samples: null # cap the target-language training lines, saved in <run_name>.n<lines>
 max_eval_samples: null
 overwrite: false # true = replace an existing run folder
 

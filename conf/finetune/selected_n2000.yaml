@@ -1,0 +1,9 @@
+# @package _global_
+# The selected configuration on 2000 target-language training lines, for the learning curve; saved in
+# <run_name>.n2000.
+defaults:
+  - selected
+  - _self_
+
+finetune:
+  max_target_samples: 2000

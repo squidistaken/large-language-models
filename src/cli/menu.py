@@ -6,7 +6,15 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.text import Text
 
-from src.cli import download_data, finetune, prepare_data, score_finetune
+from src.cli import (
+    compare_predictions,
+    download_data,
+    evaluate_final,
+    finetune,
+    prepare_data,
+    score_finetune,
+    zero_shot,
+)
 from src.utils.logger import Logger
 
 PROJECT_TITLE = "Cross-Lingual Multi-Label Emotion Classification Using Large Language Models"
@@ -32,6 +40,9 @@ ACTIONS: dict[str, CLIAction] = {
     "prepare_data": prepare_data,
     "finetune": finetune,
     "score_finetune": score_finetune,
+    "zero_shot": zero_shot,
+    "evaluate_final": evaluate_final,
+    "compare_predictions": compare_predictions,
 }
 
 

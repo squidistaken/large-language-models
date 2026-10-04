@@ -1,0 +1,9 @@
+slurm:
+  job_name: llm-smoke
+  time: "00:30:00"
+  cpus_per_task: 4
+  mem: 32G
+  partition: gpu
+  gpu_type: a100
+  output: slurm/logs/%x_%j.out
+  error: slurm/logs/%x_%j.err

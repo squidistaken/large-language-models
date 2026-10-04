@@ -48,7 +48,6 @@ BAND_SIZES = {
 LANGUAGE_TO_BAND = {lang: band for band, langs in LANGUAGE_BANDS.items() for lang in langs}
 ALL_LANGUAGES = sorted(set(LANGUAGE_TO_BAND) | {SOURCE_LANG})
 TARGET_LANGS = sorted(LANGUAGE_TO_BAND)
-PAIRS_LANGS = set(ALL_LANGUAGES)
 LANGUAGE_NAMES = {
     "ar": "Arabic",
     "bg": "Bulgarian",
@@ -82,8 +81,40 @@ LANGUAGE_NAMES = {
     "vi": "Vietnamese",
 }
 
-# Models.
-DEFAULT_DTYPE = "bfloat16"
-DEFAULT_BATCH_SIZE = 8
-DEFAULT_MAX_NEW_TOKENS = 32
-QUANTIZATION_4BIT = "4bit"
+# The systems compared: zero-shot prompting and the PEFT conditions (English, the target language,
+# or both).
+ZERO_SHOT = "zero_shot"
+BILINGUAL = "bilingual"
+
+# The run folders.
+ADAPTER_DIR = "adapter"
+CHECKPOINT_DIR = "checkpoints"
+RUN_INFO_FILE = "run_info.json"
+SCORES_DIR = "scores"
+SELECTION_FILE = "selection.json"
+
+# The metrics.
+PRIMARY_METRICS = ("micro_f1", "jaccard_samples")
+SECONDARY_METRICS = ("macro_f1", "micro_precision", "micro_recall", "hamming_loss")
+DIAGNOSTIC_METRICS = ("exact_match", "malformed_rate", "empty_rate")
+AGGREGATE_METRICS = (*PRIMARY_METRICS, *SECONDARY_METRICS, *DIAGNOSTIC_METRICS)
+
+SHORT_NAMES = {
+    "micro_f1": "micro-F1",
+    "jaccard_samples": "Jaccard",
+    "macro_f1": "macro-F1",
+    "micro_precision": "micro-P",
+    "micro_recall": "micro-R",
+    "hamming_loss": "Hamming",
+    "exact_match": "Exact",
+    "malformed_rate": "Malformed",
+    "empty_rate": "Empty",
+}
+
+LOWER_IS_BETTER = {"hamming_loss", "malformed_rate", "empty_rate"}
+
+# The metrics with bootstrap confidence intervals.
+HEADLINE_METRICS = ("micro_f1", "jaccard_samples", "macro_f1")
+
+# The dev quantities that can pick the kept checkpoint, and whether higher is better.
+CHECKPOINT_METRICS = {"loss": False, "micro_f1": True}

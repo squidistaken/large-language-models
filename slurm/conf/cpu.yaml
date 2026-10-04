@@ -1,0 +1,9 @@
+slurm:
+  job_name: llm-cpu
+  time: "01:00:00"
+  cpus_per_task: 4
+  mem: 16G
+  partition: regular
+  gpu_type: none
+  output: slurm/logs/%x_%j.out
+  error: slurm/logs/%x_%j.err

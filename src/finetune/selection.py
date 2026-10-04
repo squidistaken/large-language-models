@@ -5,20 +5,17 @@ from typing import Any
 
 from omegaconf import DictConfig
 
-from src.constants import DEV, SOURCE_LANG
-from src.evaluation.scoring import SCORES_DIR, scores_stem
+from src.constants import DEV, SCORES_DIR, SELECTION_FILE, SOURCE_LANG
 from src.finetune.conditions import conditions, evaluation_languages
 from src.utils.files import read_json, write_json
 from src.utils.logger import Logger
-from src.utils.runs import read_run_info
+from src.utils.runs import RunVariant, read_run_info, run_dir, scores_path, scores_stem
 
-SELECTION_FILE = "selection.json"
 DEV_SCORES_FILE = f"{scores_stem(DEV, None)}.json"
 MODEL_KEYS = (
     "hf_id",
     "revision_sha",
     "dtype",
-    "quantization",
     "max_new_tokens",
     "decoding",
     "chat_template_kwargs",
@@ -28,6 +25,7 @@ FIXED_KEYS = (
     "data_dir",
     "target_lang",
     "max_train_samples",
+    "max_target_samples",
     "max_eval_samples",
     "max_length",
     "seed",
@@ -35,16 +33,20 @@ FIXED_KEYS = (
 SHARED_KEYS = (
     *FIXED_KEYS,
     "lora",
+    "quantization",
     "learning_rate",
     "epochs",
     "batch_size",
     "grad_accum_steps",
     "warmup_ratio",
+    "evals_per_epoch",
+    "checkpoint_metric",
+    "early_stopping_patience",
 )
 
 
 def differing_keys(settings: list[dict[str, Any]], keys: tuple[str, ...]) -> list[str]:
-    """Find the settings that are not the same in every run.
+    """Get the keys that differ between a list of settings.
 
     Args:
         settings (list[dict[str, Any]]): The compared settings of each run.
@@ -85,6 +87,23 @@ class SelectionSummary:
         """
         return self.results[0]
 
+    def ranking(self) -> list[dict[str, Any]]:
+        """Get the ranked candidates as table rows.
+
+        Returns:
+            list[dict[str, Any]]: A list of dictionaries, one per candidate, with the rank,
+                                  run name, per-language mean and selection score.
+        """
+        return [
+            {
+                "rank": rank,
+                "run_name": result.run_name,
+                **{f"{lang}_mean": result.language_scores.get(lang) for lang in self.langs},
+                "selection_score": result.selection_score,
+            }
+            for rank, result in enumerate(self.results, start=1)
+        ]
+
 
 class ConfigSelector:
     """Class that picks one final PEFT configuration from scored candidates on the dev set."""
@@ -105,14 +124,15 @@ class ConfigSelector:
         self.metric = str(cfg.select.metric)
 
     def select(self) -> SelectionSummary:
-        """Score every candidate on dev, rank them, and save the selection record.
+        """Select the best candidate configuration by averaging its dev scores over the conditions
+        and languages.
 
         Returns:
             SelectionSummary: A summary of the selection process.
 
         Raises:
             ValueError: If there are no candidates, or they were not trained with the same model
-                and data.
+                        and data.
         """
         summary = SelectionSummary(
             metric=self.metric,
@@ -162,6 +182,7 @@ class ConfigSelector:
                 {
                     path.parent.parent.name
                     for path in (self.out_dir / condition).glob(f"*/{SCORES_DIR}/{DEV_SCORES_FILE}")
+                    if RunVariant.of(read_run_info(path.parent.parent)["config"]).is_main
                 }
                 for condition in self.conditions
             )
@@ -192,17 +213,17 @@ class ConfigSelector:
         configs = []
 
         for condition in self.conditions:
-            run_dir = self.out_dir / condition / run_name
-            scores_path = run_dir / SCORES_DIR / DEV_SCORES_FILE
+            run = run_dir(self.cfg.out_dir, condition, run_name)
+            path = scores_path(run, DEV, None)
 
-            if not scores_path.exists():
+            if not path.exists():
                 raise FileNotFoundError(
-                    f"Missing {scores_path}. Train '{run_name}' for condition '{condition}' and "
-                    "score it on the full dev set first."
+                    f"Missing {path}. Train '{run_name}' for condition '{condition}' and score it "
+                    "on the full dev set first."
                 )
 
-            configs.append(self._settings(read_run_info(run_dir)))
-            scores = read_json(scores_path)["scores"]
+            configs.append(self._settings(read_run_info(run)))
+            scores = read_json(path)["scores"]
 
             for lang in evaluation_languages(condition, self.cfg.target_lang):
                 if lang in per_lang:
@@ -241,6 +262,57 @@ class ConfigSelector:
         settings = {
             **run_info["config"],
             "model": {key: run_info["model"].get(key) for key in MODEL_KEYS},
+            "quantization": run_info["model"].get("quantization"),
         }
 
         return {key: settings.get(key) for key in SHARED_KEYS}
+
+
+def read_selection(out_dir: str) -> dict[str, Any] | None:
+    """Read the last dev-set selection.
+
+    Args:
+        out_dir (str): The base folder of the fine-tuning runs.
+
+    Returns:
+        dict[str, Any] | None: A dictionary with the selection summary, or None if no selection has
+                               been made yet.
+    """
+    path = Path(out_dir) / SELECTION_FILE
+
+    return read_json(path) if path.exists() else None
+
+
+def selected_run(out_dir: str) -> str | None:
+    """Get the run name the last dev-set selection picked.
+
+    Args:
+        out_dir (str): The base folder of the fine-tuning runs.
+
+    Returns:
+        str | None: A run name, or None if no selection has been made yet.
+    """
+    selection = read_selection(out_dir)
+
+    return str(selection["best"]) if selection else None
+
+
+def resolve_run_name(cfg: DictConfig, run_name: str | None = None) -> str:
+    """Resolve the run name to score, either from the config or the last selection.
+
+    Args:
+        cfg (DictConfig): The full config.
+        run_name (str | None): The configuration, or None. Defaults to None.
+
+    Returns:
+        str: A run name.
+
+    Raises:
+        FileNotFoundError: If no configuration is given and none has been selected yet.
+    """
+    name = run_name or cfg.evaluate.run_name or selected_run(cfg.finetune.out_dir)
+
+    if name is None:
+        raise FileNotFoundError("No configuration selected yet. Pass evaluate.run_name=<run_name>.")
+
+    return str(name)

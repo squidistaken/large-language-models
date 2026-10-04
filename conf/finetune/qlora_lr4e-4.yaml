@@ -1,0 +1,9 @@
+# @package _global_
+# QLoRA at twice the default learning rate.
+defaults:
+  - qlora
+  - _self_
+
+finetune:
+  run_name: qlora_lr4e-4
+  learning_rate: 4.0e-4

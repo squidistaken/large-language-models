@@ -18,24 +18,12 @@ from src.constants import (
 from src.data.alignment import AlignmentBuilder, AlignmentStats
 from src.data.formatting import USER_TEMPLATE
 from src.data.splitting import STRATIFIER, SplitAssigner, SplitStats
-from src.data.writing import SplitWriter
+from src.data.writing import SplitWriter, pair_name
 from src.data.xed_corpus import XEDCorpus
 from src.utils.files import checksum, read_json
 from src.utils.logger import Logger
 
 CHECKSUM_PREFIX = 12
-
-
-def pair_name(target_lang: str) -> str:
-    """Name the directory holding one source-target pair's splits.
-
-    Args:
-        target_lang (str): The target language.
-
-    Returns:
-        str: A pair name.
-    """
-    return f"{SOURCE_LANG}-{target_lang}"
 
 
 @dataclass

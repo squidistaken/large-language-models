@@ -3,7 +3,7 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from src.cli.prompts import ask_until, parse_choice, parse_int, parse_splits
+from src.cli.prompts import ask_target_lang, ask_until, parse_int, parse_splits
 from src.constants import (
     BAND_NAMES,
     BAND_SIZES,
@@ -12,7 +12,6 @@ from src.constants import (
     LANGUAGE_NAMES,
     LANGUAGE_TO_BAND,
     SPLIT_NAMES,
-    TARGET_LANGS,
 )
 from src.data.prepare_data import PreparationSummary, XEDPreparer
 from src.utils.logger import Logger
@@ -44,12 +43,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
 
     console.print(table)
 
-    target_lang = ask_until(
-        console,
-        "Target language",
-        cfg.prepare.target_lang,
-        lambda raw: parse_choice(raw, TARGET_LANGS, "target language"),
-    )
+    target_lang = ask_target_lang(console, cfg)
 
     raw_dir = Prompt.ask("Raw data directory", default=cfg.prepare.raw_dir)
     out_dir = Prompt.ask("Output directory", default=cfg.prepare.out_dir)
@@ -68,7 +62,6 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     )
     overwrite = Confirm.ask("Overwrite existing splits?", default=cfg.prepare.overwrite)
 
-    cfg.prepare.target_lang = target_lang
     cfg.prepare.raw_dir = raw_dir
     cfg.prepare.out_dir = out_dir
     cfg.prepare.splits = splits
@@ -144,8 +137,8 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         logger (Logger): The logger.
 
     Raises:
-        SystemExit: If the settings are invalid, the raw inputs are missing, or no pair could be
-            aligned.
+        SystemExit: If the settings are invalid, the raw inputs are missing, no pair could be
+            aligned, or existing splits were built with other settings.
     """
 
     console = Console()
@@ -175,9 +168,8 @@ def run(cfg: DictConfig, logger: Logger) -> None:
 
         console.print(remedy)
 
-        logger.info("Preparation skipped; existing splits do not match the request.")
-
-        return
+        # The requested splits do not exist, so later steps must not run on the old ones.
+        raise SystemExit("Existing splits do not match the requested settings.")
 
     if summary.skipped:
         console.print(

@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 from rich.console import Console
 from rich.prompt import Prompt
 
+from src.constants import DEFAULT_TARGET_LANG, EVAL_SPLITS, TARGET_LANGS
 from src.data.splitting import validate_splits
 
 
@@ -167,3 +168,42 @@ def parse_int(raw: str, subject: str) -> int:
 
     except ValueError as e:
         raise ValueError(f"The {subject} must be a whole number, got '{raw}'.") from e
+
+
+def ask_split(console: Console, default: str) -> str:
+    """Ask which partition to score: dev or test.
+
+    Args:
+        console (Console): The console.
+        default (str): The answer used when the user just presses return.
+
+    Returns:
+        str: A chosen partition.
+    """
+    return ask_until(
+        console,
+        f"Split ({', '.join(EVAL_SPLITS)})",
+        default,
+        lambda raw: parse_choice(raw, list(EVAL_SPLITS), "split"),
+    )
+
+
+def ask_target_lang(console: Console, cfg: DictConfig) -> str:
+    """Ask which target language to work on.
+
+    Args:
+        console (Console): The console.
+        cfg (DictConfig): The dictionary object override.
+
+    Returns:
+        str: A chosen language code.
+    """
+    target_lang = ask_until(
+        console,
+        "Target language",
+        DEFAULT_TARGET_LANG,
+        lambda raw: parse_choice(raw, TARGET_LANGS, "target language"),
+    )
+    cfg.prepare.target_lang = target_lang
+
+    return target_lang

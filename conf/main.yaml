@@ -3,12 +3,18 @@ defaults:
   - prepare: default
   - model: eurollm_9b
   - finetune: default
+  - prompting: default
+  - evaluate: default
+  - analysis: default
+  - plot: default
+  - wandb: default
   - logging: default
   - override hydra/job_logging: disabled
   - _self_
 
 action: null
 seed: 42
+out_dir: outputs/${prepare.target_lang}
 
 hydra:
   run:

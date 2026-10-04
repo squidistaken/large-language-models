@@ -161,6 +161,10 @@ class BaseScorer(ABC):
         default."""
         return None
 
+    def _detach(self) -> None:
+        """Detach the run's adapter from the base model, or do any other cleanup after scoring."""
+        return None
+
     def _save(self, model_info: dict[str, Any]) -> None:
         """Save anything else about the run after it has been scored. Nothing by default.
 
@@ -175,7 +179,11 @@ class BaseScorer(ABC):
         Returns:
             ScoreSummary: A summary of the scores and predictions of the partition.
         """
-        self.model.load()
+        # A model that is already loaded is shared by the caller, which unloads it.
+        owned = not self.model.is_loaded
+
+        if owned:
+            self.model.load()
 
         try:
             self._attach()
@@ -183,7 +191,10 @@ class BaseScorer(ABC):
             model_info = self.model.info()
 
         finally:
-            self.model.unload()
+            self._detach()
+
+            if owned:
+                self.model.unload()
 
         self._save(model_info)
 

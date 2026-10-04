@@ -16,7 +16,12 @@ class PromptScorer(BaseScorer):
     """Class that scores a base model."""
 
     def __init__(
-        self, cfg: DictConfig, model_cfg: DictConfig, wandb_cfg: DictConfig, logger: Logger
+        self,
+        cfg: DictConfig,
+        model_cfg: DictConfig,
+        wandb_cfg: DictConfig,
+        logger: Logger,
+        model: Model | None = None,
     ) -> None:
         """Initialise the class.
 
@@ -25,11 +30,13 @@ class PromptScorer(BaseScorer):
             model_cfg (DictConfig): The model config.
             wandb_cfg (DictConfig): The wandb config.
             logger (Logger): The logger.
+            model (Model | None): The model to score with, or None to load the model from the run
+                                  folder. Defaults to None.
 
         Raises:
             ValueError: If the split is not dev or test.
         """
-        model = Model(model_cfg, logger)
+        model = model or Model(model_cfg, logger)
         self.cfg = cfg
 
         super().__init__(

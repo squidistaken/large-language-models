@@ -169,6 +169,19 @@ class BaseScorer(ABC):
         """
         return None
 
+    def _prepare(self, examples: list[dict], lang: str) -> list[dict]:
+        """Change the examples before the model answers them, e.g. by adding demonstrations.
+        Unchanged by default.
+
+        Args:
+            examples (list[dict]): The conversational examples.
+            lang (str): The language of the examples.
+
+        Returns:
+            list[dict]: A list of the examples to score.
+        """
+        return examples
+
     def score(self) -> ScoreSummary:
         """Let the model answer the partition in every language, then save and log the scores.
 
@@ -211,6 +224,7 @@ class BaseScorer(ABC):
             examples = load_examples(
                 data_dir, target_lang, [lang], self.split, self.logger, self.max_samples, seed
             )
+            examples = self._prepare(examples, lang)
             summary.scores[lang], summary.predictions[lang] = score_examples(
                 self.model,
                 examples,

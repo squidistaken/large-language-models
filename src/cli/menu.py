@@ -15,6 +15,7 @@ from src.cli import (
     select_demos,
     score_finetune,
     zero_shot,
+    five_shot,
 )
 from src.utils.logger import Logger
 
@@ -43,6 +44,7 @@ ACTIONS: dict[str, CLIAction] = {
     "finetune": finetune,
     "score_finetune": score_finetune,
     "zero_shot": zero_shot,
+    "five_shot": five_shot,
     "evaluate_final": evaluate_final,
     "compare_predictions": compare_predictions,
 }

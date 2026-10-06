@@ -35,8 +35,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     from src.prompting.demos import (
         select_demonstrations, 
         load_train_rows, 
-        filter_candidates, 
-        show_pairs
+        filter_candidates
     )
 
     p = cfg.prompting

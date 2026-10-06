@@ -86,6 +86,9 @@ LANGUAGE_NAMES = {
 ZERO_SHOT = "zero_shot"
 BILINGUAL = "bilingual"
 
+# Number of demonstrations in the five-shot prompt
+FIVE_SHOT = 5
+
 # The run folders.
 ADAPTER_DIR = "adapter"
 CHECKPOINT_DIR = "checkpoints"

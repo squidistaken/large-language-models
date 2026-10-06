@@ -157,6 +157,20 @@ def zero_shot_dir_of(out_dir: str, peft_run: Path) -> Path:
     return zero_shot_dir(out_dir, read_run_info(peft_run)["model"]["name"])
 
 
+def prompting_dir(out_dir: str, condition: str, model_name: str) -> Path:
+    """Get the folder holding the scores of one prompting condition of one model.
+
+    Args:
+        out_dir (str): The base folder of the prompting runs.
+        condition (str): The prompting condition, e.g. zero_shot or 5_shot.
+        model_name (str): The model config name.
+
+    Returns:
+        Path: A path.
+    """
+    return Path(out_dir) / condition / model_name
+
+
 def zero_shot_dir(out_dir: str, model_name: str) -> Path:
     """Get the folder holding the zero-shot scores of one model.
 
@@ -167,7 +181,7 @@ def zero_shot_dir(out_dir: str, model_name: str) -> Path:
     Returns:
         Path: A path.
     """
-    return Path(out_dir) / ZERO_SHOT / model_name
+    return prompting_dir(out_dir, ZERO_SHOT, model_name)
 
 
 def scores_stem(split: str, max_samples: int | None) -> str:

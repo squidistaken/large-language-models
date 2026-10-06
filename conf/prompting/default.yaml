@@ -4,6 +4,11 @@ out_dir: ${out_dir}/prompting
 split: dev
 max_samples: null # null = every line; an integer scores a seeded random subset per language
 shots: 0          # 0 for zero-shot prompting; 5 for five-shot prompting
-demo_k: 5         # how many demonstrations select_demos picks
-demo_ids: null    # the chosen alignment ids, pasted in after select_demos
+demo_k: 5         # how many demonstrations select_demos picks   
+demo_ids:         # the chosen alignment ids, pasted in after select_demos
+  - 'en/1990/100232/4438698.xml.gz|hr/1990/100232/5831717.xml.gz|317|288'
+  - 'en/1965/59037/5735869.xml.gz|hr/1965/59037/6082076.xml.gz|126|121 122'
+  - 'en/1990/100260/5855803.xml.gz|hr/1990/100260/6018262.xml.gz|405|412'
+  - 'en/1990/100260/5855803.xml.gz|hr/1990/100260/6018262.xml.gz|1022|1028'
+  - 'en/1990/100258/4986942.xml.gz|hr/1990/100258/6988842.xml.gz|375|430'
 seed: ${seed}

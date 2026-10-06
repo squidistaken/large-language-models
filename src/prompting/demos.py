@@ -30,6 +30,38 @@ def load_train_rows(data_dir: str, target_lang: str, lang: str, logger: Logger) 
     return read_jsonl(path)
 
 
+def load_demo_turns(data_dir: str, target_lang: str, lang: str, ids: list[str], logger: Logger) -> list[dict]:
+    """Load the demonstrations of one language as alternating user and assistant turns.
+
+    Args:
+        data_dir (str): The folder holding every pair's splits.
+        target_lang (str): The assigned target language.
+        lang (str): The language of the demonstrations.
+        ids (list[str]): The alignment ids of the demonstrations, in prompt order.
+        logger (Logger): The logger.
+
+    Returns:
+        list[dict]: A list of chat messages, two per demonstration.
+
+    Raises:
+        FileNotFoundError: If the split file is missing.
+        ValueError: If a demonstration is not in the train split.
+    """
+    path = SplitWriter.for_pair(data_dir, target_lang, logger).chat_path(lang, TRAIN)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Missing {path}. Run `uv run main.py action=prepare_data` first.")
+
+    by_id = {row["align_id"]: row for row in read_jsonl(path)}
+    missing = [align_id for align_id in ids if align_id not in by_id]
+
+    if missing:
+        raise ValueError(f"Demonstrations missing from {lang} train: {missing}")
+
+    # messages[0] is the system prompt; [1:] is the subtitle (user) and its gold answer (assistant).
+    return [turn for align_id in ids for turn in by_id[align_id]["messages"][1:]]
+
+
 def filter_candidates(rows: list[dict], max_chars: int = MAX_DEMO_CHARS) -> list[dict]:
     """Keep the rows suitable as demonstrations: gold English labels, a direct alignment and a
     short line.
@@ -87,20 +119,16 @@ def select_demonstrations(rows: list[dict], k: int, seed: int) -> list[str]:
     return [row["align_id"] for row in chosen]
 
 
-def show_pairs(data_dir: str, ids: list[str]) -> None:
-    """Print the chosen demonstrations in English and Croatian, to check them by eye.
+def with_demonstrations(example: dict, turns: list[dict]) -> dict:
+    """Insert the demonstration turns between the system message and the subtitle.
 
     Args:
-        data_dir (str): The folder of the language pair, e.g. data/processed/xed/en-hr.
-        ids (list[str]): The chosen alignment ids.
-    """
-    by_lang = {
-        lang: {row["align_id"]: row for row in read_jsonl(f"{data_dir}/{lang}/train.jsonl")}
-        for lang in ("en", "hr")
-    }
+        example (dict): A conversational example: system, user, assistant.
+        turns (list[dict]): The demonstration turns.
 
-    for align_id in ids:
-        en, hr = by_lang["en"][align_id], by_lang["hr"][align_id]
-        print(f"{align_id}  {en['labels']}")
-        print(f"  en: {en['text']}")
-        print(f"  hr: {hr['text']}")
+    Returns:
+        dict: A copy of the example with the demonstrations in its messages.
+    """
+    system, *rest = example["messages"]
+
+    return {**example, "messages": [system, *turns, *rest]}

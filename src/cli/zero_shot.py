@@ -5,6 +5,8 @@ from src.cli.prompts import ask_model, ask_split, ask_target_lang
 from src.cli.render import render_scores
 from src.utils.logger import Logger
 
+SHOTS = 0
+
 LABEL = "Zero-shot Prompting"
 TITLE = "Zero-shot Prompting of the Base Model"
 
@@ -37,6 +39,8 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         SystemExit: If the settings are invalid or the prepared splits are missing.
     """
     from src.prompting.scorer import PromptScorer
+
+    cfg.prompting.shots = 0
 
     try:
         summary = PromptScorer(cfg.prompting, cfg.model, cfg.wandb, logger).score()

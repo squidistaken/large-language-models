@@ -360,6 +360,7 @@ class FinalEvaluator:
         prompt_cfg = self.cfg.prompting.copy()
         prompt_cfg.split = self.split
         prompt_cfg.max_samples = self.max_samples
+        prompt_cfg.shots = 0
 
         return PromptScorer(prompt_cfg, model_cfg, self.cfg.wandb, self.logger)
 

@@ -4,7 +4,7 @@ from rich.console import Console
 from src.cli.prompts import ask_target_lang
 from src.utils.logger import Logger
 
-from src.constants import SOURCE_LANG
+from src.constants import SOURCE_LANG, FIVE_SHOT
 
 LABEL = "Select demonstrations"
 TITLE = "Select Five-shot Demonstrations"
@@ -19,7 +19,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     """
     target_lang = ask_target_lang(console, cfg)
 
-    logger.info(f"select_demos config: target_lang={target_lang} k={cfg.prompting.demo_k}")
+    logger.info(f"select_demos config: target_lang={target_lang} k={FIVE_SHOT}")
 
 
 def run(cfg: DictConfig, logger: Logger) -> None:
@@ -45,7 +45,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         target_ids = {
             row["align_id"] for row in load_train_rows(p.data_dir, p.target_lang, p.target_lang, logger)
         }   
-        ids = select_demonstrations(filter_candidates(source), k = p.demo_k, seed = p.seed)
+        ids = select_demonstrations(filter_candidates(source), k = FIVE_SHOT, seed = p.seed)
 
     except (FileNotFoundError, ValueError) as e:
         raise SystemExit(str(e)) from e

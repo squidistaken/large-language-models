@@ -6,6 +6,7 @@ from src.utils.files import read_jsonl
 from src.utils.logger import Logger
 
 MAX_DEMONSTRATION_CHARS = 80
+MAX_DEMONSTRATION_LABELS = 3
 
 def load_train_rows(data_dir: str, target_lang: str, lang: str, logger: Logger) -> list[dict]:
     """Load the canonical train rows of one language of a language pair.
@@ -79,6 +80,7 @@ def filter_candidates(rows: list[dict], max_chars: int = MAX_DEMONSTRATION_CHARS
         if row["label_source"] == "gold"
         and row["alignment_hops"] == 1
         and len(row["text"]) <= max_chars
+        and len(row["labels"]) <= MAX_DEMONSTRATION_LABELS
     ]
 
     return sorted(candidates, key=lambda row: row["align_id"])
@@ -104,9 +106,12 @@ def select_demonstrations(rows: list[dict], k: int, seed: int) -> list[str]:
     rng = random.Random(seed)
     covered: set[str] = set()
     chosen: list[dict] = []
-    remaining = list(rows)
+    used_films: set[str] = set()
 
     for _ in range(k):
+        # One per film to maximize diversity
+        remaining = [row for row in rows if row["align_id"].split("/")[2] not in used_films]
+
         gains = [len(set(row["labels"]) - covered) for row in remaining]
         best = max(gains)
         ties = [row for row, gain in zip(remaining, gains, strict=True) if gain == best]
@@ -114,7 +119,7 @@ def select_demonstrations(rows: list[dict], k: int, seed: int) -> list[str]:
 
         chosen.append(pick)
         covered.update(pick["labels"])
-        remaining.remove(pick)
+        used_films.add(pick["align_id"].split("/")[2])
 
     return [row["align_id"] for row in chosen]
 

@@ -5,9 +5,9 @@ split: dev
 max_samples: null   # null = every line; an integer scores a seeded random subset per language
 shots: 0
 demonstration_ids:  # the chosen alignment ids, pasted in after select_demonstrations
-  - 'en/1990/100232/4438698.xml.gz|hr/1990/100232/5831717.xml.gz|317|288'
-  - 'en/1965/59037/5735869.xml.gz|hr/1965/59037/6082076.xml.gz|126|121 122'
-  - 'en/1990/100260/5855803.xml.gz|hr/1990/100260/6018262.xml.gz|405|412'
-  - 'en/1990/100260/5855803.xml.gz|hr/1990/100260/6018262.xml.gz|1022|1028'
-  - 'en/1990/100258/4986942.xml.gz|hr/1990/100258/6988842.xml.gz|375|430'
+  - 'en/1990/100507/4049754.xml.gz|hr/1990/100507/3976815.xml.gz|1882|1815'
+  - 'en/1965/59037/5735869.xml.gz|hr/1965/59037/6082076.xml.gz|628|618'
+  - 'en/1965/59017/5730443.xml.gz|hr/1965/59017/3689924.xml.gz|956|907'
+  - 'en/1990/100449/7037913.xml.gz|hr/1990/100449/6445315.xml.gz|183|182'
+  - 'en/1990/100258/4986942.xml.gz|hr/1990/100258/6988842.xml.gz|702|856'
 seed: ${seed}

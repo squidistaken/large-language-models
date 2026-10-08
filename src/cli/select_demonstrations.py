@@ -19,7 +19,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
     """
     target_lang = ask_target_lang(console, cfg)
 
-    logger.info(f"select_demos config: target_lang={target_lang} k={FIVE_SHOT}")
+    logger.info(f"select_demonstrations config: target_lang={target_lang} k={FIVE_SHOT}")
 
 
 def run(cfg: DictConfig, logger: Logger) -> None:
@@ -32,7 +32,7 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     Raises:
         SystemExit: If the settings are invalid or the prepared splits are missing.
     """
-    from src.prompting.demos import (
+    from src.prompting.demonstrations import (
         select_demonstrations, 
         load_train_rows, 
         filter_candidates
@@ -56,4 +56,4 @@ def run(cfg: DictConfig, logger: Logger) -> None:
         raise SystemExit(f"Demonstrations missing from {p.target_lang} train: {missing}")
 
     logger.info(f"Selected demonstrations: {ids}")
-    Console().print(f"demo_ids: [{', '.join(repr(i) for i in ids)}]")
+    Console().print(f"demonstration_ids: [{', '.join(repr(i) for i in ids)}]")

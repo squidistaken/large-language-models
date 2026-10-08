@@ -9,7 +9,7 @@ from src.models.base import Model
 from src.utils import tracking
 from src.utils.files import write_json
 from src.utils.logger import Logger
-from src.prompting.demos import load_demo_turns, with_demonstrations
+from src.prompting.demonstrations import load_demonstration_turns, with_demonstrations
 from src.utils.runs import library_versions, prompting_dir
 
 class PromptScorer(BaseScorer):
@@ -32,11 +32,11 @@ class PromptScorer(BaseScorer):
         model = Model(model_cfg, logger)
         self.cfg = cfg
         self.shots = int(cfg.get("shots") or 0)
-        self.demo_ids = list(cfg.get("demo_ids") or []) if self.shots else []
+        self.demonstration_ids = list(cfg.get("demonstration_ids") or []) if self.shots else []
 
-        if self.shots and len(self.demo_ids) != self.shots:
+        if self.shots and len(self.demonstration_ids) != self.shots:
             raise ValueError(
-                f"prompting.shots={self.shots} needs {self.shots} demo_ids, got {len(self.demo_ids)}."
+                f"prompting.shots={self.shots} needs {self.shots} demonstration_ids, got {len(self.demonstration_ids)}."
             )
         
         self._turns: dict[str, list[dict]] = {}
@@ -78,7 +78,7 @@ class PromptScorer(BaseScorer):
         return self.cfg.data_dir, self.cfg.target_lang, self.cfg.seed
     
 
-    def _demo_turns(self, lang: str) -> list[dict]:
+    def _demonstration_turns(self, lang: str) -> list[dict]:
         """Get the demonstration turns of one language, loading them once.
 
         Args:
@@ -88,8 +88,8 @@ class PromptScorer(BaseScorer):
             list[dict]: A list of chat messages.
         """
         if lang not in self._turns:
-            self._turns[lang] = load_demo_turns(
-                self.cfg.data_dir, self.cfg.target_lang, lang, self.demo_ids, self.logger
+            self._turns[lang] = load_demonstration_turns(
+                self.cfg.data_dir, self.cfg.target_lang, lang, self.demonstration_ids, self.logger
             )
 
         return self._turns[lang]
@@ -111,12 +111,12 @@ class PromptScorer(BaseScorer):
         if not self.shots:
             return examples
 
-        leaked = {example["align_id"] for example in examples} & set(self.demo_ids)
+        leaked = {example["align_id"] for example in examples} & set(self.demonstration_ids)
 
         if leaked:
             raise ValueError(f"Demonstrations found in the {self.split} split: {sorted(leaked)}")
 
-        turns = self._demo_turns(lang)
+        turns = self._demonstration_turns(lang)
 
         return [with_demonstrations(example, turns) for example in examples]
     
@@ -131,9 +131,9 @@ class PromptScorer(BaseScorer):
 
         demonstrations = (
             {
-                "align_ids": self.demo_ids,
-                "selection": "select_demos: greedy label cover over gold, 1-hop, short train lines",
-                "turns": {lang: self._demo_turns(lang) for lang in self.langs},
+                "align_ids": self.demonstration_ids,
+                "selection": "select_demonstrations: greedy label cover over gold, 1-hop, short train lines",
+                "turns": {lang: self._demonstration_turns(lang) for lang in self.langs},
             }
             if self.shots
             else "none (zero-shot)"

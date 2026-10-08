@@ -5,7 +5,7 @@ from src.data.writing import SplitWriter
 from src.utils.files import read_jsonl
 from src.utils.logger import Logger
 
-MAX_DEMO_CHARS = 80
+MAX_DEMONSTRATION_CHARS = 80
 
 def load_train_rows(data_dir: str, target_lang: str, lang: str, logger: Logger) -> list[dict]:
     """Load the canonical train rows of one language of a language pair.
@@ -30,8 +30,8 @@ def load_train_rows(data_dir: str, target_lang: str, lang: str, logger: Logger) 
     return read_jsonl(path)
 
 
-def load_demo_turns(data_dir: str, target_lang: str, lang: str, ids: list[str], logger: Logger) -> list[dict]:
-    """Load the demonstrations of one language as alternating user and assistant turns.
+def load_demonstration_turns(data_dir: str, target_lang: str, lang: str, ids: list[str], logger: Logger) -> list[dict]:
+    """Load the demonstrations of one language as alternating user and assistant messages.
 
     Args:
         data_dir (str): The folder holding every pair's splits.
@@ -62,7 +62,7 @@ def load_demo_turns(data_dir: str, target_lang: str, lang: str, ids: list[str], 
     return [turn for align_id in ids for turn in by_id[align_id]["messages"][1:]]
 
 
-def filter_candidates(rows: list[dict], max_chars: int = MAX_DEMO_CHARS) -> list[dict]:
+def filter_candidates(rows: list[dict], max_chars: int = MAX_DEMONSTRATION_CHARS) -> list[dict]:
     """Keep the rows suitable as demonstrations: gold English labels, a direct alignment and a
     short line.
 
@@ -120,11 +120,11 @@ def select_demonstrations(rows: list[dict], k: int, seed: int) -> list[str]:
 
 
 def with_demonstrations(example: dict, turns: list[dict]) -> dict:
-    """Insert the demonstration turns between the system message and the subtitle.
+    """Insert the demonstration messages between the system message and the subtitle.
 
     Args:
         example (dict): A conversational example: system, user, assistant.
-        turns (list[dict]): The demonstration turns.
+        messages (list[dict]): The demonstration messages.
 
     Returns:
         dict: A copy of the example with the demonstrations in its messages.

@@ -54,3 +54,17 @@ def load_adapter(model: Model, path: str) -> None:
     model.model.eval()
 
     model.logger.info(f"Loaded the LoRA adapter from {path}")
+
+
+def detach_adapter(model: Model) -> None:
+    """Detach an attached LoRA adapter, restoring the loaded weights as they were.
+
+    Args:
+        model (Model): The loaded model; it keeps the restored weights from now on.
+    """
+    if not isinstance(model.model, PeftModel):
+        return
+
+    model.model = model.model.unload()
+
+    model.logger.info(f"Removed the LoRA adapter from {model.name}")

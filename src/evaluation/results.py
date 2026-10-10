@@ -18,6 +18,7 @@ from src.finetune.conditions import (
 )
 from src.finetune.evaluate import AdapterScorer
 from src.finetune.selection import ConfigSelector, SelectionSummary
+from src.models.base import Model
 from src.prompting.scorer import PromptScorer
 from src.utils import tracking
 from src.utils.files import read_json, read_jsonl, write_json
@@ -32,6 +33,7 @@ from src.utils.runs import (
     scores_path,
 )
 
+HOST_KEYS = ("device", "vram_gb")
 Scores = dict[str, dict[str, Any]]
 Variants = dict[str, list[tuple[Path, RunVariant]]]
 
@@ -105,6 +107,8 @@ class FinalEvaluator:
         self.split = str(cfg.evaluate.split)
         self.max_samples = cfg.evaluate.max_samples
         self.selection: SelectionSummary | None = None
+        self._model: Model | None = None
+        self._model_key: str | None = None
 
         if cfg.evaluate.run_name:
             self.run_name = str(cfg.evaluate.run_name)
@@ -126,30 +130,37 @@ class FinalEvaluator:
         folders: dict[str, Path] = {}
         scores = {}
 
-        if self.cfg.evaluate.include_zero_shot:
-            scorer = self._zero_shot_scorer(next(iter(runs.values())))
-            folders[ZERO_SHOT] = scorer.run_dir
-            scores[ZERO_SHOT] = self._ensure(scorer.run_dir, scorer.score)
-
-        for condition, run in runs.items():
-            folders[condition] = run
-            scores[condition] = self._adapter_scores(run)
-
-        summary = ResultsSummary(self.run_name, self.split, self.max_samples)
-
-        for condition, by_lang in scores.items():
-            for lang, metrics in by_lang.items():
-                summary.rows.append(
-                    self._row(system_name(condition), folders[condition], lang, metrics)
-                )
-                summary.per_emotion.extend(
-                    {"system": system_name(condition), "eval_lang": lang, **row}
-                    for row in per_emotion_rows(metrics)
+        try:
+            if self.cfg.evaluate.include_zero_shot:
+                peft_run = next(iter(runs.values()))
+                folders[ZERO_SHOT] = self._zero_shot_scorer(peft_run).run_dir
+                scores[ZERO_SHOT] = self._ensure(
+                    folders[ZERO_SHOT],
+                    lambda: self._zero_shot_scorer(peft_run, shared=True).score(),
                 )
 
-        repetitions, capped = self._variants()
-        summary.seeds = self._seeds(runs, scores, repetitions)
-        summary.curve = self._curve(capped, summary.rows)
+            for condition, run in runs.items():
+                folders[condition] = run
+                scores[condition] = self._adapter_scores(run)
+
+            summary = ResultsSummary(self.run_name, self.split, self.max_samples)
+
+            for condition, by_lang in scores.items():
+                for lang, metrics in by_lang.items():
+                    summary.rows.append(
+                        self._row(system_name(condition), folders[condition], lang, metrics)
+                    )
+                    summary.per_emotion.extend(
+                        {"system": system_name(condition), "eval_lang": lang, **row}
+                        for row in per_emotion_rows(metrics)
+                    )
+
+            repetitions, capped = self._variants()
+            summary.seeds = self._seeds(runs, scores, repetitions)
+            summary.curve = self._curve(capped, summary.rows)
+
+        finally:
+            self._release()
 
         path = results_path(self.cfg.evaluate.out_dir, self.split, self.max_samples, self.run_name)
         summary.files = [str(path)]
@@ -345,13 +356,22 @@ class FinalEvaluator:
         Returns:
             ScoreSummary: The scores.
         """
-        return AdapterScorer(run, self.split, self.max_samples, self.cfg.wandb, self.logger).score()
+        return AdapterScorer(
+            run,
+            self.split,
+            self.max_samples,
+            self.cfg.wandb,
+            self.logger,
+            self._shared_model(pinned_model_cfg(read_run_info(run))),
+        ).score()
 
-    def _zero_shot_scorer(self, peft_run: Path) -> PromptScorer:
+    def _zero_shot_scorer(self, peft_run: Path, shared: bool = False) -> PromptScorer:
         """Set up zero-shot scoring of the base model a PEFT run started from.
 
         Args:
             peft_run (Path): A PEFT run of the evaluated configuration.
+            shared (bool): Whether to load the shared model now, so the scorer can score.
+                           Defaults to False.
 
         Returns:
             PromptScorer: A scorer that can score the base model on the partition.
@@ -361,7 +381,46 @@ class FinalEvaluator:
         prompt_cfg.split = self.split
         prompt_cfg.max_samples = self.max_samples
 
-        return PromptScorer(prompt_cfg, model_cfg, self.cfg.wandb, self.logger)
+        return PromptScorer(
+            prompt_cfg,
+            model_cfg,
+            self.cfg.wandb,
+            self.logger,
+            self._shared_model(model_cfg) if shared else None,
+        )
+
+    def _shared_model(self, model_cfg: DictConfig) -> Model:
+        """Get the model for a config, loading it only if it differs from the one already loaded,
+        so runs on the same base model share one copy of the weights.
+
+        Args:
+            model_cfg (DictConfig): The pinned model config.
+
+        Returns:
+            Model: A loaded model.
+        """
+        settings = model_cfg.copy()
+
+        for name in HOST_KEYS:
+            settings.pop(name, None)
+
+        key = OmegaConf.to_yaml(settings, resolve=True, sort_keys=True)
+
+        if self._model is None or key != self._model_key:
+            self._release()
+            self._model = Model(model_cfg, self.logger)
+            self._model.load()
+            self._model_key = key
+
+        return self._model
+
+    def _release(self) -> None:
+        """Release the loaded model, if any, so it can be garbage collected and its memory freed."""
+        if self._model is not None:
+            self._model.unload()
+
+        self._model = None
+        self._model_key = None
 
     def _log(self, summary: ResultsSummary) -> None:
         """Log the results tables, and the dev ranking if this run made it, to W&B.

@@ -33,6 +33,7 @@ from src.utils.files import read_json, read_jsonl, write_json
 from src.utils.logger import Logger
 from src.utils.runs import (
     RunVariant,
+    model_folder,
     pinned_model_cfg,
     predictions_path,
     prompting_dir,
@@ -43,6 +44,7 @@ from src.utils.runs import (
     scores_path,
 )
 
+HOST_KEYS = ("device", "vram_gb")
 Scores = dict[str, dict[str, Any]]
 Variants = dict[str, list[tuple[Path, RunVariant]]]
 
@@ -116,6 +118,8 @@ class FinalEvaluator:
         self.split = str(cfg.evaluate.split)
         self.max_samples = cfg.evaluate.max_samples
         self.selection: SelectionSummary | None = None
+        self._model: Model | None = None
+        self._model_key: str | None = None
 
         if cfg.evaluate.run_name:
             self.run_name = str(cfg.evaluate.run_name)
@@ -137,41 +141,47 @@ class FinalEvaluator:
         folders: dict[str, Path] = {}
         scores = {}
 
-        model = Model(pinned_model_cfg(read_run_info(next(iter(runs.values())))), self.logger)
+        # The prompting baselines use the base model of the PEFT runs, at the same precision. One
+        # loaded copy is shared by every system scored here, and it loads only if one needs scoring.
+        model_cfg = pinned_model_cfg(read_run_info(next(iter(runs.values()))))
+        folder = model_folder(model_cfg.name, model_cfg.get("quantization"))
 
-        with model.kept():
+        try:
             for condition, shots in zip(
                 prompt_baselines(self.cfg.evaluate.prompt_shots),
                 self.cfg.evaluate.prompt_shots,
                 strict=True,
             ):
-                folders[condition] = prompting_dir(
-                    self.cfg.prompting.out_dir, condition, model.folder
-                )
+                folders[condition] = prompting_dir(self.cfg.prompting.out_dir, condition, folder)
                 scores[condition] = self._ensure(
                     folders[condition],
-                    lambda shots=shots: self._prompt_scorer(model, int(shots)).score(),
+                    lambda shots=shots: self._prompt_scorer(
+                        self._shared_model(model_cfg), int(shots)
+                    ).score(),
                 )
 
-        for condition, run in runs.items():
-            folders[condition] = run
-            scores[condition] = self._adapter_scores(run)
+            for condition, run in runs.items():
+                folders[condition] = run
+                scores[condition] = self._adapter_scores(run)
 
-        summary = ResultsSummary(self.run_name, self.split, self.max_samples)
+            summary = ResultsSummary(self.run_name, self.split, self.max_samples)
 
-        for condition, by_lang in scores.items():
-            for lang, metrics in by_lang.items():
-                summary.rows.append(
-                    self._row(system_name(condition), folders[condition], lang, metrics)
-                )
-                summary.per_emotion.extend(
-                    {"system": system_name(condition), "eval_lang": lang, **row}
-                    for row in per_emotion_rows(metrics)
-                )
+            for condition, by_lang in scores.items():
+                for lang, metrics in by_lang.items():
+                    summary.rows.append(
+                        self._row(system_name(condition), folders[condition], lang, metrics)
+                    )
+                    summary.per_emotion.extend(
+                        {"system": system_name(condition), "eval_lang": lang, **row}
+                        for row in per_emotion_rows(metrics)
+                    )
 
-        repetitions, capped = self._variants()
-        summary.seeds = self._seeds(runs, scores, repetitions)
-        summary.curve = self._curve(capped, summary.rows)
+            repetitions, capped = self._variants()
+            summary.seeds = self._seeds(runs, scores, repetitions)
+            summary.curve = self._curve(capped, summary.rows)
+
+        finally:
+            self._release()
 
         path = results_path(self.cfg.evaluate.out_dir, self.split, self.max_samples, self.run_name)
         summary.files = [str(path)]
@@ -367,7 +377,14 @@ class FinalEvaluator:
         Returns:
             ScoreSummary: The scores.
         """
-        return AdapterScorer(run, self.split, self.max_samples, self.cfg.wandb, self.logger).score()
+        return AdapterScorer(
+            run,
+            self.split,
+            self.max_samples,
+            self.cfg.wandb,
+            self.logger,
+            self._shared_model(pinned_model_cfg(read_run_info(run))),
+        ).score()
 
     def _prompt_scorer(self, model: Model, shots: int) -> PromptScorer:
         """Get a scorer that can score the base model on the partition, with the default prompt
@@ -388,6 +405,39 @@ class FinalEvaluator:
         prompt_cfg.demonstration_selection = COVERAGE
 
         return PromptScorer(prompt_cfg, model, self.cfg.wandb, self.logger)
+
+    def _shared_model(self, model_cfg: DictConfig) -> Model:
+        """Get the model for a config, loading it only if it differs from the one already loaded,
+        so runs on the same base model share one copy of the weights.
+
+        Args:
+            model_cfg (DictConfig): The pinned model config.
+
+        Returns:
+            Model: A loaded model.
+        """
+        settings = model_cfg.copy()
+
+        for name in HOST_KEYS:
+            settings.pop(name, None)
+
+        key = OmegaConf.to_yaml(settings, resolve=True, sort_keys=True)
+
+        if self._model is None or key != self._model_key:
+            self._release()
+            self._model = Model(model_cfg, self.logger)
+            self._model.load()
+            self._model_key = key
+
+        return self._model
+
+    def _release(self) -> None:
+        """Release the loaded model, if any, so it can be garbage collected and its memory freed."""
+        if self._model is not None:
+            self._model.unload()
+
+        self._model = None
+        self._model_key = None
 
     def _log(self, summary: ResultsSummary) -> None:
         """Log the results tables, and the dev ranking if this run made it, to W&B.

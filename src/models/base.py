@@ -1,6 +1,4 @@
 import gc
-from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import Any
 
 import torch
@@ -77,7 +75,6 @@ class Model:
         self._model: PreTrainedModel | PeftModel | None = None
         self._tokenizer: PreTrainedTokenizerBase | None = None
         self._revision_sha = self.revision
-        self._keepers = 0
 
     @property
     def model(self) -> PreTrainedModel | PeftModel:
@@ -181,8 +178,7 @@ class Model:
     def load(self) -> None:
         """Load the tokenizer and the weights at the pinned revision."""
         if self.is_loaded:
-            if not self._keepers:
-                self.logger.warning(f"{self.name} is already loaded, skipping")
+            self.logger.warning(f"{self.name} is already loaded, skipping")
 
             return
 
@@ -319,25 +315,9 @@ class Model:
             "vram_gb": round(vram_gb(), 1),
         }
 
-    @contextmanager
-    def kept(self) -> Iterator[None]:
-        """Get a context manager that keeps the model loaded until the block exits.
-
-        Yields:
-            None: An iterator that yields once, for use in a `with` statement.
-        """
-        self._keepers += 1
-
-        try:
-            yield
-
-        finally:
-            self._keepers -= 1
-            self.unload()
-
     def unload(self) -> None:
-        """Unload the model and release its memory."""
-        if not self.is_loaded or self._keepers:
+        """Drop the weights and release the memory they held."""
+        if not self.is_loaded:
             return
 
         self._model = None

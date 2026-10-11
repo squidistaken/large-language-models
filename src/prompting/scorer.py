@@ -25,7 +25,8 @@ class PromptScorer(BaseScorer):
 
         Args:
             cfg (DictConfig): The prompting config.
-            model (Model): The base model, loaded when scoring; scorers may share one.
+            model (Model): The base model. It is loaded for the scoring, unless the caller shares
+                           one it has already loaded.
             wandb_cfg (DictConfig): The wandb config.
             logger (Logger): The logger.
 

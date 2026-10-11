@@ -13,6 +13,7 @@ from src.constants import (
     LANGUAGE_TO_BAND,
     SPLIT_NAMES,
 )
+from src.data.formatting import ConversationFormatter, Prompts
 from src.data.prepare_data import PreparationSummary, XEDPreparer
 from src.utils.logger import Logger
 
@@ -144,7 +145,8 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     console = Console()
 
     try:
-        preparer = XEDPreparer(cfg.prepare, logger)
+        formatter = ConversationFormatter(Prompts.from_cfg(cfg.prompting))
+        preparer = XEDPreparer(cfg.prepare, logger, formatter)
         summary = preparer.prepare()
 
     except (FileNotFoundError, ValueError) as e:

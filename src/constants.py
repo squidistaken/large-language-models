@@ -81,10 +81,20 @@ LANGUAGE_NAMES = {
     "vi": "Vietnamese",
 }
 
-# The systems compared: zero-shot prompting and the PEFT conditions (English, the target language,
-# or both).
+# The systems compared: prompting the base model (zero-shot, and the few-shot baselines set in
+# evaluate.prompt_shots) and the PEFT conditions (English, the target language, or both).
 ZERO_SHOT = "zero_shot"
 BILINGUAL = "bilingual"
+
+# The prompting design choices.
+DEFAULT_TEMPLATE = "default"
+COVERAGE = "coverage"
+RANDOM = "random"
+SELECTIONS = (COVERAGE, RANDOM)
+PINNED = "pinned"
+
+# The spellings of no quantization (full precision) in a model config.
+FULL_PRECISION = (None, "none", "null")
 
 # The run folders.
 ADAPTER_DIR = "adapter"

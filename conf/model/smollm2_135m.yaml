@@ -1,0 +1,9 @@
+name: smollm2_135m
+hf_id: HuggingFaceTB/SmolLM2-135M-Instruct
+revision: 12fd25f77366fa6b3b4b768ec3050bf629380bac
+dtype: bfloat16
+quantization: null # Options: null | 4bit
+batch_size: 8
+max_new_tokens: 32
+decoding:
+  do_sample: false

@@ -9,7 +9,14 @@ from src.constants import DEV, SCORES_DIR, SELECTION_FILE, SOURCE_LANG
 from src.finetune.conditions import conditions, evaluation_languages
 from src.utils.files import read_json, write_json
 from src.utils.logger import Logger
-from src.utils.runs import RunVariant, read_run_info, run_dir, scores_path, scores_stem
+from src.utils.runs import (
+    RunVariant,
+    read_run_info,
+    read_scores,
+    run_dir,
+    scores_path,
+    scores_stem,
+)
 
 DEV_SCORES_FILE = f"{scores_stem(DEV, None)}.json"
 MODEL_KEYS = (
@@ -223,7 +230,7 @@ class ConfigSelector:
                 )
 
             configs.append(self._settings(read_run_info(run)))
-            scores = read_json(path)["scores"]
+            scores = read_scores(run, DEV, None)
 
             for lang in evaluation_languages(condition, self.cfg.target_lang):
                 if lang in per_lang:

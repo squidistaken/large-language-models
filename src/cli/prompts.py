@@ -80,29 +80,33 @@ def ask_model(console: Console, cfg: DictConfig) -> str:
     return name
 
 
-def parse_languages(raw: str, allowed: list[str]) -> list[str]:
-    """Parse a comma-separated list of language codes, or `all`.
+def parse_list(raw: str, allowed: list[str], subject: str) -> list[str]:
+    """Parse a comma-separated list of values, or `all`, that must come from a fixed set.
 
     Args:
         raw (str): The raw answer.
-        allowed (list[str]): The permitted language codes.
+        allowed (list[str]): The permitted values.
+        subject (str): The subject.
 
     Returns:
-        list[str]: A list of chosen language codes.
+        list[str]: A list of chosen values.
 
     Raises:
-        ValueError: If any code is not permitted.
+        ValueError: If any value is not permitted, or none is given.
     """
     if raw.strip().lower() == "all":
         return list(allowed)
 
-    languages = [lang.strip() for lang in raw.split(",") if lang.strip()]
-    invalid = [lang for lang in languages if lang not in allowed]
+    values = [value.strip() for value in raw.split(",") if value.strip()]
+    invalid = [value for value in values if value not in allowed]
 
     if invalid:
-        raise ValueError(f"Unknown language code(s): {', '.join(invalid)}")
+        raise ValueError(f"Unknown {subject}: {', '.join(invalid)}")
 
-    return languages
+    if not values:
+        raise ValueError(f"Choose at least one of the {subject}, or 'all'.")
+
+    return values
 
 
 def parse_choice(raw: str, allowed: list[str], subject: str) -> str:
@@ -150,24 +154,30 @@ def parse_splits(raw: str) -> list[float]:
     return splits
 
 
-def parse_int(raw: str, subject: str) -> int:
+def parse_int(raw: str, subject: str, minimum: int | None = None) -> int:
     """Parse a whole number.
 
     Args:
         raw (str): The raw answer.
         subject (str): The subject.
+        minimum (int | None): The smallest permitted number.
 
     Returns:
         int: A parsed integer.
 
     Raises:
-        ValueError: If the answer is not a whole number.
+        ValueError: If the answer is not a whole number, or below the minimum.
     """
     try:
-        return int(raw.strip())
+        value = int(raw.strip())
 
     except ValueError as e:
         raise ValueError(f"The {subject} must be a whole number, got '{raw}'.") from e
+
+    if minimum is not None and value < minimum:
+        raise ValueError(f"The {subject} must be at least {minimum}, got {value}.")
+
+    return value
 
 
 def ask_split(console: Console, default: str) -> str:

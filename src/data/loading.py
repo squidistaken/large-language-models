@@ -2,7 +2,6 @@ import random
 
 from src.constants import DEFAULT_SEED
 from src.data.writing import SplitWriter
-from src.utils.files import read_jsonl
 from src.utils.logger import Logger
 
 
@@ -36,16 +35,9 @@ def load_examples(
     examples = []
 
     for lang in langs:
-        path = writer.chat_path(lang, split)
+        rows = writer.read_chat(lang, split)
 
-        if not path.exists():
-            raise FileNotFoundError(
-                f"Missing {path}. Run `uv run main.py action=prepare_data` first."
-            )
-
-        rows = read_jsonl(path)
-
-        logger.info(f"Loaded {len(rows)} {split} examples from {path}")
+        logger.info(f"Loaded {len(rows)} {split} examples from {writer.chat_path(lang, split)}")
         examples.extend(rows)
 
     if limit is not None:

@@ -3,7 +3,7 @@ from collections import Counter
 from matplotlib.figure import Figure
 
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import NEUTRAL, UNIT, bars, color_keys, panels
+from src.plotting.style import NEUTRAL, UNIT, bars, color_keys, legend, panels
 
 GOLD_SERIES = "gold"
 COUNTS = ("0", "1", "2", "3", "4+")
@@ -42,7 +42,7 @@ class LabelCounts(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Labels per line on {self.data.split} ({self.data.run_name})"
+        return f"Labels per line on {self.data.split} {self.context}"
 
     def draw(self) -> Figure:
         """Draw the figure.
@@ -78,6 +78,6 @@ class LabelCounts(BaseFigure):
 
         axes[0][0].set_ylim(*UNIT)
         axes[0][0].set_ylabel("Share of lines")
-        axes[0][0].legend(handles=color_keys(colors), loc="upper right")
+        legend(fig, color_keys(colors))
 
         return fig

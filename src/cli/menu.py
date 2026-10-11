@@ -12,8 +12,9 @@ from src.cli import (
     evaluate_final,
     finetune,
     prepare_data,
+    prompting,
     score_finetune,
-    zero_shot,
+    summarise_prompting,
 )
 from src.utils.logger import Logger
 
@@ -40,7 +41,8 @@ ACTIONS: dict[str, CLIAction] = {
     "prepare_data": prepare_data,
     "finetune": finetune,
     "score_finetune": score_finetune,
-    "zero_shot": zero_shot,
+    "prompting": prompting,
+    "summarise_prompting": summarise_prompting,
     "evaluate_final": evaluate_final,
     "compare_predictions": compare_predictions,
 }

@@ -6,7 +6,17 @@ from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
-from src.constants import RUN_INFO_FILE, SCORES_DIR, ZERO_SHOT
+from src.constants import (
+    COVERAGE,
+    DEFAULT_TEMPLATE,
+    DEV,
+    FULL_PRECISION,
+    PINNED,
+    RUN_INFO_FILE,
+    SCORES_DIR,
+    SELECTIONS,
+    ZERO_SHOT,
+)
 from src.utils.files import read_json
 
 LIBRARIES = ("torch", "transformers", "peft", "scikit-learn")
@@ -144,30 +154,142 @@ class RunVariant:
         return ".".join([run_name, *parts])
 
 
-def zero_shot_dir_of(out_dir: str, peft_run: Path) -> Path:
-    """Get the folder holding the zero-shot scores of one PEFT run.
+@dataclass(frozen=True)
+class PromptVariant:
+    """The variant of a prompting run, if it differs from the main run of its configuration."""
+
+    shots: int = 0
+    selection: str = COVERAGE
+    template: str = DEFAULT_TEMPLATE
+
+    def __post_init__(self) -> None:
+        """Get the demonstration selection and check it.
+
+        Raises:
+            ValueError: If the selection is unknown.
+        """
+        if self.selection not in (*SELECTIONS, PINNED):
+            raise ValueError(
+                f"Unknown demonstration selection '{self.selection}'. "
+                f"Choose one of: {', '.join(SELECTIONS)}"
+            )
+
+    @classmethod
+    def of(cls, config: Any) -> "PromptVariant":
+        """Get the variant of a prompting run, if it differs from the main run of its configuration.
+
+        Args:
+            config (Any): The prompting config.
+
+        Returns:
+            PromptVariant: A prompt variant.
+        """
+        pinned = bool(config.get("demonstration_ids"))
+        selection = PINNED if pinned else config.get("demonstration_selection") or COVERAGE
+
+        return cls(
+            int(config.get("shots") or 0),
+            selection,
+            str(config.get("template") or DEFAULT_TEMPLATE),
+        )
+
+    @property
+    def condition(self) -> str:
+        """Get the name of the prompting condition, which tells a variant apart from the default run of its configuration.
+
+        Returns:
+            str: A condition.
+        """
+        parts = [ZERO_SHOT if not self.shots else f"{self.shots}_shot"]
+
+        if self.shots and self.selection not in (COVERAGE, PINNED):
+            parts.append(self.selection)
+
+        if self.template != DEFAULT_TEMPLATE:
+            parts.append(self.template)
+
+        return "-".join(parts)
+
+    @property
+    def selection_label(self) -> str:
+        """Get the label of the demonstration selection, which tells a variant apart from the
+        default run of its configuration.
+
+        Returns:
+            str: A label.
+        """
+        return self.selection if self.shots else "-"
+
+    @property
+    def is_default(self) -> bool:
+        """Get whether the run is the default run of its configuration, with the default prompt
+        template and the default demonstration selection.
+
+        Returns:
+            bool: True if neither design choice deviates from its default.
+        """
+        return self.template == DEFAULT_TEMPLATE and (
+            not self.shots or self.selection in (COVERAGE, PINNED)
+        )
+
+    def check_split(self, split: str) -> None:
+        """Check that a sensitivity variant is only scored on dev.
+
+        Args:
+            split (str): The partition name.
+
+        Raises:
+            ValueError: If a non-default variant would be scored on another partition.
+        """
+        if not self.is_default and split != DEV:
+            raise ValueError(
+                f"The prompt variant '{self.condition}' is for the sensitivity analysis on {DEV} "
+                f"only; score {split} with the default template and selection."
+            )
+
+
+def model_folder(name: str, quantization: str | None) -> str:
+    """Get the folder name of a model, which is the config name plus its quantization if not full
+    precision.
+
+    Args:
+        name (str): The model config name.
+        quantization (str | None): The quantization.
+
+    Returns:
+        str: A folder name.
+    """
+    return name if quantization in FULL_PRECISION else f"{name}.{quantization}"
+
+
+def prompting_dir(out_dir: str, condition: str, folder: str) -> Path:
+    """Get the folder holding the scores of one prompting condition of one model.
 
     Args:
         out_dir (str): The base folder of the prompting runs.
+        condition (str): The prompting condition, e.g. zero_shot or 5_shot.
+        folder (str): The model folder, see model_folder.
+
+    Returns:
+        Path: A path.
+    """
+    return Path(out_dir) / condition / folder
+
+
+def prompting_dir_of(out_dir: str, condition: str, peft_run: Path) -> Path:
+    """Get the folder holding the scores of one prompting condition of one model, from a PEFT run.
+
+    Args:
+        out_dir (str): The base folder of the prompting runs.
+        condition (str): The prompting condition.
         peft_run (Path): The PEFT run folder.
 
     Returns:
         Path: A path.
     """
-    return zero_shot_dir(out_dir, read_run_info(peft_run)["model"]["name"])
+    model = read_run_info(peft_run)["model"]
 
-
-def zero_shot_dir(out_dir: str, model_name: str) -> Path:
-    """Get the folder holding the zero-shot scores of one model.
-
-    Args:
-        out_dir (str): The base folder of the prompting runs.
-        model_name (str): The model config name.
-
-    Returns:
-        Path: A path.
-    """
-    return Path(out_dir) / ZERO_SHOT / model_name
+    return prompting_dir(out_dir, condition, model_folder(model["name"], model.get("quantization")))
 
 
 def scores_stem(split: str, max_samples: int | None) -> str:
@@ -195,6 +317,20 @@ def scores_path(run: Path, split: str, max_samples: int | None) -> Path:
         Path: A path.
     """
     return run / SCORES_DIR / f"{scores_stem(split, max_samples)}.json"
+
+
+def read_scores(run: Path, split: str, max_samples: int | None) -> dict[str, dict[str, Any]]:
+    """Read the scores of one partition of a run, per language.
+
+    Args:
+        run (Path): The run folder.
+        split (str): The partition name.
+        max_samples (int | None): The number of lines scored per language, or None for all.
+
+    Returns:
+        dict[str, dict[str, Any]]: A dictionary of scores, one per language.
+    """
+    return read_json(scores_path(run, split, max_samples))["scores"]
 
 
 def predictions_path(run: Path, split: str, max_samples: int | None, lang: str) -> Path:

@@ -9,22 +9,23 @@ from typing import TYPE_CHECKING, Any
 from matplotlib.figure import Figure
 from omegaconf import DictConfig
 
-from src.constants import CHECKPOINT_METRICS, SOURCE_LANG, ZERO_SHOT
+from src.constants import CHECKPOINT_METRICS, SOURCE_LANG
 from src.data.writing import SplitWriter
 from src.evaluation.metrics import eval_key
-from src.finetune.conditions import conditions, system_name
+from src.finetune.conditions import conditions, prompt_baselines, system_name
 from src.finetune.selection import read_selection
 from src.plotting.style import save, system_colors, system_markers
-from src.utils.files import read_json, read_jsonl
+from src.utils.files import read_jsonl
 from src.utils.logger import Logger
 from src.utils.runs import (
+    model_folder,
     predictions_path,
+    prompting_dir,
     read_run_info,
+    read_scores,
     results_path,
     results_stem,
     run_dir,
-    scores_path,
-    zero_shot_dir_of,
 )
 
 if TYPE_CHECKING:
@@ -123,6 +124,28 @@ class FigureData:
         return self.candidate_infos(self.run_name)
 
     @cached_property
+    def model(self) -> str:
+        """Get the base model of the evaluated configuration, as named in the prompting folders.
+
+        Returns:
+            str: A model name, e.g. eurollm_9b or eurollm_9b.4bit.
+        """
+        return self.model_of(self.run_name)
+
+    def model_of(self, run_name: str) -> str:
+        """Get the base model of one candidate configuration, as named in the prompting folders.
+
+        Args:
+            run_name (str): The candidate's run name.
+
+        Returns:
+            str: A model name, e.g. eurollm_9b or eurollm_9b.4bit.
+        """
+        model = next(iter(self.candidate_infos(run_name).values()))["model"]
+
+        return model_folder(model["name"], model.get("quantization"))
+
+    @cached_property
     def candidates(self) -> list[str]:
         """Get the candidate configurations the dev-set selection ranked.
 
@@ -164,7 +187,7 @@ class FigureData:
         """
         run = run_dir(self.cfg.finetune.out_dir, condition, run_name)
 
-        return read_json(scores_path(run, split, None))["scores"]
+        return read_scores(run, split, None)
 
     @cached_property
     def predictions(self) -> dict[str, dict[str, list[dict]]]:
@@ -173,8 +196,13 @@ class FigureData:
         Returns:
             dict[str, dict[str, list[dict]]]: A mapping from system to language to lines.
         """
-        main = next(iter(self.runs.values()))
-        folders = {ZERO_SHOT: zero_shot_dir_of(self.cfg.prompting.out_dir, main), **self.runs}
+        folders = {
+            **{
+                condition: prompting_dir(self.cfg.prompting.out_dir, condition, self.model)
+                for condition in prompt_baselines(self.cfg.evaluate.prompt_shots)
+            },
+            **self.runs,
+        }
 
         return {
             system_name(condition): {
@@ -241,7 +269,11 @@ class FigureData:
         Returns:
             dict[str, str]: A mapping from system name to hex colour.
         """
-        return {name: color for name, color in system_colors(self.target).items() if name in names}
+        return {
+            name: color
+            for name, color in system_colors(self.target, self.cfg.evaluate.prompt_shots).items()
+            if name in names
+        }
 
     def markers(self, names: set[str] | list[str]) -> dict[str, str]:
         """Get the marker shape of every given system, in display order.
@@ -252,7 +284,11 @@ class FigureData:
         Returns:
             dict[str, str]: A mapping from system name to marker shape.
         """
-        return {k: v for k, v in system_markers(self.target).items() if k in names}
+        return {
+            k: v
+            for k, v in system_markers(self.target, self.cfg.evaluate.prompt_shots).items()
+            if k in names
+        }
 
 
 class BaseFigure(ABC):
@@ -295,6 +331,15 @@ class BaseFigure(ABC):
         Returns:
             str: A title.
         """
+
+    @property
+    def context(self) -> str:
+        """Get the context shown below the figure.
+
+        Returns:
+            str: A context.
+        """
+        return f"for {self.data.model} ({self.data.run_name})"
 
     @abstractmethod
     def draw(self) -> Figure | None:

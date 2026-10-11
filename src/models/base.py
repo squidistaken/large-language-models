@@ -9,8 +9,10 @@ from transformers.generation import GenerationMixin
 from transformers.modeling_utils import PreTrainedModel
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
+from src.constants import FULL_PRECISION
 from src.utils.hardware import device_summary, vram_gb
 from src.utils.logger import Logger
+from src.utils.runs import model_folder
 
 DEFAULT_DTYPE = "bfloat16"
 DEFAULT_BATCH_SIZE = 8
@@ -60,7 +62,8 @@ class Model:
         self.hf_id = str(cfg.hf_id)
         self.revision = str(cfg.get("revision", "main"))
         self.dtype = str(cfg.get("dtype", DEFAULT_DTYPE))
-        self.quantization = cfg.get("quantization", None)
+        quantization = cfg.get("quantization", None)
+        self.quantization = None if quantization in FULL_PRECISION else str(quantization)
         self.batch_size = int(cfg.get("batch_size", DEFAULT_BATCH_SIZE))
         self.max_new_tokens = int(cfg.get("max_new_tokens", DEFAULT_MAX_NEW_TOKENS))
         self.decoding = _mapping(cfg, "decoding")
@@ -139,6 +142,15 @@ class Model:
         """
         return self._revision_sha
 
+    @property
+    def folder(self) -> str:
+        """Get the folder name for the model and its quantization.
+
+        Returns:
+            str: A folder name.
+        """
+        return model_folder(self.name, self.quantization)
+
     def quantization_config(self) -> BitsAndBytesConfig | None:
         """Build the bitsandbytes config for the configured quantization.
 
@@ -148,7 +160,7 @@ class Model:
         Raises:
             ValueError: If the quantization is neither null nor 4bit.
         """
-        if self.quantization in (None, "none", "null"):
+        if self.quantization is None:
             return None
 
         if self.quantization != QUANTIZATION_4BIT:

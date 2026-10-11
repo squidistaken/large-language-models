@@ -1,4 +1,6 @@
 import gc
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 import torch
@@ -9,8 +11,10 @@ from transformers.generation import GenerationMixin
 from transformers.modeling_utils import PreTrainedModel
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
+from src.constants import FULL_PRECISION
 from src.utils.hardware import device_summary, vram_gb
 from src.utils.logger import Logger
+from src.utils.runs import model_folder
 
 DEFAULT_DTYPE = "bfloat16"
 DEFAULT_BATCH_SIZE = 8
@@ -60,7 +64,8 @@ class Model:
         self.hf_id = str(cfg.hf_id)
         self.revision = str(cfg.get("revision", "main"))
         self.dtype = str(cfg.get("dtype", DEFAULT_DTYPE))
-        self.quantization = cfg.get("quantization", None)
+        quantization = cfg.get("quantization", None)
+        self.quantization = None if quantization in FULL_PRECISION else str(quantization)
         self.batch_size = int(cfg.get("batch_size", DEFAULT_BATCH_SIZE))
         self.max_new_tokens = int(cfg.get("max_new_tokens", DEFAULT_MAX_NEW_TOKENS))
         self.decoding = _mapping(cfg, "decoding")
@@ -72,6 +77,7 @@ class Model:
         self._model: PreTrainedModel | PeftModel | None = None
         self._tokenizer: PreTrainedTokenizerBase | None = None
         self._revision_sha = self.revision
+        self._keepers = 0
 
     @property
     def model(self) -> PreTrainedModel | PeftModel:
@@ -139,6 +145,15 @@ class Model:
         """
         return self._revision_sha
 
+    @property
+    def folder(self) -> str:
+        """Get the folder name for the model and its quantization.
+
+        Returns:
+            str: A folder name.
+        """
+        return model_folder(self.name, self.quantization)
+
     def quantization_config(self) -> BitsAndBytesConfig | None:
         """Build the bitsandbytes config for the configured quantization.
 
@@ -148,7 +163,7 @@ class Model:
         Raises:
             ValueError: If the quantization is neither null nor 4bit.
         """
-        if self.quantization in (None, "none", "null"):
+        if self.quantization is None:
             return None
 
         if self.quantization != QUANTIZATION_4BIT:
@@ -166,7 +181,8 @@ class Model:
     def load(self) -> None:
         """Load the tokenizer and the weights at the pinned revision."""
         if self.is_loaded:
-            self.logger.warning(f"{self.name} is already loaded, skipping")
+            if not self._keepers:
+                self.logger.warning(f"{self.name} is already loaded, skipping")
 
             return
 
@@ -303,9 +319,25 @@ class Model:
             "vram_gb": round(vram_gb(), 1),
         }
 
+    @contextmanager
+    def kept(self) -> Iterator[None]:
+        """Get a context manager that keeps the model loaded until the block exits.
+
+        Yields:
+            None: An iterator that yields once, for use in a `with` statement.
+        """
+        self._keepers += 1
+
+        try:
+            yield
+
+        finally:
+            self._keepers -= 1
+            self.unload()
+
     def unload(self) -> None:
-        """Drop the weights and release the memory they held."""
-        if not self.is_loaded:
+        """Unload the model and release its memory."""
+        if not self.is_loaded or self._keepers:
             return
 
         self._model = None

@@ -1,8 +1,9 @@
 from matplotlib.figure import Figure
 
 from src.constants import SOURCE_LANG
+from src.evaluation.metrics import metric_label
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import LANGUAGE_COLORS, UNIT, bars, color_keys, panels
+from src.plotting.style import LANGUAGE_COLORS, UNIT, bars, color_keys, mark_selected, panels
 
 
 class Selection(BaseFigure):
@@ -24,7 +25,7 @@ class Selection(BaseFigure):
         Returns:
             str: A title.
         """
-        return "Dev-set selection of the configuration"
+        return f"Dev-set selection of the configuration for {self.data.model}"
 
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -51,8 +52,9 @@ class Selection(BaseFigure):
             horizontal=True,
             label="{:.3f}",
         )
+        mark_selected(ax, list(scores), selection.get("best"))
         ax.set_xlim(*UNIT)
-        ax.set_xlabel(f"Mean dev {selection['metric']} over the PEFT conditions")
+        ax.set_xlabel(f"Mean dev {metric_label(selection['metric'])} over the PEFT conditions")
         ax.set_ylabel("Candidate configuration")
         ax.legend(handles=color_keys(colors), title="Language", loc="lower right")
 

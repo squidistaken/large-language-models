@@ -6,7 +6,14 @@ from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
-from src.constants import AGGREGATE_METRICS, RUN_INFO_FILE, TRAIN, ZERO_SHOT
+from src.constants import (
+    AGGREGATE_METRICS,
+    COVERAGE,
+    DEFAULT_TEMPLATE,
+    RUN_INFO_FILE,
+    TRAIN,
+    ZERO_SHOT,
+)
 from src.data.writing import SplitWriter
 from src.evaluation.metrics import bootstrap_intervals, metrics_info, per_emotion_rows
 from src.evaluation.scoring import ScoreSummary
@@ -14,10 +21,12 @@ from src.finetune.conditions import (
     condition_languages,
     conditions,
     evaluation_languages,
+    prompt_baselines,
     system_name,
 )
 from src.finetune.evaluate import AdapterScorer
 from src.finetune.selection import ConfigSelector, SelectionSummary
+from src.models.base import Model
 from src.prompting.scorer import PromptScorer
 from src.utils import tracking
 from src.utils.files import read_json, read_jsonl, write_json
@@ -26,7 +35,9 @@ from src.utils.runs import (
     RunVariant,
     pinned_model_cfg,
     predictions_path,
+    prompting_dir,
     read_run_info,
+    read_scores,
     results_path,
     run_dir,
     scores_path,
@@ -126,10 +137,21 @@ class FinalEvaluator:
         folders: dict[str, Path] = {}
         scores = {}
 
-        if self.cfg.evaluate.include_zero_shot:
-            scorer = self._zero_shot_scorer(next(iter(runs.values())))
-            folders[ZERO_SHOT] = scorer.run_dir
-            scores[ZERO_SHOT] = self._ensure(scorer.run_dir, scorer.score)
+        model = Model(pinned_model_cfg(read_run_info(next(iter(runs.values())))), self.logger)
+
+        with model.kept():
+            for condition, shots in zip(
+                prompt_baselines(self.cfg.evaluate.prompt_shots),
+                self.cfg.evaluate.prompt_shots,
+                strict=True,
+            ):
+                folders[condition] = prompting_dir(
+                    self.cfg.prompting.out_dir, condition, model.folder
+                )
+                scores[condition] = self._ensure(
+                    folders[condition],
+                    lambda shots=shots: self._prompt_scorer(model, int(shots)).score(),
+                )
 
         for condition, run in runs.items():
             folders[condition] = run
@@ -334,7 +356,7 @@ class FinalEvaluator:
 
         self.logger.info(f"Reusing {path}")
 
-        return read_json(path)["scores"]
+        return read_scores(run, self.split, self.max_samples)
 
     def _score_adapter(self, run: Path) -> ScoreSummary:
         """Score one fine-tuned run on the partition.
@@ -347,22 +369,25 @@ class FinalEvaluator:
         """
         return AdapterScorer(run, self.split, self.max_samples, self.cfg.wandb, self.logger).score()
 
-    def _zero_shot_scorer(self, peft_run: Path) -> PromptScorer:
-        """Set up zero-shot scoring of the base model a PEFT run started from.
+    def _prompt_scorer(self, model: Model, shots: int) -> PromptScorer:
+        """Get a scorer that can score the base model on the partition, with the default prompt
+        and demonstration selection.
 
         Args:
-            peft_run (Path): A PEFT run of the evaluated configuration.
+            model (Model): The PEFT runs' base model.
+            shots (int): The number of demonstrations.
 
         Returns:
             PromptScorer: A scorer that can score the base model on the partition.
         """
-        model_cfg = pinned_model_cfg(read_run_info(peft_run))
         prompt_cfg = self.cfg.prompting.copy()
         prompt_cfg.split = self.split
         prompt_cfg.max_samples = self.max_samples
-        prompt_cfg.shots = 0
+        prompt_cfg.shots = shots
+        prompt_cfg.template = DEFAULT_TEMPLATE
+        prompt_cfg.demonstration_selection = COVERAGE
 
-        return PromptScorer(prompt_cfg, model_cfg, self.cfg.wandb, self.logger)
+        return PromptScorer(prompt_cfg, model, self.cfg.wandb, self.logger)
 
     def _log(self, summary: ResultsSummary) -> None:
         """Log the results tables, and the dev ranking if this run made it, to W&B.

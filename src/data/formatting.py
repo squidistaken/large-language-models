@@ -1,59 +1,109 @@
 import hashlib
 import json
 from dataclasses import dataclass
+from typing import Any
 
+from omegaconf import DictConfig, OmegaConf
+
+from src.constants import DEFAULT_TEMPLATE
 from src.data.labels import XED_LABELS, LabelSpace
 
-EMOTION_DEFINITIONS = {
-    "anger": "displeasure or hostility at a perceived wrong",
-    "anticipation": "expecting or looking forward to something",
-    "disgust": "revulsion or strong disapproval",
-    "fear": "feeling threatened or afraid",
-    "joy": "happiness or pleasure",
-    "sadness": "sorrow, loss or disappointment",
-    "surprise": "reaction to something unexpected",
-    "trust": "confidence in, or acceptance of, someone or something",
-}
-SYSTEM_TEMPLATE = (
-    "You classify the emotions expressed in a movie subtitle line.\n\n"
-    "Permitted labels:\n{definitions}\n\n"
-    "Every line expresses at least one of these emotions and may express several. "
-    "Answer with a JSON list of the matching label names, using only the names above, "
-    'and nothing else, in the format ["label", ...].'
-)
-USER_TEMPLATE = "Subtitle: {text}"
+
+@dataclass(frozen=True)
+class Prompts:
+    """The wording of the prompting system message, user message, and label definitions."""
+
+    definitions: dict[str, str]
+    templates: dict[str, str]
+    user: str
+
+    def __post_init__(self) -> None:
+        """Get the prompt wording from the prompting config, and check it.
+
+        Raises:
+            ValueError: If a label lacks a definition, the default template is missing, or a
+                        template lacks its placeholder.
+        """
+        missing = [name for name in XED_LABELS.names if name not in self.definitions]
+
+        if missing:
+            raise ValueError(f"prompting.definitions has no definition for {', '.join(missing)}")
+
+        if DEFAULT_TEMPLATE not in self.templates:
+            raise ValueError(f"prompting.templates has no '{DEFAULT_TEMPLATE}' template")
+
+        for name, template in self.templates.items():
+            if "{definitions}" not in template:
+                raise ValueError(f"prompting.templates.{name} lacks {{definitions}}")
+
+        if "{text}" not in self.user:
+            raise ValueError("prompting.user lacks {text}")
+
+    @classmethod
+    def from_cfg(cls, cfg: DictConfig) -> "Prompts":
+        """Get the prompt wording from the prompting config.
+
+        Args:
+            cfg (DictConfig): The prompting config.
+
+        Returns:
+            Prompts: The prompt wording.
+
+        Raises:
+            ValueError: If a label lacks a definition, the default template is missing, or a
+                        template lacks its placeholder.
+        """
+        container: Any = OmegaConf.to_container(cfg, resolve=True)
+
+        return cls(
+            dict(container["definitions"]), dict(container["templates"]), str(container["user"])
+        )
 
 
 @dataclass(frozen=True)
 class ConversationFormatter:
     """Render canonical records as conversational examples."""
 
+    prompts: Prompts
+    template: str = DEFAULT_TEMPLATE
     labels: LabelSpace = XED_LABELS
+
+    def __post_init__(self) -> None:
+        """Get the prompt wording from the prompting config, and check it.
+
+        Raises:
+            ValueError: If the template is unknown.
+        """
+        if self.template not in self.prompts.templates:
+            raise ValueError(
+                f"Unknown prompt template '{self.template}'. "
+                f"Choose one of: {', '.join(self.prompts.templates)}"
+            )
 
     @property
     def system_prompt(self) -> str:
-        """The system message defining the task and the permitted labels.
+        """Get the system message for the prompt template, with the label definitions.
 
         Returns:
             str: A system message.
         """
         definitions = "\n".join(
-            f"- {name}: {EMOTION_DEFINITIONS[name]}" for name in self.labels.names
+            f"- {name}: {self.prompts.definitions[name]}" for name in self.labels.names
         )
 
-        return SYSTEM_TEMPLATE.format(definitions=definitions)
+        return self.prompts.templates[self.template].format(definitions=definitions)
 
     @property
     def prompt_sha256(self) -> str:
-        """Fingerprint of the prompt, so splits built with other wording can be detected.
+        """Get a hex digest of the system message and user template, for caching.
 
         Returns:
             str: A hex digest of the system message and user template.
         """
-        return hashlib.sha256(f"{self.system_prompt}\n{USER_TEMPLATE}".encode()).hexdigest()
+        return hashlib.sha256(f"{self.system_prompt}\n{self.prompts.user}".encode()).hexdigest()
 
     def user_prompt(self, text: str) -> str:
-        """Render the user message for a subtitle line.
+        """Get the user message for a subtitle line, with the text.
 
         Args:
             text (str): The subtitle line.
@@ -61,10 +111,10 @@ class ConversationFormatter:
         Returns:
             str: A user message.
         """
-        return USER_TEMPLATE.format(text=text)
+        return self.prompts.user.format(text=text)
 
     def target(self, label_names: list[str]) -> str:
-        """Render the assistant message for a label set.
+        """Get the assistant message for a label set.
 
         Args:
             label_names (list[str]): The label names, already in the fixed order.
@@ -75,7 +125,8 @@ class ConversationFormatter:
         return json.dumps(label_names, ensure_ascii=False)
 
     def conversation(self, row: dict) -> dict:
-        """Render a canonical record as a conversational training example.
+        """Get a canonical record as a chat-formatted example, with system, user, and assistant
+        messages.
 
         Args:
             row (dict): The canonical record.
@@ -92,3 +143,18 @@ class ConversationFormatter:
                 {"role": "assistant", "content": self.target(row["labels"])},
             ],
         }
+
+    def with_prompt(self, example: dict, turns: list[dict]) -> dict:
+        """Get an example with this formatter's system message, and demonstration messages
+        between the system message and the subtitle.
+
+        Args:
+            example (dict): A conversational example: system, user, assistant.
+            turns (list[dict]): The demonstration messages, or none.
+
+        Returns:
+            dict: A copy of the example with the system message and demonstrations in its messages.
+        """
+        system = {"role": "system", "content": self.system_prompt}
+
+        return {**example, "messages": [system, *turns, *example["messages"][1:]]}

@@ -12,10 +12,9 @@ from src.cli import (
     evaluate_final,
     finetune,
     prepare_data,
-    select_demonstrations,
+    prompting,
     score_finetune,
-    zero_shot,
-    five_shot,
+    summarise_prompting,
 )
 from src.utils.logger import Logger
 
@@ -40,11 +39,10 @@ class CLIAction(Protocol):
 ACTIONS: dict[str, CLIAction] = {
     "download_data": download_data,
     "prepare_data": prepare_data,
-    "select_demonstrations": select_demonstrations,
     "finetune": finetune,
     "score_finetune": score_finetune,
-    "zero_shot": zero_shot,
-    "five_shot": five_shot,
+    "prompting": prompting,
+    "summarise_prompting": summarise_prompting,
     "evaluate_final": evaluate_final,
     "compare_predictions": compare_predictions,
 }

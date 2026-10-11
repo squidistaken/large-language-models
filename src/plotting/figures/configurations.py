@@ -12,6 +12,7 @@ from src.plotting.style import (
     bars,
     color_keys,
     legend,
+    selected_name,
 )
 
 LABELLED_CANDIDATES = 3
@@ -36,7 +37,7 @@ class Configurations(BaseFigure):
         Returns:
             str: A title.
         """
-        return "Candidate PEFT configurations on dev"
+        return f"Candidate PEFT configurations on dev for {self.data.model}"
 
     def draw(self) -> Figure | None:
         """Draw the figure: (a) the dev micro-F1 of every condition and language, (b) the peak GPU
@@ -97,6 +98,7 @@ class Configurations(BaseFigure):
             axes[key].set_title(f"({letter}) {measure.title}")
 
         axes["time"].tick_params(labelleft=False)
-        legend(fig, color_keys(colors))
+        best = (self.data.selection or {}).get("best")
+        legend(fig, color_keys({selected_name(run, best): color for run, color in colors.items()}))
 
         return fig

@@ -3,7 +3,7 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from src.cli.prompts import ask_until, parse_languages
+from src.cli.prompts import ask_until, parse_list
 from src.constants import (
     ALL_LANGUAGES,
     BAND_NAMES,
@@ -45,7 +45,7 @@ def prompt(cfg: DictConfig, console: Console, logger: Logger) -> None:
         console,
         "Languages (comma-separated, or 'all')",
         f"{SOURCE_LANG},{DEFAULT_TARGET_LANG}",
-        lambda raw: parse_languages(raw, ALL_LANGUAGES),
+        lambda raw: parse_list(raw, ALL_LANGUAGES, "language code(s)"),
     )
 
     out_dir = Prompt.ask("Output directory", default=cfg.data.out_dir)

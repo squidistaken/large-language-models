@@ -1,4 +1,5 @@
 from collections.abc import Callable, Sequence
+from itertools import cycle
 from pathlib import Path
 
 import matplotlib
@@ -12,11 +13,15 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
-from src.finetune.conditions import systems
+from src.finetune.conditions import conditions, prompt_baselines, system_name
 
 TEXT_WIDTH_IN = 17 / 2.54
 CATEGORICAL = ("tab:blue", "tab:orange", "tab:green", "tab:red")
-MARKERS = ("o", "s", "^", "D")
+# The PEFT conditions keep fixed colours and markers; the prompting baselines take theirs in turn.
+PROMPT_COLORS = ("tab:blue", "tab:cyan", "tab:olive", "tab:gray")
+PROMPT_MARKERS = ("o", "v", "P", "X")
+PEFT_COLORS = ("tab:orange", "tab:green", "tab:red")
+PEFT_MARKERS = ("s", "^", "D")
 NEUTRAL = "black"
 LANGUAGE_COLORS = ("tab:purple", "tab:brown")
 CONFIGURATION_COLORS = (
@@ -35,30 +40,53 @@ GAIN = (-0.3, 0.3)  # difference in F1
 SHARE = (0.0, 0.5)  # share of lines carrying one emotion
 HOURS = (0.0, 2.0)  # training time per PEFT condition
 GROUP_SHARE = 0.8
+MAX_UPRIGHT_LABELS = 3
 
 
-def system_colors(target_lang: str) -> dict[str, str]:
+def system_styles(
+    target_lang: str, prompt_shots: Sequence[int], prompt: Sequence[str], peft: Sequence[str]
+) -> dict[str, str]:
+    """Get the fixed style of every system in the results, for either colour or marker.
+
+    Args:
+        target_lang (str): The assigned target language.
+        prompt_shots (Sequence[int]): The number of demonstrations of each prompting baseline.
+        prompt (Sequence[str]): The styles of the prompting baselines, used in turn.
+        peft (Sequence[str]): The styles of the PEFT conditions.
+
+    Returns:
+        dict[str, str]: A mapping from system name to style.
+    """
+    baselines = [system_name(condition) for condition in prompt_baselines(prompt_shots)]
+    trained = [system_name(condition) for condition in conditions(target_lang)]
+
+    return {**dict(zip(baselines, cycle(prompt))), **dict(zip(trained, peft, strict=True))}
+
+
+def system_colors(target_lang: str, prompt_shots: Sequence[int]) -> dict[str, str]:
     """Get the fixed colour of every system in the results.
 
     Args:
         target_lang (str): The assigned target language.
+        prompt_shots (Sequence[int]): The number of demonstrations of each prompting baseline.
 
     Returns:
-        dict[str, str]: A mapping from system name to hex colour.
+        dict[str, str]: A mapping from system name to colour.
     """
-    return dict(zip(systems(target_lang), CATEGORICAL, strict=True))
+    return system_styles(target_lang, prompt_shots, PROMPT_COLORS, PEFT_COLORS)
 
 
-def system_markers(target_lang: str) -> dict[str, str]:
+def system_markers(target_lang: str, prompt_shots: Sequence[int]) -> dict[str, str]:
     """Get the fixed marker shape of every system in the results.
 
     Args:
         target_lang (str): The assigned target language.
+        prompt_shots (Sequence[int]): The number of demonstrations of each prompting baseline.
 
     Returns:
         dict[str, str]: A mapping from system name to marker shape.
     """
-    return dict(zip(systems(target_lang), MARKERS, strict=True))
+    return system_styles(target_lang, prompt_shots, PROMPT_MARKERS, PEFT_MARKERS)
 
 
 def apply_style() -> None:
@@ -122,6 +150,34 @@ def legend(fig: Figure, handles: list, ncols: int | None = None) -> None:
         ncols (int | None): The entries per row, or None for a single row.
     """
     fig.legend(handles=handles, loc="outside lower center", ncols=ncols or len(handles))
+
+
+def selected_name(run_name: str, best: str | None) -> str:
+    """Get the display name of a candidate configuration, marking the selected one.
+
+    Args:
+        run_name (str): The candidate's run name.
+        best (str | None): The run name of the selected configuration, if any.
+
+    Returns:
+        str: A display name.
+    """
+    return f"{run_name} (selected)" if run_name == best else run_name
+
+
+def mark_selected(ax: Axes, categories: list[str], best: str | None) -> None:
+    """Mark the selected configuration among the category labels of a horizontal bar panel.
+
+    Args:
+        ax (Axes): The panel.
+        categories (list[str]): The candidates' run names, in panel order.
+        best (str | None): The run name of the selected configuration, if any.
+    """
+    ax.set_yticks(range(len(categories)), [selected_name(run, best) for run in categories])
+
+    for tick, run in zip(ax.get_yticklabels(), categories, strict=True):
+        if run == best:
+            tick.set_fontweight("bold")
 
 
 def color_keys(colors: dict[str, str]) -> list[Patch]:
@@ -215,6 +271,8 @@ def bars(
         label (str | None): The format of the printed values, e.g. "{:.2f}", or None for none.
     """
     width = GROUP_SHARE / len(colors)
+    # Upright values overlap once the bars get narrower than the text; sideways they always fit.
+    sideways = not horizontal and len(colors) > MAX_UPRIGHT_LABELS
 
     for position, category in enumerate(categories):
         present = [(name, value(name, category)) for name in colors]
@@ -239,6 +297,7 @@ def bars(
                     textcoords="offset points",
                     ha="left" if horizontal else "center",
                     va="center" if horizontal else "bottom",
+                    rotation=90 if sideways else 0,
                     fontsize=7,
                 )
 

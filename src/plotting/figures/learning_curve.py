@@ -39,7 +39,7 @@ class LearningCurve(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Learning curve on {self.data.target}, {self.data.split} ({self.data.run_name})"
+        return f"Learning curve on {self.data.target}, {self.data.split} {self.context}"
 
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -92,8 +92,11 @@ class LearningCurve(BaseFigure):
                 ax.axhline(zero_shot[metric], color=colors.get(baseline, NEUTRAL), linestyle="--")
                 ax.axhspan(low, high, color=colors.get(baseline, NEUTRAL), alpha=0.12)
 
-            ax.set_xticks(sizes)
-            ax.set_xlim(0, max(sizes) * 1.05)
+            # The capped runs double in size, so a log axis spaces them evenly.
+            ax.set_xscale("log", base=2)
+            ax.set_xticks(sizes, [str(size) for size in sizes])
+            ax.minorticks_off()
+            ax.set_xlim(min(sizes) / 1.4, max(sizes) * 1.4)
             ax.set_xlabel(f"Training lines in {self.data.target}")
             ax.set_title(metric_label(metric))
 

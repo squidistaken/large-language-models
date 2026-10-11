@@ -17,7 +17,8 @@ BRIDGED_HOPS = 2
 
 @dataclass(frozen=True)
 class AlignmentUnit:
-    """One aligned English-target subtitle pair, keyed by its XED alignment identifier."""
+    """The English and target-language lines that XED aligned, with their labels and the alignment's
+    provenance."""
 
     align_id: str
     source_text: str
@@ -31,7 +32,7 @@ class AlignmentUnit:
 
 @dataclass(frozen=True)
 class Candidate:
-    """One English line that could stand as the counterpart of a target line."""
+    """The English side of a target-language line's alignment, with its distance from the labels."""
 
     hops: int
     align_id: str
@@ -48,7 +49,7 @@ class Candidate:
 
 @dataclass
 class AlignmentStats:
-    """Counts describing how target lines were resolved to English counterparts."""
+    """The statistics of a run of the alignment builder."""
 
     target_rows: int = 0
     malformed_rows: int = 0
@@ -64,13 +65,13 @@ class AlignmentStats:
 
 
 def _match_key(text: str) -> str:
-    """Reduce an English line to a key for matching against XED's annotated text.
+    """Match key for an English line.
 
     Args:
         text (str): The English line.
 
     Returns:
-        str: The comparison key.
+        str: A normalised key.
     """
     return " ".join(DIGIT_PATTERN.sub(" ", normalise(text)).split())
 

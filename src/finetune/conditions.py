@@ -1,4 +1,7 @@
-from src.constants import BILINGUAL, SOURCE_LANG, ZERO_SHOT
+from collections.abc import Sequence
+
+from src.constants import BILINGUAL, SHOT_SUFFIX, SOURCE_LANG, ZERO_SHOT
+from src.utils.runs import PromptVariant
 
 
 def conditions(target_lang: str) -> list[str]:
@@ -57,24 +60,31 @@ def evaluation_languages(condition: str, target_lang: str) -> list[str]:
 
 
 def system_name(condition: str) -> str:
-    """Get the display name of a PEFT condition.
+    """Get the display name of a prompting or PEFT condition.
 
     Args:
-        condition (str): The PEFT condition.
+        condition (str): The condition.
 
     Returns:
         str: A display name.
     """
-    return "zero-shot" if condition == ZERO_SHOT else f"PEFT-{condition}"
+    shots, _, variant = condition.partition("-")
+
+    if shots == ZERO_SHOT or shots.endswith(SHOT_SUFFIX):
+        name = shots.replace("_", "-")
+
+        return f"{name} ({variant})" if variant else name
+
+    return f"PEFT-{condition}"
 
 
-def systems(target_lang: str) -> list[str]:
-    """Get the display names of all systems for a target language.
+def prompt_baselines(shots: Sequence[int]) -> list[str]:
+    """Get the prompting conditions the PEFT conditions are compared with.
 
     Args:
-        target_lang (str): The assigned target language.
+        shots (Sequence[int]): The number of demonstrations of each baseline.
 
     Returns:
-        list[str]: A list of system names.
+        list[str]: A list of condition names.
     """
-    return [system_name(condition) for condition in (ZERO_SHOT, *conditions(target_lang))]
+    return [PromptVariant(shots=int(count)).condition for count in shots]

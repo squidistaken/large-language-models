@@ -38,10 +38,7 @@ class SeedVariation(BaseFigure):
         """
         seeds = ", ".join(str(seed) for seed in self.rows[0]["seeds"])
 
-        return (
-            f"Headline metrics on {self.data.split}, mean ± sd over seeds {seeds} "
-            f"({self.data.run_name})"
-        )
+        return f"Headline metrics on {self.data.split}, mean ± sd over seeds {seeds} {self.context}"
 
     def draw(self) -> Figure | None:
         """Draw the figure.

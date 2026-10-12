@@ -1,0 +1,90 @@
+{
+  "target_lang": "hr",
+  "target_band": 3,
+  "source_lang": "en",
+  "seed": 42,
+  "splits": [
+    0.7,
+    0.2,
+    0.1
+  ],
+  "label_order": [
+    "anger",
+    "anticipation",
+    "disgust",
+    "fear",
+    "joy",
+    "sadness",
+    "surprise",
+    "trust"
+  ],
+  "use_pivot": true,
+  "pivot_lang": "da",
+  "stratifier": "iterstrat.ml_stratifiers.MultilabelStratifiedShuffleSplit",
+  "prompt_sha256": "a0116dcba0bae875c1a02b1aba8a75e893b68b2be322b50657dc29ef03bd2d7f",
+  "prompt": {
+    "system": "You classify the emotions expressed in a movie subtitle line.\n\nPermitted labels:\n- anger: displeasure or hostility at a perceived wrong\n- anticipation: expecting or looking forward to something\n- disgust: revulsion or strong disapproval\n- fear: feeling threatened or afraid\n- joy: happiness or pleasure\n- sadness: sorrow, loss or disappointment\n- surprise: reaction to something unexpected\n- trust: confidence in, or acceptance of, someone or something\n\nEvery line expresses at least one of these emotions and may express several. Answer with a JSON list of the matching label names, using only the names above, and nothing else, in the format [\"label\", ...].",
+    "user_template": "Subtitle: {text}"
+  },
+  "counts": {
+    "target_rows": 5941,
+    "malformed_rows": 3,
+    "unlabelled_rows": 0,
+    "resolved_units": 5422,
+    "unresolved_rows": 1,
+    "duplicate_rows": 518,
+    "multi_unit_groups": 612,
+    "gold_source_labels": 5247,
+    "direct_alignments": 2368,
+    "bridged_alignments": 5311,
+    "pivot_anchored_ids": 125
+  },
+  "units_by_alignment_hops": {
+    "1": 2236,
+    "2": 3186
+  },
+  "split_sizes": {
+    "train": 3803,
+    "dev": 1068,
+    "test": 551
+  },
+  "label_support": {
+    "train": {
+      "anger": 962,
+      "anticipation": 905,
+      "disgust": 478,
+      "fear": 610,
+      "joy": 663,
+      "sadness": 596,
+      "surprise": 620,
+      "trust": 665
+    },
+    "dev": {
+      "anger": 269,
+      "anticipation": 255,
+      "disgust": 132,
+      "fear": 169,
+      "joy": 186,
+      "sadness": 180,
+      "surprise": 169,
+      "trust": 200
+    },
+    "test": {
+      "anger": 132,
+      "anticipation": 132,
+      "disgust": 69,
+      "fear": 90,
+      "joy": 94,
+      "sadness": 80,
+      "surprise": 87,
+      "trust": 99
+    }
+  },
+  "raw_checksums": {
+    "en-annotated.tsv": "26ac0254fbdb8b09cf2b00d44041d9084ece31bd200ae7c0e0662fbd8b037d98",
+    "hr-projections.tsv": "b7d87c935db995b03fef8676f7bcd8537830e3fa9f7a2f10d8868755e09514a8",
+    "pairs-hr.txt": "070325eef5375363e41c39cae67bf33c8a2a2ac4cb7d72194f4dcf7d7796cddc",
+    "student_annotations.csv": "4f02884e9979b58066202a3a708cf3be81c2de3cbf218b242d5ff4be117ce7f6",
+    "pairs-en.txt": "d4729c6db72fb88dd5a9b9960e8a560f48ea486a68ab8cc295be9f2d35d622f7"
+  }
+}

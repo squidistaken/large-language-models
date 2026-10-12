@@ -1,0 +1,11 @@
+order,lang,align_id,subtitle,labels
+1,en,en/1990/100507/4049754.xml.gz|hr/1990/100507/3976815.xml.gz|1882|1815,- Think I should go out with Paulie?,"anticipation, surprise, trust"
+2,en,en/1965/59037/5735869.xml.gz|hr/1965/59037/6082076.xml.gz|628|618,Relax.,"anger, fear, joy"
+3,en,en/1965/59017/5730443.xml.gz|hr/1965/59017/3689924.xml.gz|956|907,You got old.,"disgust, sadness"
+4,en,en/1990/100449/7037913.xml.gz|hr/1990/100449/6445315.xml.gz|184|183,He said no pilots.,"sadness, surprise"
+5,en,en/1990/100258/4986942.xml.gz|hr/1990/100258/6988842.xml.gz|705|864,Shoot the fuck down!,fear
+1,hr,en/1990/100507/4049754.xml.gz|hr/1990/100507/3976815.xml.gz|1882|1815,- Hoćeš da izađem sa Paulijem?,"anticipation, surprise, trust"
+2,hr,en/1965/59037/5735869.xml.gz|hr/1965/59037/6082076.xml.gz|628|618,Smiri se.,"anger, fear"
+3,hr,en/1965/59017/5730443.xml.gz|hr/1965/59017/3689924.xml.gz|956|907,Ostarili ste.,"disgust, sadness"
+4,hr,en/1990/100449/7037913.xml.gz|hr/1990/100449/6445315.xml.gz|184|183,Neće pilota.,"sadness, surprise"
+5,hr,en/1990/100258/4986942.xml.gz|hr/1990/100258/6988842.xml.gz|705|864,Skini ih jebeno dolje!,fear

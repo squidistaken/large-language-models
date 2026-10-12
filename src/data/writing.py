@@ -6,7 +6,7 @@ from src.constants import PROJECTED, SOURCE_LANG, SPLIT_NAMES
 from src.data.alignment import AlignmentUnit
 from src.data.formatting import ConversationFormatter
 from src.data.labels import XED_LABELS, LabelSpace
-from src.utils.files import write_json, write_jsonl
+from src.utils.files import read_json, read_jsonl, write_json, write_jsonl
 from src.utils.logger import Logger
 
 MANIFEST_FILE = "split_manifest.json"
@@ -34,7 +34,6 @@ class SplitWriter:
         target_lang: str,
         logger: Logger,
         labels: LabelSpace = XED_LABELS,
-        formatter: ConversationFormatter | None = None,
     ) -> None:
         """Initialise the class.
 
@@ -43,13 +42,11 @@ class SplitWriter:
             target_lang (str): The assigned target language.
             logger (Logger): The logger.
             labels (LabelSpace): The label space in use.
-            formatter (ConversationFormatter | None): The conversational renderer.
         """
         self.out_dir = out_dir
         self.target_lang = target_lang
         self.logger = logger
         self.labels = labels
-        self.formatter = formatter or ConversationFormatter(labels)
 
     @classmethod
     def for_pair(cls, data_dir: str | Path, target_lang: str, logger: Logger) -> "SplitWriter":
@@ -121,14 +118,76 @@ class SplitWriter:
         """
         return self.out_dir / lang / f"{split}.chat.jsonl"
 
+    def read_canonical(self, lang: str, split: str) -> list[dict]:
+        """Read one canonical split file.
+
+        Args:
+            lang (str): The language.
+            split (str): The partition name.
+
+        Returns:
+            list[dict]: A list of canonical rows.
+
+        Raises:
+            FileNotFoundError: If the splits have not been prepared.
+        """
+        return read_jsonl(self._require(self.canonical_path(lang, split)))
+
+    def read_chat(self, lang: str, split: str) -> list[dict]:
+        """Read one conversational split file.
+
+        Args:
+            lang (str): The language.
+            split (str): The partition name.
+
+        Returns:
+            list[dict]: A list of conversational examples.
+
+        Raises:
+            FileNotFoundError: If the splits have not been prepared.
+        """
+        return read_jsonl(self._require(self.chat_path(lang, split)))
+
+    def read_manifest(self) -> dict[str, Any]:
+        """Read the reproducibility manifest.
+
+        Returns:
+            dict[str, Any]: A dictionary containing every choice needed to reproduce the run.
+
+        Raises:
+            FileNotFoundError: If the splits have not been prepared.
+        """
+        return read_json(self._require(self.manifest_path))
+
+    @staticmethod
+    def _require(path: Path) -> Path:
+        """Get a path.
+
+        Args:
+            path (Path): The file.
+
+        Returns:
+            Path: A path.
+
+        Raises:
+            FileNotFoundError: If the file is missing.
+        """
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Missing {path}. Run `uv run main.py action=prepare_data` first."
+            )
+
+        return path
+
     def write(
-        self, units: list[AlignmentUnit], assignments: list[str]
+        self, units: list[AlignmentUnit], assignments: list[str], formatter: ConversationFormatter
     ) -> dict[str, dict[str, int]]:
         """Write every split file for both languages.
 
         Args:
             units (list[AlignmentUnit]): The deduplicated units.
             assignments (list[str]): The partition name for each unit.
+            formatter (ConversationFormatter): The renderer of the conversational files.
 
         Returns:
             dict[str, dict[str, int]]: A dictionary containing per-label support per partition, for
@@ -147,9 +206,7 @@ class SplitWriter:
             rows = [self.record(unit, lang) for unit in by_split[split]]
 
             write_jsonl(self.canonical_path(lang, split), rows)
-            write_jsonl(
-                self.chat_path(lang, split), [self.formatter.conversation(row) for row in rows]
-            )
+            write_jsonl(self.chat_path(lang, split), [formatter.conversation(row) for row in rows])
             self.logger.info(f"Wrote {len(rows)} rows to {self.canonical_path(lang, split)}")
 
         return {split: self._support(by_split[split]) for split in SPLIT_NAMES}

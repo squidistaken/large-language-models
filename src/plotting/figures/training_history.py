@@ -61,7 +61,16 @@ class TrainingHistory(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Training history of {system_name(self.condition)} ({self.run_name})"
+        return f"Training history of {system_name(self.condition)} {self.context}"
+
+    @property
+    def context(self) -> str:
+        """Get the context for the figure.
+
+        Returns:
+            str: A context.
+        """
+        return f"for {self.data.model_of(self.run_name)} ({self.run_name})"
 
     def draw(self) -> Figure:
         """Draw the figure.

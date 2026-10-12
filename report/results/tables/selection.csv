@@ -1,0 +1,7 @@
+configuration,selected,selection_score,dev_micro_f1_en,dev_micro_f1_hr,data_dir,target_lang,max_train_samples,max_target_samples,max_eval_samples,max_length,seed,quantization,learning_rate,epochs,batch_size,grad_accum_steps,warmup_ratio,evals_per_epoch,checkpoint_metric,early_stopping_patience
+qlora_lr1e-4,True,0.479,0.5212,0.4368,data/processed/xed,hr,,,,256,42,4bit,0.0001,3,8,2,0.03,2,micro_f1,2
+qlora,False,0.4772,0.5166,0.4378,data/processed/xed,hr,,,,256,42,4bit,0.0002,3,8,2,0.03,2,micro_f1,2
+lora_lr1e-4,False,0.4753,0.512,0.4386,data/processed/xed,hr,,,,256,42,,0.0001,3,8,2,0.03,2,micro_f1,2
+lora_lr4e-4,False,0.4733,0.5101,0.4365,data/processed/xed,hr,,,,256,42,,0.0004,3,8,2,0.03,2,micro_f1,2
+qlora_lr4e-4,False,0.473,0.5088,0.4373,data/processed/xed,hr,,,,256,42,4bit,0.0004,3,8,2,0.03,2,micro_f1,2
+lora,False,0.4705,0.5104,0.4306,data/processed/xed,hr,,,,256,42,,0.0002,3,8,2,0.03,2,micro_f1,2

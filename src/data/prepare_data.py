@@ -16,7 +16,7 @@ from src.constants import (
     SOURCE_LANG,
 )
 from src.data.alignment import AlignmentBuilder, AlignmentStats
-from src.data.formatting import USER_TEMPLATE
+from src.data.formatting import ConversationFormatter
 from src.data.splitting import STRATIFIER, SplitAssigner, SplitStats
 from src.data.writing import SplitWriter, pair_name
 from src.data.xed_corpus import XEDCorpus
@@ -93,12 +93,14 @@ class PreparationSummary:
 class XEDPreparer:
     """Class that builds a leakage-controlled stratified split of matched XED language pairs."""
 
-    def __init__(self, cfg: DictConfig, logger: Logger) -> None:
+    def __init__(self, cfg: DictConfig, logger: Logger, formatter: ConversationFormatter) -> None:
         """Initialise the class.
 
         Args:
             cfg (DictConfig): The dictionary object override.
             logger (Logger): The logger.
+            formatter (ConversationFormatter): The renderer of the conversational files, with the
+                                               default prompt.
         """
         self.target_lang = cfg.get("target_lang", DEFAULT_TARGET_LANG)
         self.raw_dir = Path(cfg.get("raw_dir", RAW_DIR))
@@ -111,6 +113,7 @@ class XEDPreparer:
         self.corpus = XEDCorpus(self.raw_dir, self.target_lang, logger)
         self.builder = AlignmentBuilder(self.corpus, logger, use_pivot=self.use_pivot)
         self.assigner = SplitAssigner(logger, splits=self.splits, seed=self.seed)
+        self.formatter = formatter
         self.writer = SplitWriter(self.out_dir, self.target_lang, logger)
 
         self.summary = PreparationSummary(
@@ -150,7 +153,7 @@ class XEDPreparer:
 
         assignments = self.assigner.assign(units)
 
-        self.summary.label_support = self.writer.write(units, assignments)
+        self.summary.label_support = self.writer.write(units, assignments, self.formatter)
         self.writer.write_manifest(self._manifest())
 
         return self.summary
@@ -174,7 +177,7 @@ class XEDPreparer:
             "seed": self.seed,
             "splits": list(self.splits),
             "use_pivot": self.use_pivot,
-            "prompt_sha256": self.writer.formatter.prompt_sha256,
+            "prompt_sha256": self.formatter.prompt_sha256,
         }
 
         summary.skipped = True
@@ -247,10 +250,10 @@ class XEDPreparer:
             "use_pivot": self.use_pivot,
             "pivot_lang": PIVOT_LANG if self.use_pivot else None,
             "stratifier": STRATIFIER,
-            "prompt_sha256": self.writer.formatter.prompt_sha256,
+            "prompt_sha256": self.formatter.prompt_sha256,
             "prompt": {
-                "system": self.writer.formatter.system_prompt,
-                "user_template": USER_TEMPLATE,
+                "system": self.formatter.system_prompt,
+                "user_template": self.formatter.prompts.user,
             },
             "counts": {
                 "target_rows": alignment.target_rows,

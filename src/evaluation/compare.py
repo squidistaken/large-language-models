@@ -4,13 +4,13 @@ from typing import Any
 
 from omegaconf import DictConfig
 
-from src.constants import BILINGUAL, SOURCE_LANG
+from src.constants import BILINGUAL, SOURCE_LANG, ZERO_SHOT
 from src.data.writing import SplitWriter
 from src.evaluation.metrics import example_jaccard
 from src.finetune.selection import resolve_run_name
 from src.utils.files import read_jsonl, write_jsonl
 from src.utils.logger import Logger
-from src.utils.runs import predictions_path, run_dir, zero_shot_dir_of
+from src.utils.runs import predictions_path, prompting_dir_of, run_dir
 
 IMPROVED = "improved"
 WORSENED = "worsened"
@@ -168,7 +168,7 @@ class PredictionComparer:
         bilingual = run_dir(
             self.cfg.finetune.out_dir, BILINGUAL, resolve_run_name(self.cfg, run_name)
         )
-        zero_shot = zero_shot_dir_of(self.cfg.prompting.out_dir, bilingual)
+        zero_shot = prompting_dir_of(self.cfg.prompting.out_dir, ZERO_SHOT, bilingual)
 
         return (
             predictions_path(zero_shot, self.split, self.cfg.evaluate.max_samples, self.lang),

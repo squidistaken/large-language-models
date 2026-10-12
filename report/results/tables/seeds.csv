@@ -1,0 +1,6 @@
+system,eval_lang,seeds,micro_f1_mean,micro_f1_std,jaccard_samples_mean,jaccard_samples_std,macro_f1_mean,macro_f1_std,micro_precision_mean,micro_precision_std,micro_recall_mean,micro_recall_std,hamming_loss_mean,hamming_loss_std,exact_match_mean,exact_match_std,malformed_rate_mean,malformed_rate_std,empty_rate_mean,empty_rate_std
+PEFT-en,en,42 67 128,0.5036,0.0121,0.4345,0.0058,0.4889,0.0166,0.4949,0.0145,0.5127,0.0125,0.1837,0.0056,0.2529,0.0038,0.0,0.0,0.0,0.0
+PEFT-en,hr,42 67 128,0.3849,0.0027,0.3388,0.002,0.3663,0.0011,0.4209,0.0095,0.3546,0.0032,0.2014,0.0036,0.219,0.0021,0.0,0.0,0.0006,0.001
+PEFT-hr,hr,42 67 128,0.4025,0.0002,0.3539,0.0042,0.3787,0.0023,0.4184,0.0067,0.3878,0.0053,0.2046,0.003,0.2202,0.0086,0.0,0.0,0.0,0.0
+PEFT-bilingual,en,42 67 128,0.5055,0.007,0.4419,0.0091,0.4899,0.0049,0.5054,0.0186,0.506,0.0132,0.18,0.0066,0.2626,0.01,0.0,0.0,0.0,0.0
+PEFT-bilingual,hr,42 67 128,0.4165,0.018,0.3636,0.0227,0.3997,0.0183,0.4259,0.0185,0.4083,0.0275,0.203,0.0073,0.2244,0.0237,0.0,0.0,0.0,0.0

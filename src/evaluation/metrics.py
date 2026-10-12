@@ -12,7 +12,7 @@ from sklearn.metrics import (
     recall_score,
 )
 
-from src.constants import EMOTIONS, LOWER_IS_BETTER, SHORT_NAMES
+from src.constants import AGGREGATE_METRICS, EMOTIONS, LOWER_IS_BETTER, SHORT_NAMES
 from src.evaluation.parsing import ParsedOutput
 
 # A metric that divides by zero counts as 0.
@@ -212,8 +212,12 @@ def bootstrap_intervals(
     line_jaccard = np.divide(
         true_pos.sum(axis=1), union, out=np.full(len(union), ZERO_DIVISION), where=union > 0
     )
-    resamples = np.random.default_rng(seed).integers(0, len(gold), size=(samples, len(gold)))
-    tp, fp, fn = (counts[resamples].sum(axis=1) for counts in (true_pos, false_pos, false_neg))
+    lines = len(gold)
+    resamples = np.random.default_rng(seed).integers(0, lines, size=(samples, lines))
+    draws = np.bincount(
+        (resamples + lines * np.arange(samples)[:, None]).ravel(), minlength=samples * lines
+    ).reshape(samples, lines)
+    tp, fp, fn = (draws @ counts.astype(np.int64) for counts in (true_pos, false_pos, false_neg))
 
     def f1(tp: np.ndarray, fp: np.ndarray, fn: np.ndarray) -> np.ndarray:
         denominator = 2 * tp + fp + fn
@@ -224,7 +228,29 @@ def bootstrap_intervals(
 
     estimates = {
         "micro_f1": f1(tp.sum(axis=1), fp.sum(axis=1), fn.sum(axis=1)),
-        "jaccard_samples": line_jaccard[resamples].mean(axis=1),
+        "jaccard_samples": draws @ line_jaccard / lines,
         "macro_f1": f1(tp, fp, fn).mean(axis=1),
     }
     return {metric: percentile_interval(values, level) for metric, values in estimates.items()}
+
+
+def scored_metrics(lines: list[dict], metrics: dict[str, Any], seed: int) -> dict[str, Any]:
+    """Get the aggregate metrics and their bootstrap confidence intervals for a set of lines.
+
+    Args:
+        lines (list[dict]): The per-line predictions, with gold and predicted labels.
+        metrics (dict[str, Any]): The scores in that language.
+        seed (int): The seed of the resampling.
+
+    Returns:
+        dict[str, Any]: A dictionary with the metrics and their values, plus the count of lines.
+    """
+    intervals = bootstrap_intervals(
+        [line["gold"] for line in lines], [line["predicted"] for line in lines], seed=seed
+    )
+
+    return {
+        **{key: metrics[key] for key in AGGREGATE_METRICS},
+        **{f"{key}_ci": bounds for key, bounds in intervals.items()},
+        "count": metrics["count"],
+    }

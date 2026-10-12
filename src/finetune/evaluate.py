@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 from src.constants import ADAPTER_DIR
 from src.evaluation.scoring import BaseScorer
 from src.finetune.conditions import evaluation_languages
-from src.finetune.lora import load_adapter
+from src.finetune.lora import detach_adapter, load_adapter
 from src.models.base import Model
 from src.utils import tracking
 from src.utils.logger import Logger
@@ -23,6 +23,7 @@ class AdapterScorer(BaseScorer):
         max_samples: int | None,
         wandb_cfg: DictConfig,
         logger: Logger,
+        model: Model | None = None,
     ) -> None:
         """Initialise the class.
 
@@ -32,6 +33,8 @@ class AdapterScorer(BaseScorer):
             max_samples (int | None): The number of lines scored per language, or None for all.
             wandb_cfg (DictConfig): The wandb config.
             logger (Logger): The logger.
+            model (Model | None): The model to score with, or None to load the model from the run
+                                  folder. Defaults to None.
 
         Raises:
             ValueError: If no run folder is set or the split is not dev or test.
@@ -46,7 +49,7 @@ class AdapterScorer(BaseScorer):
         self.run_cfg = run_info["config"]
 
         super().__init__(
-            Model(pinned_model_cfg(run_info), logger),
+            model or Model(pinned_model_cfg(run_info), logger),
             Path(run_dir),
             split,
             max_samples,
@@ -86,6 +89,10 @@ class AdapterScorer(BaseScorer):
     def _attach(self) -> None:
         """Attach the run's adapter to the loaded base model."""
         load_adapter(self.model, str(self.run_dir / ADAPTER_DIR))
+
+    def _detach(self) -> None:
+        """Detach the run's adapter from the base model."""
+        detach_adapter(self.model)
 
     def _tracking_run(self, model_info: dict[str, Any]) -> Any:
         """Get a W&B run for the scoring, or None if W&B is switched off.

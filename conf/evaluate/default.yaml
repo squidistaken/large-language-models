@@ -1,6 +1,6 @@
 split: test
 run_name: null # null = the best run in ${finetune.out_dir}/selection.json
-include_zero_shot: true
+prompt_shots: [0, 5] # the prompting baselines scored next to the PEFT conditions, by number of demonstrations; [] = none
 max_samples: null # null = every line; an integer is for quick smoke tests only
 overwrite: false # true = rescore runs that already have scores on this split
 out_dir: ${out_dir}/results

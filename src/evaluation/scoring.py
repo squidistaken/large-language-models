@@ -161,6 +161,10 @@ class BaseScorer(ABC):
         default."""
         return None
 
+    def _detach(self) -> None:
+        """Detach the run's adapter from the base model, or do any other cleanup after scoring."""
+        return None
+
     def _save(self, model_info: dict[str, Any]) -> None:
         """Save anything else about the run after it has been scored. Nothing by default.
 
@@ -169,13 +173,30 @@ class BaseScorer(ABC):
         """
         return None
 
+    def _prepare(self, examples: list[dict], lang: str) -> list[dict]:
+        """Change the examples before the model answers them, e.g. by adding demonstrations.
+        Unchanged by default.
+
+        Args:
+            examples (list[dict]): The conversational examples.
+            lang (str): The language of the examples.
+
+        Returns:
+            list[dict]: A list of the examples to score.
+        """
+        return examples
+
     def score(self) -> ScoreSummary:
         """Let the model answer the partition in every language, then save and log the scores.
 
         Returns:
             ScoreSummary: A summary of the scores and predictions of the partition.
         """
-        self.model.load()
+        # A model that is already loaded is shared by the caller, which unloads it.
+        owned = not self.model.is_loaded
+
+        if owned:
+            self.model.load()
 
         try:
             self._attach()
@@ -183,7 +204,10 @@ class BaseScorer(ABC):
             model_info = self.model.info()
 
         finally:
-            self.model.unload()
+            self._detach()
+
+            if owned:
+                self.model.unload()
 
         self._save(model_info)
 
@@ -211,6 +235,7 @@ class BaseScorer(ABC):
             examples = load_examples(
                 data_dir, target_lang, [lang], self.split, self.logger, self.max_samples, seed
             )
+            examples = self._prepare(examples, lang)
             summary.scores[lang], summary.predictions[lang] = score_examples(
                 self.model,
                 examples,

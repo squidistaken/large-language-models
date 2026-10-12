@@ -58,6 +58,7 @@ Models (`model=<name>`):
 | `eurollm_9b` (default) | [utter-project/EuroLLM-9B-Instruct](https://huggingface.co/utter-project/EuroLLM-9B-Instruct) |
 | `qwen3_5_9b` | [Qwen/Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B) |
 | `qwen3_5_0_8b` | [Qwen/Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) |
+| `smollm2_135m` | [HuggingFaceTB/SmolLM2-135M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct) |
 
 The global `seed` (42) seeds the data split, training and sampled subsets. Decoding is greedy.
 
@@ -158,6 +159,67 @@ Slurm:
 
 Output: `outputs/hr/finetune/<condition>/<run_name>/scores/`, with `<split>.json` and the per-line predictions `<split>.<lang>.predictions.jsonl`, and the dev-set ranking in `outputs/hr/finetune/selection.json`.
 
+### Prompting
+
+Lets the base model answer every line of a split, zero-shot or with demonstrations, and computes all the metrics. With `prompting.shots=5`, five demonstrations are chosen from the train split: short gold English lines with a direct alignment, one per film, covering as many emotions as possible (seeded). English is prompted with the English lines and the target language with their translations. `prompting.demonstration_ids` pins a set instead.
+
+Two variants serve the prompt-sensitivity analysis and are scored on dev only:
+
+1. `prompting.template` picks the instruction: `default`, `terse` or `annotator`. The wording lives in [conf/prompting/default.yaml](conf/prompting/default.yaml), where you can add templates. `default` is the prompt the PEFT runs were trained with and cannot be changed without preparing the splits again.
+2. `prompting.demonstration_selection=random` draws the demonstrations at random instead.
+
+Prompt the primary model with the quantization of its PEFT runs (`model.quantization=4bit` for QLoRA).
+
+Interactively you are asked for the target language, the model, the split, the number of shots, the demonstration selection and the template.
+
+```bash
+uv run main.py action=prompting model=eurollm_9b model.quantization=4bit prompting.shots=5 prompting.split=dev prepare.target_lang=hr
+```
+
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config a100 action=prompting model=eurollm_9b model.quantization=4bit prompting.shots=5 prompting.split=dev prepare.target_lang=hr
+```
+
+Output: `outputs/hr/prompting/<condition>/<model>/`, with the scores, the per-line predictions and a `run_info.json` recording the prompt, the decoding settings and the demonstrations. The condition is `zero_shot` or `5_shot`, plus `-random` or `-<template>` for a variant; the model folder ends in `.4bit` when quantized.
+
+### Summarising Prompting Runs
+
+Collects every prompting run scored on a split into one table, with bootstrap confidence intervals, and adds the prompt sensitivity: the mean, standard deviation and range of micro-F1 and Jaccard across the templates.
+
+Interactively you are asked for the target language, the split and the models.
+
+```bash
+uv run main.py action=summarise_prompting prompting.split=dev "prompting.summary_models=[eurollm_9b.4bit,qwen3_5_9b]" prepare.target_lang=hr
+```
+
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config cpu action=summarise_prompting prompting.split=dev "prompting.summary_models=[eurollm_9b.4bit,qwen3_5_9b]" prepare.target_lang=hr
+```
+
+Output: `outputs/hr/prompting/summary.<split>.json`, and `prompting.<split>` and `prompt_sensitivity.<split>` in `outputs/hr/figures/`.
+
+### Final Evaluation
+
+Scores the selected PEFT configuration in all three conditions on a split (test by default), next to the prompting baselines of its base model, set by `evaluate.prompt_shots` (`[0, 5]` by default). Systems already scored are reused. It also reports the spread over seeds, the learning curve, all figures and a line-by-line comparison of zero-shot against the bilingual run.
+
+Interactively you are asked for the target language, the split and the prompting baselines.
+
+```bash
+uv run main.py action=evaluate_final evaluate.split=test prepare.target_lang=hr
+```
+
+Slurm:
+
+```bash
+./slurm/run.sh --slurm-config a100 action=evaluate_final evaluate.split=test prepare.target_lang=hr
+```
+
+Output: `outputs/hr/results/<split>.<run_name>.json`, the figures in `outputs/hr/figures/` and the comparison in `outputs/hr/analysis/`.
+
 ### Comparing Predictions
 
 Compares two systems line by line, for the qualitative analysis. Each line is categorised as improved, worsened, same-correct or same-incorrect by its per-line Jaccard index, and enriched with the aligned English subtitle and its labels, the label source, and the number of alignment hops, to help tell model errors from alignment or projection noise.
@@ -189,6 +251,11 @@ outputs/<lang>/                       one folder per target language (out_dir)
 │   │   ├── run_info.json             settings, versions, hardware, training log
 │   │   └── scores/                   <split>.json and <split>.<lang>.predictions.jsonl
 │   └── selection.json                the dev-set ranking and the final configuration
+├── prompting/
+│   ├── <condition>/<model>/          run_info.json (prompt, demonstrations) and scores/
+│   └── summary.<split>.json          all prompting runs and the prompt sensitivity
+├── results/<split>.<run_name>.json   the final results table, seeds and learning curve
+├── figures/                          the report figures, PDF and PNG
 └── analysis/<name>.jsonl             prediction comparisons
 logs/                                 one log file per CLI run
 ```

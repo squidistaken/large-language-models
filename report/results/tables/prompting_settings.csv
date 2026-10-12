@@ -1,0 +1,5 @@
+condition,model,revision,quantization,dtype,max_new_tokens,decoding_do_sample,template,prompt_sha256,demonstrations,chat_enable_thinking
+5_shot,utter-project/EuroLLM-9B-Instruct,f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace,4bit,bfloat16,32,False,default,a0116dcba0bae875c1a02b1aba8a75e893b68b2be322b50657dc29ef03bd2d7f,"selected (coverage): one per film, over gold, 1-hop, short train lines (seed=42)",
+5_shot,Qwen/Qwen3.5-9B,c202236235762e1c871ad0ccb60c8ee5ba337b9a,,bfloat16,32,False,default,a0116dcba0bae875c1a02b1aba8a75e893b68b2be322b50657dc29ef03bd2d7f,"selected (coverage): one per film, over gold, 1-hop, short train lines (seed=42)",False
+zero_shot,utter-project/EuroLLM-9B-Instruct,f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace,4bit,bfloat16,32,False,default,a0116dcba0bae875c1a02b1aba8a75e893b68b2be322b50657dc29ef03bd2d7f,none (zero-shot),
+zero_shot,Qwen/Qwen3.5-9B,c202236235762e1c871ad0ccb60c8ee5ba337b9a,,bfloat16,32,False,default,a0116dcba0bae875c1a02b1aba8a75e893b68b2be322b50657dc29ef03bd2d7f,none (zero-shot),False

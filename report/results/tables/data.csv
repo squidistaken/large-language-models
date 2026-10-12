@@ -1,0 +1,24 @@
+setting,value
+source_lang,en
+target_lang,hr
+resource_band,3
+seed,42
+split_ratios,0.7 / 0.2 / 0.1
+stratifier,iterstrat.ml_stratifiers.MultilabelStratifiedShuffleSplit
+pivot_lang,da
+train_lines,3803
+dev_lines,1068
+test_lines,551
+units_with_1_hop(s),2236
+units_with_2_hop(s),3186
+target_rows,5941
+malformed_rows,3
+unlabelled_rows,0
+resolved_units,5422
+unresolved_rows,1
+duplicate_rows,518
+multi_unit_groups,612
+gold_source_labels,5247
+direct_alignments,2368
+bridged_alignments,5311
+pivot_anchored_ids,125

@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 
 from src.evaluation.metrics import bootstrap_mean, example_jaccard
 from src.plotting.figures.base import BaseFigure
-from src.plotting.style import UNIT, bars, color_keys, panels
+from src.plotting.style import UNIT, bars, color_keys, legend, panels
 
 
 class Alignment(BaseFigure):
@@ -27,7 +27,7 @@ class Alignment(BaseFigure):
         Returns:
             str: A title.
         """
-        return f"Per-line Jaccard by alignment hops on {self.data.split} ({self.data.run_name})"
+        return f"Per-line Jaccard by alignment hops on {self.data.split} {self.context}"
 
     def draw(self) -> Figure | None:
         """Draw the figure.
@@ -82,6 +82,6 @@ class Alignment(BaseFigure):
         ax.set_ylim(*UNIT)
         ax.set_xlabel("Alignment hops behind the labels (lines)")
         ax.set_ylabel(f"Mean per-line Jaccard, {target}")
-        ax.legend(handles=color_keys(colors), loc="upper right")
+        legend(fig, color_keys(colors))
 
         return fig

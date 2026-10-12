@@ -1,0 +1,6 @@
+setting,value
+label_order,anger anticipation disgust fear joy sadness surprise trust
+zero_division,0.0
+zero_division_policy,A metric whose denominator is zero (no positive gold labels or no predictions for a class or line) is set to 0.0.
+malformed_policy,Malformed answers and answers with no permitted label count as an empty predicted label set.
+implementation,scikit-learn 1.9.1

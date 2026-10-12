@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.table import Table
 
-from src.constants import AGGREGATE_METRICS, EMOTIONS, PRIMARY_METRICS
+from src.constants import (
+    AGGREGATE_METRICS,
+    DIAGNOSTIC_METRICS,
+    EMOTIONS,
+    PRIMARY_METRICS,
+    SECONDARY_METRICS,
+)
 
 if TYPE_CHECKING:
     from src.evaluation.compare import ComparisonSummary
     from src.evaluation.results import ResultsSummary
     from src.evaluation.scoring import ScoreSummary
     from src.finetune.selection import SelectionSummary
+    from src.prompting.summary import PromptingSummary
 
 
 def _metrics_table(title: str, columns: list[str], values: list[dict]) -> Table:
@@ -112,21 +120,126 @@ def render_selection(console: Console, summary: SelectionSummary) -> None:
     console.print(f"Final configuration: [bold cyan]{summary.best.run_name}[/bold cyan]")
 
 
+type Column = Callable[[dict[str, Any]], str]
+
+
+def _field(name: str) -> Column:
+    """Get a column that shows one field of a row.
+
+    Args:
+        name (str): The field.
+
+    Returns:
+        Column: A function from a row to its cell.
+    """
+    return lambda row: str(row[name])
+
+
+def _rows_table(
+    title: str,
+    keys: dict[str, Column],
+    metrics: Sequence[str],
+    rows: list[dict[str, Any]],
+    cell: Callable[[dict[str, Any], str], str] = lambda row, key: f"{row[key]:.4f}",
+    extra: dict[str, Column] | None = None,
+) -> Table:
+    """Get a table with one row per result, one column per key, and one column per metric.
+
+    Args:
+        title (str): The table title.
+        keys (dict[str, Column]): The key columns, by header.
+        metrics (Sequence[str]): The metric keys, shown with their short labels.
+        rows (list[dict[str, Any]]): The results.
+        cell (Callable[[dict[str, Any], str], str]): The cell of a row and metric. Defaults to a
+                                                     float with four decimals.
+        extra (dict[str, Column] | None): The columns after the metrics, by header. Defaults to
+                                          None.
+
+    Returns:
+        Table: A table.
+    """
+    from src.evaluation.metrics import metric_label
+
+    extra = extra or {}
+    table = Table(title=title)
+
+    for header in keys:
+        table.add_column(header)
+
+    for key in metrics:
+        table.add_column(metric_label(key), justify="right", style="cyan")
+
+    for header in extra:
+        table.add_column(header, justify="right")
+
+    for row in rows:
+        table.add_row(
+            *(column(row) for column in keys.values()),
+            *(cell(row, key) for key in metrics),
+            *(column(row) for column in extra.values()),
+        )
+
+    return table
+
+
 def render_results(console: Console, summary: ResultsSummary) -> None:
-    """Render the final results table, one column per system and language.
+    """Render the final results, one row per system and language.
 
     Args:
         console (Console): The console.
         summary (ResultsSummary): The summary to render.
     """
+    title = f"{summary.split} results, configuration '{summary.run_name}'"
+    keys = {"System": _field("system"), "Lang": _field("eval_lang")}
+
+    console.print(_rows_table(title, keys, (*PRIMARY_METRICS, *SECONDARY_METRICS), summary.rows))
     console.print(
-        _metrics_table(
-            f"{summary.split} results, configuration '{summary.run_name}'",
-            [f"{row['system']}\n{row['eval_lang']}" for row in summary.rows],
+        _rows_table(
+            f"{title} (diagnostics)",
+            keys,
+            DIAGNOSTIC_METRICS,
             summary.rows,
+            extra={"Lines": lambda row: str(int(row["count"]))},
         )
     )
     _experiment_tables(console, summary)
+
+    for path in summary.files:
+        console.print(f"Saved [cyan]{path}[/cyan]")
+
+
+def render_prompting(console: Console, summary: PromptingSummary) -> None:
+    """Render the prompting results, one row per configuration and language.
+
+    Args:
+        console (Console): The console.
+        summary (PromptingSummary): The summary to render.
+    """
+    variant = {"Model": _field("model"), "Shots": _field("shots"), "Selection": _field("selection")}
+
+    console.print(
+        _rows_table(
+            f"Prompting on {summary.split}",
+            {**variant, "Template": _field("template"), "Lang": _field("eval_lang")},
+            ("micro_f1", "jaccard_samples", "macro_f1", "hamming_loss", "malformed_rate"),
+            summary.rows,
+        )
+    )
+    console.print(
+        _rows_table(
+            f"Prompt sensitivity on {summary.split}: mean ± std (range) over templates",
+            {
+                **variant,
+                "Lang": _field("eval_lang"),
+                "Templates": lambda row: str(len(row["templates"])),
+            },
+            PRIMARY_METRICS,
+            summary.sensitivity,
+            cell=lambda row, key: (
+                f"{row[f'{key}_mean']:.3f} ± {row[f'{key}_std']:.3f} ({row[f'{key}_range']:.3f})"
+            ),
+        )
+    )
 
     for path in summary.files:
         console.print(f"Saved [cyan]{path}[/cyan]")

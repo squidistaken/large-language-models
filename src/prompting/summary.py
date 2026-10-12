@@ -5,12 +5,20 @@ from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
-from src.constants import AGGREGATE_METRICS, PRIMARY_METRICS, RUN_INFO_FILE
-from src.evaluation.metrics import metrics_info
+from src.constants import PRIMARY_METRICS
+from src.evaluation.metrics import metrics_info, scored_metrics
 from src.utils import tracking
-from src.utils.files import write_json
+from src.utils.files import read_jsonl, write_json
 from src.utils.logger import Logger
-from src.utils.runs import PromptVariant, read_run_info, read_scores, scores_path, scores_stem
+from src.utils.runs import (
+    PromptVariant,
+    find_runs,
+    predictions_path,
+    read_run_info,
+    read_scores,
+    scores_path,
+    scores_stem,
+)
 
 PROMPTING = "prompting"
 
@@ -21,6 +29,7 @@ class PromptingSummary:
 
     split: str
     max_samples: int | None
+    target_lang: str
     models: list[str] = field(default_factory=list)
     rows: list[dict[str, Any]] = field(default_factory=list)
     sensitivity: list[dict[str, Any]] = field(default_factory=list)
@@ -35,6 +44,7 @@ class PromptingSummary:
         return {
             "split": self.split,
             "max_samples": self.max_samples,
+            "target_lang": self.target_lang,
             "models": self.models,
             "metrics": metrics_info(),
             "results": self.rows,
@@ -57,12 +67,12 @@ class PromptingSummariser:
         self.out_dir = Path(cfg.prompting.out_dir)
 
     def runs(self) -> list[Path]:
-        """Get the run folders of every prompting run.
+        """Get every prompting run folder.
 
         Returns:
             list[Path]: A list of run folders.
         """
-        return sorted(path.parent for path in self.out_dir.glob(f"*/*/{RUN_INFO_FILE}"))
+        return find_runs(self.out_dir)
 
     def models(self) -> list[str]:
         """Get the names of the models with prompting runs.
@@ -101,7 +111,9 @@ class PromptingSummariser:
                 f"Models with runs: {', '.join(available) or 'none'}"
             )
 
-        summary = PromptingSummary(split, max_samples, sorted(models))
+        summary = PromptingSummary(
+            split, max_samples, str(self.cfg.prepare.target_lang), sorted(models)
+        )
 
         scored = [
             (run, PromptVariant.of(read_run_info(run)["config"]))
@@ -118,7 +130,7 @@ class PromptingSummariser:
                 item[1].condition,
             ),
         ):
-            summary.rows.extend(self._rows(run, variant, read_scores(run, split, max_samples)))
+            summary.rows.extend(self._rows(run, variant, split, max_samples))
 
         if not summary.rows:
             raise FileNotFoundError(
@@ -137,14 +149,16 @@ class PromptingSummariser:
         return summary
 
     def _rows(
-        self, run: Path, variant: PromptVariant, scores: dict[str, dict[str, Any]]
+        self, run: Path, variant: PromptVariant, split: str, max_samples: int | None
     ) -> list[dict[str, Any]]:
-        """Get the rows of a prompting run, one per language.
+        """Get the rows of a prompting run, one per language, with bootstrap confidence intervals
+        as in the final results.
 
         Args:
             run (Path): The run folder.
             variant (PromptVariant): The run's prompt variant.
-            scores (dict[str, dict[str, Any]]): The scores per language.
+            split (str): The partition name.
+            max_samples (int | None): The number of lines scored per language, or None for all.
 
         Returns:
             list[dict[str, Any]]: A list of rows.
@@ -153,13 +167,18 @@ class PromptingSummariser:
             {
                 "model": run.name,
                 "shots": variant.shots,
+                "variant": variant.variant,
+                "is_default": variant.is_default,
                 "selection": variant.selection_label,
                 "template": variant.template,
                 "eval_lang": lang,
-                **{key: metrics[key] for key in AGGREGATE_METRICS},
-                "count": metrics["count"],
+                **scored_metrics(
+                    read_jsonl(predictions_path(run, split, max_samples, lang)),
+                    metrics,
+                    self.cfg.seed,
+                ),
             }
-            for lang, metrics in scores.items()
+            for lang, metrics in read_scores(run, split, max_samples).items()
         ]
 
     @staticmethod

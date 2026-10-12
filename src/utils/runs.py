@@ -9,12 +9,14 @@ from omegaconf import DictConfig, OmegaConf
 from src.constants import (
     COVERAGE,
     DEFAULT_TEMPLATE,
+    DEFAULT_VARIANT,
     DEV,
     FULL_PRECISION,
     PINNED,
     RUN_INFO_FILE,
     SCORES_DIR,
     SELECTIONS,
+    SHOT_SUFFIX,
     ZERO_SHOT,
 )
 from src.utils.files import read_json
@@ -69,9 +71,21 @@ def latest_run(out_dir: str) -> Path | None:
     Returns:
         Path | None: A run.
     """
-    infos = list(Path(out_dir).glob(f"*/*/{RUN_INFO_FILE}"))
+    runs = find_runs(out_dir)
 
-    return max(infos, key=lambda path: path.stat().st_mtime).parent if infos else None
+    return max(runs, key=lambda run: (run / RUN_INFO_FILE).stat().st_mtime) if runs else None
+
+
+def find_runs(out_dir: str | Path) -> list[Path]:
+    """Find every finished run folder.
+
+    Args:
+        out_dir (str | Path): The folder holding the runs.
+
+    Returns:
+        list[Path]: A list of run folders, sorted.
+    """
+    return sorted(path.parent for path in Path(out_dir).glob(f"*/*/{RUN_INFO_FILE}"))
 
 
 def run_dir(out_dir: str, condition: str, run_name: str) -> Path:
@@ -200,15 +214,35 @@ class PromptVariant:
         Returns:
             str: A condition.
         """
-        parts = [ZERO_SHOT if not self.shots else f"{self.shots}_shot"]
+        shots = ZERO_SHOT if not self.shots else f"{self.shots}{SHOT_SUFFIX}"
+
+        return shots if self.is_default else f"{shots}-{self.variant}"
+
+    @property
+    def variant(self) -> str:
+        """Get the name of the prompting variant.
+
+        Returns:
+            str: A variant.
+        """
+        return "-".join(self._deviations) or DEFAULT_VARIANT
+
+    @property
+    def _deviations(self) -> list[str]:
+        """Get the design choices that deviate from the default run of a configuration.
+
+        Returns:
+            list[str]: A list of deviations.
+        """
+        deviations = []
 
         if self.shots and self.selection not in (COVERAGE, PINNED):
-            parts.append(self.selection)
+            deviations.append(self.selection)
 
         if self.template != DEFAULT_TEMPLATE:
-            parts.append(self.template)
+            deviations.append(self.template)
 
-        return "-".join(parts)
+        return deviations
 
     @property
     def selection_label(self) -> str:
@@ -228,9 +262,7 @@ class PromptVariant:
         Returns:
             bool: True if neither design choice deviates from its default.
         """
-        return self.template == DEFAULT_TEMPLATE and (
-            not self.shots or self.selection in (COVERAGE, PINNED)
-        )
+        return not self._deviations
 
     def check_split(self, split: str) -> None:
         """Check that a sensitivity variant is only scored on dev.

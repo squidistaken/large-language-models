@@ -1,6 +1,5 @@
 from matplotlib.figure import Figure
 
-from src.constants import SOURCE_LANG
 from src.evaluation.metrics import metric_label
 from src.plotting.figures.base import BaseFigure
 from src.plotting.style import LANGUAGE_COLORS, UNIT, bars, color_keys, mark_selected, panels
@@ -38,7 +37,7 @@ class Selection(BaseFigure):
         if selection is None or len(selection["results"]) < 2:
             return None
 
-        langs = sorted(selection["langs"], key=lambda lang: lang != SOURCE_LANG)
+        langs = self.data.languages(selection["langs"])
         scores = {result["run_name"]: result["language_scores"] for result in selection["results"]}
         colors = dict(zip(langs, LANGUAGE_COLORS, strict=False))
         fig, axes = panels(1, 1, 0.4 * len(scores) + 1.2)

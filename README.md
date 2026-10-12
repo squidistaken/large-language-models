@@ -186,7 +186,7 @@ Output: `outputs/hr/prompting/<condition>/<model>/`, with the scores, the per-li
 
 ### Summarising Prompting Runs
 
-Collects every prompting run scored on a split into one table, and adds the prompt sensitivity: the mean, standard deviation and range of micro-F1 and Jaccard across the templates. `prompting.summary_models` limits it to the listed models.
+Collects every prompting run scored on a split into one table, with bootstrap confidence intervals, and adds the prompt sensitivity: the mean, standard deviation and range of micro-F1 and Jaccard across the templates.
 
 Interactively you are asked for the target language, the split and the models.
 
@@ -200,7 +200,7 @@ Slurm:
 ./slurm/run.sh --slurm-config cpu action=summarise_prompting prompting.split=dev "prompting.summary_models=[eurollm_9b.4bit,qwen3_5_9b]" prepare.target_lang=hr
 ```
 
-Output: `outputs/hr/prompting/summary.<split>.json`.
+Output: `outputs/hr/prompting/summary.<split>.json`, and `prompting.<split>` and `prompt_sensitivity.<split>` in `outputs/hr/figures/`.
 
 ### Final Evaluation
 

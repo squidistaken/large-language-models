@@ -48,12 +48,15 @@ def run(cfg: DictConfig, logger: Logger) -> None:
     Raises:
         SystemExit: If no prompting run has scores on the partition.
     """
+    from src.plotting.report import make_prompting_figures
     from src.prompting.summary import PromptingSummariser
 
     try:
         summary = PromptingSummariser(cfg, logger).summarise(
             cfg.prompting.split, cfg.prompting.max_samples, cfg.prompting.get("summary_models")
         )
+
+        summary.files.extend(make_prompting_figures(cfg, logger, summary))
 
     except (FileNotFoundError, KeyError, ValueError) as e:
         raise SystemExit(str(e)) from e

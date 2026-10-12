@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -256,9 +256,7 @@ class FigureData:
         Returns:
             list[str]: A list of language codes.
         """
-        found = set(present)
-
-        return [lang for lang in (SOURCE_LANG, self.target) if lang in found]
+        return display_languages(present, self.target)
 
     def colors(self, names: set[str] | list[str]) -> dict[str, str]:
         """Get the colour of every given system, in display order.
@@ -291,28 +289,40 @@ class FigureData:
         }
 
 
-class BaseFigure(ABC):
-    """Class for the base of the report figures."""
+def display_languages(present: Iterable[str], target: str) -> list[str]:
+    """Get the languages that are present in the results, in display order: English, then the
+    target language.
 
-    @classmethod
-    def instances(cls, data: FigureData) -> list[BaseFigure]:
-        """Get the figures this class draws for the data.
+    Args:
+        present (Iterable[str]): The language codes present.
+        target (str): The target language.
 
-        Args:
-            data (FigureData): The inputs of the figures.
+    Returns:
+        list[str]: A list of language codes.
+    """
+    found = set(present)
 
-        Returns:
-            list[BaseFigure]: A list of figures.
-        """
-        return [cls(data)]
+    return [lang for lang in (SOURCE_LANG, target) if lang in found]
 
-    def __init__(self, data: FigureData) -> None:
-        """Initialise the class.
 
-        Args:
-            data (FigureData): The inputs of the figures.
-        """
-        self.data = data
+def cell(lookup: dict[tuple, dict[str, Any]], key: str, *fixed: str) -> Callable[..., Any]:
+    """Get a function that looks up one value of the result rows, or None when there is no row, as
+    the value of a series in a category of a panel.
+
+    Args:
+        lookup (dict[tuple, dict[str, Any]]): The rows, keyed by series and category, then the
+                                              fixed parts of the key.
+        key (str): The metric key.
+        *fixed (str): The parts of the lookup key after the series and category.
+
+    Returns:
+        Callable[..., Any]: A function from a series and category to the value.
+    """
+    return lambda *parts: lookup.get((*parts, *fixed), {}).get(key)
+
+
+class Drawable(ABC):
+    """Class for the base of every figure that can be drawn and saved to disk."""
 
     @property
     @abstractmethod
@@ -331,15 +341,6 @@ class BaseFigure(ABC):
         Returns:
             str: A title.
         """
-
-    @property
-    def context(self) -> str:
-        """Get the context shown below the figure.
-
-        Returns:
-            str: A context.
-        """
-        return f"for {self.data.model} ({self.data.run_name})"
 
     @abstractmethod
     def draw(self) -> Figure | None:
@@ -368,6 +369,41 @@ class BaseFigure(ABC):
         fig.suptitle(self.title)
 
         return save(fig, out_dir, self.name, formats)
+
+
+class BaseFigure(Drawable):
+    """Class for the base of every figure that can be drawn and saved to disk, with a title and
+    context.
+    """
+
+    @classmethod
+    def instances(cls, data: FigureData) -> list[BaseFigure]:
+        """Get the instances of one figure class for one configuration.
+
+        Args:
+            data (FigureData): The inputs of the figures.
+
+        Returns:
+            list[BaseFigure]: A list of figures.
+        """
+        return [cls(data)]
+
+    def __init__(self, data: FigureData) -> None:
+        """Initialise the class.
+
+        Args:
+            data (FigureData): The inputs of the figures.
+        """
+        self.data = data
+
+    @property
+    def context(self) -> str:
+        """Get what the figure's results belong to, for the end of its title.
+
+        Returns:
+            str: A context.
+        """
+        return f"for {self.data.model} ({self.data.run_name})"
 
 
 def series(history: list[dict[str, Any]], key: str) -> tuple[list[float], list[float]]:

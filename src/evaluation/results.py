@@ -15,7 +15,7 @@ from src.constants import (
     ZERO_SHOT,
 )
 from src.data.writing import SplitWriter
-from src.evaluation.metrics import bootstrap_intervals, metrics_info, per_emotion_rows
+from src.evaluation.metrics import metrics_info, per_emotion_rows, scored_metrics
 from src.evaluation.scoring import ScoreSummary
 from src.finetune.conditions import (
     condition_languages,
@@ -205,19 +205,14 @@ class FinalEvaluator:
         Returns:
             dict: A row.
         """
-        lines = read_jsonl(predictions_path(folder, self.split, self.max_samples, lang))
-        intervals = bootstrap_intervals(
-            [line["gold"] for line in lines],
-            [line["predicted"] for line in lines],
-            seed=self.cfg.seed,
-        )
-
         return {
             "system": system,
             "eval_lang": lang,
-            **{key: metrics[key] for key in AGGREGATE_METRICS},
-            **{f"{key}_ci": bounds for key, bounds in intervals.items()},
-            "count": metrics["count"],
+            **scored_metrics(
+                read_jsonl(predictions_path(folder, self.split, self.max_samples, lang)),
+                metrics,
+                self.cfg.seed,
+            ),
         }
 
     def _variants(self) -> tuple[Variants, Variants]:

@@ -65,7 +65,7 @@ class TrainingHistory(BaseFigure):
 
     @property
     def context(self) -> str:
-        """Get the context shown in the title.
+        """Get the context for the figure.
 
         Returns:
             str: A context.

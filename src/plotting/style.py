@@ -22,6 +22,14 @@ PROMPT_COLORS = ("tab:blue", "tab:cyan", "tab:olive", "tab:gray")
 PROMPT_MARKERS = ("o", "v", "P", "X")
 PEFT_COLORS = ("tab:orange", "tab:green", "tab:red")
 PEFT_MARKERS = ("s", "^", "D")
+MODEL_SHADES = (
+    ("#9ecae1", "#2171b5"),
+    ("#fdae6b", "#d94801"),
+    ("#a1d99b", "#238b45"),
+    ("#bcbddc", "#6a51a3"),
+)
+VARIANT_COLORS = ("tab:blue", "tab:orange", "tab:green", "tab:purple", "tab:brown")
+VARIANT_MARKERS = ("s", "^", "v", "P", "X")
 NEUTRAL = "black"
 LANGUAGE_COLORS = ("tab:purple", "tab:brown")
 CONFIGURATION_COLORS = (
@@ -41,6 +49,7 @@ SHARE = (0.0, 0.5)  # share of lines carrying one emotion
 HOURS = (0.0, 2.0)  # training time per PEFT condition
 GROUP_SHARE = 0.8
 MAX_UPRIGHT_LABELS = 3
+MAX_LEGEND_COLUMNS = 6
 
 
 def system_styles(
@@ -147,9 +156,13 @@ def legend(fig: Figure, handles: list, ncols: int | None = None) -> None:
     Args:
         fig (Figure): The figure.
         handles (list): The legend entries.
-        ncols (int | None): The entries per row, or None for a single row.
+        ncols (int | None): The number of columns or None for a single column. Defaults to None.
     """
-    fig.legend(handles=handles, loc="outside lower center", ncols=ncols or len(handles))
+    fig.legend(
+        handles=handles,
+        loc="outside lower center",
+        ncols=ncols or min(len(handles), MAX_LEGEND_COLUMNS),
+    )
 
 
 def selected_name(run_name: str, best: str | None) -> str:

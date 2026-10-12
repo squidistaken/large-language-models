@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from src.constants import BILINGUAL, SOURCE_LANG
+from src.constants import BILINGUAL, SHOT_SUFFIX, SOURCE_LANG, ZERO_SHOT
 from src.utils.runs import PromptVariant
 
 
@@ -68,8 +68,12 @@ def system_name(condition: str) -> str:
     Returns:
         str: A display name.
     """
-    if condition.endswith("_shot"):
-        return condition.replace("_", "-")
+    shots, _, variant = condition.partition("-")
+
+    if shots == ZERO_SHOT or shots.endswith(SHOT_SUFFIX):
+        name = shots.replace("_", "-")
+
+        return f"{name} ({variant})" if variant else name
 
     return f"PEFT-{condition}"
 

@@ -5,7 +5,7 @@ from matplotlib.ticker import PercentFormatter
 
 from src.constants import AGGREGATE_METRICS, HEADLINE_METRICS
 from src.evaluation.metrics import metric_label
-from src.plotting.figures.base import BaseFigure
+from src.plotting.figures.base import BaseFigure, cell
 from src.plotting.style import UNIT, bars, color_keys, legend, panels
 
 APPENDIX_METRICS = tuple(key for key in AGGREGATE_METRICS if key not in HEADLINE_METRICS)
@@ -58,12 +58,8 @@ class Metrics(BaseFigure):
                 ax,
                 langs,
                 colors,
-                lambda name, lang, metric=metric: (
-                    lookup[(name, lang)][metric] if (name, lang) in lookup else None
-                ),
-                interval=lambda name, lang, metric=metric: lookup.get((name, lang), {}).get(
-                    f"{metric}_ci"
-                ),
+                cell(lookup, metric),
+                interval=cell(lookup, f"{metric}_ci"),
                 label="{:.1%}" if metric in zoomed else "{:.2f}",
             )
             ax.set_xlabel("Evaluation language")

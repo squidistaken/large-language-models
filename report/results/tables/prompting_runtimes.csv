@@ -1,0 +1,17 @@
+log,started,model,quantization,split,shots,condition,max_samples,minutes
+20261011_131732.log,2026-10-11 13:17:32,eurollm_9b,4bit,dev,0,zero_shot,,6.0
+20261011_131732.log,2026-10-11 13:17:32,eurollm_9b,4bit,dev,0,zero_shot-annotator,,6.6
+20261011_131732.log,2026-10-11 13:17:32,eurollm_9b,4bit,dev,0,zero_shot-terse,,7.2
+20261011_132354.log,2026-10-11 13:23:54,eurollm_9b,4bit,dev,5,5_shot,,4.5
+20261011_132431.log,2026-10-11 13:24:31,eurollm_9b,4bit,dev,5,5_shot-terse,,4.5
+20261011_132502.log,2026-10-11 13:25:02,eurollm_9b,4bit,dev,5,5_shot-annotator,,4.2
+20261011_132847.log,2026-10-11 13:28:47,eurollm_9b,4bit,dev,5,5_shot-random,,4.2
+20261011_132917.log,2026-10-11 13:29:17,qwen3_5_9b,,dev,0,zero_shot,,3.8
+20261011_132936.log,2026-10-11 13:29:36,qwen3_5_9b,,dev,0,zero_shot-terse,,3.4
+20261011_133323.log,2026-10-11 13:33:23,qwen3_5_9b,,dev,5,5_shot-terse,,3.8
+20261011_133324.log,2026-10-11 13:33:24,qwen3_5_9b,,dev,0,zero_shot-annotator,,2.7
+20261011_133324.log,2026-10-11 13:33:24,qwen3_5_9b,,dev,5,5_shot,,3.8
+20261011_133625.log,2026-10-11 13:36:25,qwen3_5_9b,,dev,5,5_shot-annotator,,3.5
+20261011_133733.log,2026-10-11 13:37:33,qwen3_5_9b,,test,0,zero_shot,,1.6
+20261011_133733.log,2026-10-11 13:37:33,qwen3_5_9b,,dev,5,5_shot-random,,3.3
+20261011_133928.log,2026-10-11 13:39:28,qwen3_5_9b,,test,5,5_shot,,2.0

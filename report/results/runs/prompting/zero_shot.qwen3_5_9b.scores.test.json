@@ -1,0 +1,164 @@
+{
+  "split": "test",
+  "max_samples": null,
+  "model": {
+    "name": "qwen3_5_9b",
+    "hf_id": "Qwen/Qwen3.5-9B",
+    "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "revision_sha": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "dtype": "bfloat16",
+    "quantization": null,
+    "batch_size": 8,
+    "max_new_tokens": 32,
+    "decoding": {
+      "do_sample": false
+    },
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "device": "1x NVIDIA A100-PCIE-40GB, 39.5 GiB VRAM in total",
+    "vram_gb": 39.5
+  },
+  "metrics": {
+    "label_order": [
+      "anger",
+      "anticipation",
+      "disgust",
+      "fear",
+      "joy",
+      "sadness",
+      "surprise",
+      "trust"
+    ],
+    "zero_division": 0.0,
+    "zero_division_policy": "A metric whose denominator is zero (no positive gold labels or no predictions for a class or line) is set to 0.0.",
+    "malformed_policy": "Malformed answers and answers with no permitted label count as an empty predicted label set.",
+    "implementation": "scikit-learn 1.9.1"
+  },
+  "scores": {
+    "en": {
+      "micro_f1": 0.48380427291523087,
+      "jaccard_samples": 0.41657592256503323,
+      "macro_f1": 0.45921633176027526,
+      "micro_precision": 0.54,
+      "micro_recall": 0.43820224719101125,
+      "hamming_loss": 0.16991833030852996,
+      "exact_match": 0.2631578947368421,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0054446460980036296,
+      "count": 551,
+      "per_emotion": {
+        "anger": {
+          "precision": 0.5851851851851851,
+          "recall": 0.5895522388059702,
+          "f1": 0.587360594795539,
+          "support": 134
+        },
+        "anticipation": {
+          "precision": 0.5909090909090909,
+          "recall": 0.2932330827067669,
+          "f1": 0.39195979899497485,
+          "support": 133
+        },
+        "disgust": {
+          "precision": 0.3333333333333333,
+          "recall": 0.15151515151515152,
+          "f1": 0.20833333333333334,
+          "support": 66
+        },
+        "fear": {
+          "precision": 0.5384615384615384,
+          "recall": 0.48514851485148514,
+          "f1": 0.5104166666666666,
+          "support": 101
+        },
+        "joy": {
+          "precision": 0.5871559633027523,
+          "recall": 0.6736842105263158,
+          "f1": 0.6274509803921569,
+          "support": 95
+        },
+        "sadness": {
+          "precision": 0.5818181818181818,
+          "recall": 0.3950617283950617,
+          "f1": 0.47058823529411764,
+          "support": 81
+        },
+        "surprise": {
+          "precision": 0.4666666666666667,
+          "recall": 0.45161290322580644,
+          "f1": 0.45901639344262296,
+          "support": 93
+        },
+        "trust": {
+          "precision": 0.4864864864864865,
+          "recall": 0.3673469387755102,
+          "f1": 0.4186046511627907,
+          "support": 98
+        }
+      }
+    },
+    "hr": {
+      "micro_f1": 0.4225352112676056,
+      "jaccard_samples": 0.37468239564428313,
+      "macro_f1": 0.4077552761477666,
+      "micro_precision": 0.47095761381475665,
+      "micro_recall": 0.3831417624521073,
+      "hamming_loss": 0.18602540834845735,
+      "exact_match": 0.2595281306715064,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0054446460980036296,
+      "count": 551,
+      "per_emotion": {
+        "anger": {
+          "precision": 0.5431034482758621,
+          "recall": 0.4772727272727273,
+          "f1": 0.5080645161290323,
+          "support": 132
+        },
+        "anticipation": {
+          "precision": 0.4909090909090909,
+          "recall": 0.20454545454545456,
+          "f1": 0.2887700534759358,
+          "support": 132
+        },
+        "disgust": {
+          "precision": 0.4444444444444444,
+          "recall": 0.17391304347826086,
+          "f1": 0.25,
+          "support": 69
+        },
+        "fear": {
+          "precision": 0.4069767441860465,
+          "recall": 0.3888888888888889,
+          "f1": 0.3977272727272727,
+          "support": 90
+        },
+        "joy": {
+          "precision": 0.48672566371681414,
+          "recall": 0.5851063829787234,
+          "f1": 0.5314009661835749,
+          "support": 94
+        },
+        "sadness": {
+          "precision": 0.4805194805194805,
+          "recall": 0.4625,
+          "f1": 0.4713375796178344,
+          "support": 80
+        },
+        "surprise": {
+          "precision": 0.4470588235294118,
+          "recall": 0.4367816091954023,
+          "f1": 0.4418604651162791,
+          "support": 87
+        },
+        "trust": {
+          "precision": 0.4230769230769231,
+          "recall": 0.3333333333333333,
+          "f1": 0.3728813559322034,
+          "support": 99
+        }
+      }
+    }
+  }
+}

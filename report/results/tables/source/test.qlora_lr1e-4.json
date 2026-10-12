@@ -1,0 +1,1658 @@
+{
+  "run_name": "qlora_lr1e-4",
+  "split": "test",
+  "max_samples": null,
+  "metrics": {
+    "label_order": [
+      "anger",
+      "anticipation",
+      "disgust",
+      "fear",
+      "joy",
+      "sadness",
+      "surprise",
+      "trust"
+    ],
+    "zero_division": 0.0,
+    "zero_division_policy": "A metric whose denominator is zero (no positive gold labels or no predictions for a class or line) is set to 0.0.",
+    "malformed_policy": "Malformed answers and answers with no permitted label count as an empty predicted label set.",
+    "implementation": "scikit-learn 1.9.1"
+  },
+  "results": [
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "micro_f1": 0.4281419122068551,
+      "jaccard_samples": 0.35700890156425547,
+      "macro_f1": 0.4116293237023192,
+      "micro_precision": 0.41299303944315546,
+      "micro_recall": 0.4444444444444444,
+      "hamming_loss": 0.21574410163339383,
+      "exact_match": 0.17604355716878403,
+      "malformed_rate": 0.0018148820326678765,
+      "empty_rate": 0.032667876588021776,
+      "micro_f1_ci": [
+        0.39806397899670504,
+        0.45548020700701464
+      ],
+      "jaccard_samples_ci": [
+        0.3266583484573503,
+        0.38616887045199205
+      ],
+      "macro_f1_ci": [
+        0.38008431466623893,
+        0.4387604933250847
+      ],
+      "count": 551
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "micro_f1": 0.37976122797043776,
+      "jaccard_samples": 0.32155820585947625,
+      "macro_f1": 0.36984271276754455,
+      "micro_precision": 0.3422131147540984,
+      "micro_recall": 0.42656449553001274,
+      "hamming_loss": 0.24750453720508167,
+      "exact_match": 0.1560798548094374,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.010889292196007259,
+      "micro_f1_ci": [
+        0.350812317565609,
+        0.4069938844959033
+      ],
+      "jaccard_samples_ci": [
+        0.2916229150462363,
+        0.34782203353210617
+      ],
+      "macro_f1_ci": [
+        0.3415064858968385,
+        0.39639740964392334
+      ],
+      "count": 551
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "micro_f1": 0.42462180490349505,
+      "jaccard_samples": 0.3271022383545069,
+      "macro_f1": 0.4153069272960861,
+      "micro_precision": 0.36469534050179214,
+      "micro_recall": 0.5081148564294632,
+      "hamming_loss": 0.25022686025408347,
+      "exact_match": 0.0925589836660617,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.3960284354773358,
+        0.45133228176409557
+      ],
+      "jaccard_samples_ci": [
+        0.3006571385359952,
+        0.3526565335753176
+      ],
+      "macro_f1_ci": [
+        0.387111647421562,
+        0.44220255327619257
+      ],
+      "count": 551
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "micro_f1": 0.39491150442477874,
+      "jaccard_samples": 0.31246218995765274,
+      "macro_f1": 0.3858303990886256,
+      "micro_precision": 0.34829268292682924,
+      "micro_recall": 0.4559386973180077,
+      "hamming_loss": 0.24818511796733211,
+      "exact_match": 0.10344827586206896,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.36524542067510907,
+        0.4248883056625677
+      ],
+      "jaccard_samples_ci": [
+        0.2849266485178463,
+        0.34087341197822146
+      ],
+      "macro_f1_ci": [
+        0.3554260078668139,
+        0.41453294563213594
+      ],
+      "count": 551
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "micro_f1": 0.5175169022741242,
+      "jaccard_samples": 0.44071385359951604,
+      "macro_f1": 0.5080177877214246,
+      "micro_precision": 0.5096852300242131,
+      "micro_recall": 0.5255930087390761,
+      "hamming_loss": 0.1780852994555354,
+      "exact_match": 0.2558983666061706,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.4876527892656925,
+        0.5448981338811847
+      ],
+      "jaccard_samples_ci": [
+        0.4099463097398669,
+        0.4702155172413793
+      ],
+      "macro_f1_ci": [
+        0.4768135895579742,
+        0.5353601596627047
+      ],
+      "count": 551
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "micro_f1": 0.3851540616246499,
+      "jaccard_samples": 0.3374168179068361,
+      "macro_f1": 0.3666971000974237,
+      "micro_precision": 0.4263565891472868,
+      "micro_recall": 0.351213282247765,
+      "hamming_loss": 0.19918330308529947,
+      "exact_match": 0.2177858439201452,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.35097493036211697,
+        0.4189299751577425
+      ],
+      "jaccard_samples_ci": [
+        0.30262401693889895,
+        0.37190335753176046
+      ],
+      "macro_f1_ci": [
+        0.3333224822801149,
+        0.3984397817171352
+      ],
+      "count": 551
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "micro_f1": 0.4026936026936027,
+      "jaccard_samples": 0.3585601935874168,
+      "macro_f1": 0.3799577867859498,
+      "micro_precision": 0.42592592592592593,
+      "micro_recall": 0.3818646232439336,
+      "hamming_loss": 0.20122504537205083,
+      "exact_match": 0.22686025408348456,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.36908113188633235,
+        0.43392045766573906
+      ],
+      "jaccard_samples_ci": [
+        0.32503856624319416,
+        0.3934407138535995
+      ],
+      "macro_f1_ci": [
+        0.34588591895009274,
+        0.40988431123837266
+      ],
+      "count": 551
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "micro_f1": 0.5110837438423645,
+      "jaccard_samples": 0.4507562008469449,
+      "macro_f1": 0.4941507185061169,
+      "micro_precision": 0.5042527339003645,
+      "micro_recall": 0.5181023720349563,
+      "hamming_loss": 0.18012704174228675,
+      "exact_match": 0.2631578947368421,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.4832195912827087,
+        0.5410670809982913
+      ],
+      "jaccard_samples_ci": [
+        0.42038641863278886,
+        0.4814337568058077
+      ],
+      "macro_f1_ci": [
+        0.4635251188183253,
+        0.5238336046916341
+      ],
+      "count": 551
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "micro_f1": 0.4365482233502538,
+      "jaccard_samples": 0.38787702013654823,
+      "macro_f1": 0.4205459177713411,
+      "micro_precision": 0.4337957124842371,
+      "micro_recall": 0.4393358876117497,
+      "hamming_loss": 0.2014519056261343,
+      "exact_match": 0.24682395644283123,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.4033181790133981,
+        0.4673452815407838
+      ],
+      "jaccard_samples_ci": [
+        0.35456323999654316,
+        0.4212574539797771
+      ],
+      "macro_f1_ci": [
+        0.38705637484213834,
+        0.45012044277572977
+      ],
+      "count": 551
+    }
+  ],
+  "per_emotion": [
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "anger",
+      "precision": 0.5174825174825175,
+      "recall": 0.5522388059701493,
+      "f1": 0.5342960288808665,
+      "support": 134
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "anticipation",
+      "precision": 0.3719806763285024,
+      "recall": 0.5789473684210527,
+      "f1": 0.45294117647058824,
+      "support": 133
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "disgust",
+      "precision": 0.24050632911392406,
+      "recall": 0.5757575757575758,
+      "f1": 0.3392857142857143,
+      "support": 66
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "fear",
+      "precision": 0.453125,
+      "recall": 0.2871287128712871,
+      "f1": 0.3515151515151515,
+      "support": 101
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "joy",
+      "precision": 0.5662650602409639,
+      "recall": 0.49473684210526314,
+      "f1": 0.5280898876404494,
+      "support": 95
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "sadness",
+      "precision": 0.5384615384615384,
+      "recall": 0.1728395061728395,
+      "f1": 0.2616822429906542,
+      "support": 81
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "surprise",
+      "precision": 0.4056603773584906,
+      "recall": 0.46236559139784944,
+      "f1": 0.4321608040201005,
+      "support": 93
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "en",
+      "emotion": "trust",
+      "precision": 0.4533333333333333,
+      "recall": 0.3469387755102041,
+      "f1": 0.3930635838150289,
+      "support": 98
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "anger",
+      "precision": 0.40860215053763443,
+      "recall": 0.5757575757575758,
+      "f1": 0.4779874213836478,
+      "support": 132
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "anticipation",
+      "precision": 0.35374149659863946,
+      "recall": 0.3939393939393939,
+      "f1": 0.3727598566308244,
+      "support": 132
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "disgust",
+      "precision": 0.19895287958115182,
+      "recall": 0.5507246376811594,
+      "f1": 0.2923076923076923,
+      "support": 69
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "fear",
+      "precision": 0.36904761904761907,
+      "recall": 0.34444444444444444,
+      "f1": 0.3563218390804598,
+      "support": 90
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "joy",
+      "precision": 0.390625,
+      "recall": 0.5319148936170213,
+      "f1": 0.45045045045045046,
+      "support": 94
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "sadness",
+      "precision": 0.44680851063829785,
+      "recall": 0.2625,
+      "f1": 0.33070866141732286,
+      "support": 80
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "surprise",
+      "precision": 0.3492063492063492,
+      "recall": 0.5057471264367817,
+      "f1": 0.4131455399061033,
+      "support": 87
+    },
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "emotion": "trust",
+      "precision": 0.3283582089552239,
+      "recall": 0.2222222222222222,
+      "f1": 0.26506024096385544,
+      "support": 99
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "anger",
+      "precision": 0.5354330708661418,
+      "recall": 0.5074626865671642,
+      "f1": 0.5210727969348659,
+      "support": 134
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "anticipation",
+      "precision": 0.48,
+      "recall": 0.5413533834586466,
+      "f1": 0.508833922261484,
+      "support": 133
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "disgust",
+      "precision": 0.20164609053497942,
+      "recall": 0.7424242424242424,
+      "f1": 0.31715210355987056,
+      "support": 66
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "fear",
+      "precision": 0.5058823529411764,
+      "recall": 0.42574257425742573,
+      "f1": 0.46236559139784944,
+      "support": 101
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "joy",
+      "precision": 0.4034090909090909,
+      "recall": 0.7473684210526316,
+      "f1": 0.5239852398523985,
+      "support": 95
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "sadness",
+      "precision": 0.29411764705882354,
+      "recall": 0.5555555555555556,
+      "f1": 0.38461538461538464,
+      "support": 81
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "surprise",
+      "precision": 0.3953488372093023,
+      "recall": 0.1827956989247312,
+      "f1": 0.25,
+      "support": 93
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "en",
+      "emotion": "trust",
+      "precision": 0.302158273381295,
+      "recall": 0.42857142857142855,
+      "f1": 0.35443037974683544,
+      "support": 98
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "anger",
+      "precision": 0.6521739130434783,
+      "recall": 0.3409090909090909,
+      "f1": 0.44776119402985076,
+      "support": 132
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "anticipation",
+      "precision": 0.3448275862068966,
+      "recall": 0.6818181818181818,
+      "f1": 0.4580152671755725,
+      "support": 132
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "disgust",
+      "precision": 0.2147239263803681,
+      "recall": 0.5072463768115942,
+      "f1": 0.3017241379310345,
+      "support": 69
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "fear",
+      "precision": 0.38333333333333336,
+      "recall": 0.25555555555555554,
+      "f1": 0.30666666666666664,
+      "support": 90
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "joy",
+      "precision": 0.410958904109589,
+      "recall": 0.6382978723404256,
+      "f1": 0.5,
+      "support": 94
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "sadness",
+      "precision": 0.3305785123966942,
+      "recall": 0.5,
+      "f1": 0.39800995024875624,
+      "support": 80
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "surprise",
+      "precision": 0.4461538461538462,
+      "recall": 0.3333333333333333,
+      "f1": 0.3815789473684211,
+      "support": 87
+    },
+    {
+      "system": "5-shot",
+      "eval_lang": "hr",
+      "emotion": "trust",
+      "precision": 0.25,
+      "recall": 0.35353535353535354,
+      "f1": 0.2928870292887029,
+      "support": 99
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "anger",
+      "precision": 0.5449101796407185,
+      "recall": 0.6791044776119403,
+      "f1": 0.6046511627906976,
+      "support": 134
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "anticipation",
+      "precision": 0.5447154471544715,
+      "recall": 0.5037593984962406,
+      "f1": 0.5234375,
+      "support": 133
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "disgust",
+      "precision": 0.2982456140350877,
+      "recall": 0.5151515151515151,
+      "f1": 0.37777777777777777,
+      "support": 66
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "fear",
+      "precision": 0.6029411764705882,
+      "recall": 0.40594059405940597,
+      "f1": 0.48520710059171596,
+      "support": 101
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "joy",
+      "precision": 0.6210526315789474,
+      "recall": 0.6210526315789474,
+      "f1": 0.6210526315789474,
+      "support": 95
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "sadness",
+      "precision": 0.4936708860759494,
+      "recall": 0.48148148148148145,
+      "f1": 0.4875,
+      "support": 81
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "surprise",
+      "precision": 0.5806451612903226,
+      "recall": 0.3870967741935484,
+      "f1": 0.4645161290322581,
+      "support": 93
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "emotion": "trust",
+      "precision": 0.4576271186440678,
+      "recall": 0.5510204081632653,
+      "f1": 0.5,
+      "support": 98
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "anger",
+      "precision": 0.45517241379310347,
+      "recall": 0.5,
+      "f1": 0.47653429602888087,
+      "support": 132
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "anticipation",
+      "precision": 0.45,
+      "recall": 0.2727272727272727,
+      "f1": 0.33962264150943394,
+      "support": 132
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "disgust",
+      "precision": 0.21052631578947367,
+      "recall": 0.11594202898550725,
+      "f1": 0.14953271028037382,
+      "support": 69
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "fear",
+      "precision": 0.41818181818181815,
+      "recall": 0.25555555555555554,
+      "f1": 0.31724137931034485,
+      "support": 90
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "joy",
+      "precision": 0.49473684210526314,
+      "recall": 0.5,
+      "f1": 0.4973544973544973,
+      "support": 94
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "sadness",
+      "precision": 0.3978494623655914,
+      "recall": 0.4625,
+      "f1": 0.4277456647398844,
+      "support": 80
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "surprise",
+      "precision": 0.5777777777777777,
+      "recall": 0.2988505747126437,
+      "f1": 0.3939393939393939,
+      "support": 87
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "emotion": "trust",
+      "precision": 0.3404255319148936,
+      "recall": 0.32323232323232326,
+      "f1": 0.3316062176165803,
+      "support": 99
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "anger",
+      "precision": 0.4556213017751479,
+      "recall": 0.5833333333333334,
+      "f1": 0.5116279069767442,
+      "support": 132
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "anticipation",
+      "precision": 0.40397350993377484,
+      "recall": 0.4621212121212121,
+      "f1": 0.43109540636042404,
+      "support": 132
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "disgust",
+      "precision": 0.2698412698412698,
+      "recall": 0.2463768115942029,
+      "f1": 0.25757575757575757,
+      "support": 69
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "fear",
+      "precision": 0.4,
+      "recall": 0.3111111111111111,
+      "f1": 0.35,
+      "support": 90
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "joy",
+      "precision": 0.5054945054945055,
+      "recall": 0.48936170212765956,
+      "f1": 0.4972972972972973,
+      "support": 94
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "sadness",
+      "precision": 0.40625,
+      "recall": 0.325,
+      "f1": 0.3611111111111111,
+      "support": 80
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "surprise",
+      "precision": 0.48936170212765956,
+      "recall": 0.26436781609195403,
+      "f1": 0.34328358208955223,
+      "support": 87
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "emotion": "trust",
+      "precision": 0.44680851063829785,
+      "recall": 0.21212121212121213,
+      "f1": 0.2876712328767123,
+      "support": 99
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "anger",
+      "precision": 0.5423728813559322,
+      "recall": 0.7164179104477612,
+      "f1": 0.617363344051447,
+      "support": 134
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "anticipation",
+      "precision": 0.49390243902439024,
+      "recall": 0.6090225563909775,
+      "f1": 0.5454545454545454,
+      "support": 133
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "disgust",
+      "precision": 0.28431372549019607,
+      "recall": 0.4393939393939394,
+      "f1": 0.34523809523809523,
+      "support": 66
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "fear",
+      "precision": 0.5882352941176471,
+      "recall": 0.39603960396039606,
+      "f1": 0.47337278106508873,
+      "support": 101
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "joy",
+      "precision": 0.5742574257425742,
+      "recall": 0.6105263157894737,
+      "f1": 0.5918367346938775,
+      "support": 95
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "sadness",
+      "precision": 0.5409836065573771,
+      "recall": 0.4074074074074074,
+      "f1": 0.4647887323943662,
+      "support": 81
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "surprise",
+      "precision": 0.5277777777777778,
+      "recall": 0.40860215053763443,
+      "f1": 0.46060606060606063,
+      "support": 93
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "emotion": "trust",
+      "precision": 0.5128205128205128,
+      "recall": 0.40816326530612246,
+      "f1": 0.45454545454545453,
+      "support": 98
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "anger",
+      "precision": 0.5061728395061729,
+      "recall": 0.6212121212121212,
+      "f1": 0.5578231292517006,
+      "support": 132
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "anticipation",
+      "precision": 0.3974358974358974,
+      "recall": 0.4696969696969697,
+      "f1": 0.4305555555555556,
+      "support": 132
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "disgust",
+      "precision": 0.2619047619047619,
+      "recall": 0.3188405797101449,
+      "f1": 0.2875816993464052,
+      "support": 69
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "fear",
+      "precision": 0.45454545454545453,
+      "recall": 0.2777777777777778,
+      "f1": 0.3448275862068966,
+      "support": 90
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "joy",
+      "precision": 0.5353535353535354,
+      "recall": 0.5638297872340425,
+      "f1": 0.5492227979274611,
+      "support": 94
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "sadness",
+      "precision": 0.40229885057471265,
+      "recall": 0.4375,
+      "f1": 0.41916167664670656,
+      "support": 80
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "surprise",
+      "precision": 0.46835443037974683,
+      "recall": 0.42528735632183906,
+      "f1": 0.4457831325301205,
+      "support": 87
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "emotion": "trust",
+      "precision": 0.39436619718309857,
+      "recall": 0.2828282828282828,
+      "f1": 0.32941176470588235,
+      "support": 99
+    }
+  ],
+  "seeds": [
+    {
+      "system": "PEFT-en",
+      "eval_lang": "en",
+      "seeds": [
+        42,
+        67,
+        128
+      ],
+      "micro_f1": {
+        "mean": 0.5036011160820473,
+        "std": 0.012083175583037075,
+        "values": [
+          0.5175169022741242,
+          0.4975186104218362,
+          0.4957678355501814
+        ]
+      },
+      "jaccard_samples": {
+        "mean": 0.43448275862068964,
+        "std": 0.005824867425899577,
+        "values": [
+          0.44071385359951604,
+          0.4291742286751361,
+          0.43356019358741676
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.4888860400755305,
+        "std": 0.016593421235752633,
+        "values": [
+          0.5080177877214246,
+          0.4802278018168359,
+          0.478412530688331
+        ]
+      },
+      "micro_precision": {
+        "mean": 0.4949310103899827,
+        "std": 0.014520306245992785,
+        "values": [
+          0.5096852300242131,
+          0.49445129469790383,
+          0.4806565064478312
+        ]
+      },
+      "micro_recall": {
+        "mean": 0.5126924677486475,
+        "std": 0.012505184520446681,
+        "values": [
+          0.5255930087390761,
+          0.5006242197253433,
+          0.5118601747815231
+        ]
+      },
+      "hamming_loss": {
+        "mean": 0.183681185722928,
+        "std": 0.005558462028414105,
+        "values": [
+          0.1780852994555354,
+          0.1837568058076225,
+          0.18920145190562612
+        ]
+      },
+      "exact_match": {
+        "mean": 0.25287356321839083,
+        "std": 0.003777978220446706,
+        "values": [
+          0.2558983666061706,
+          0.24863883847549909,
+          0.2540834845735027
+        ]
+      },
+      "malformed_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "empty_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "system": "PEFT-en",
+      "eval_lang": "hr",
+      "seeds": [
+        42,
+        67,
+        128
+      ],
+      "micro_f1": {
+        "mean": 0.3848674406929333,
+        "std": 0.0027435675887003646,
+        "values": [
+          0.3851540616246499,
+          0.38745644599303136,
+          0.3819918144611187
+        ]
+      },
+      "jaccard_samples": {
+        "mean": 0.3387534929277216,
+        "std": 0.001970397547582721,
+        "values": [
+          0.3374168179068361,
+          0.34101633393829395,
+          0.33782732693803474
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.36632178840213764,
+        "std": 0.001056397985569183,
+        "values": [
+          0.3666971000974237,
+          0.3671392855540179,
+          0.36512897955497126
+        ]
+      },
+      "micro_precision": {
+        "mean": 0.42089767779338205,
+        "std": 0.009475712453561672,
+        "values": [
+          0.4263565891472868,
+          0.4263803680981595,
+          0.40995607613469986
+        ]
+      },
+      "micro_recall": {
+        "mean": 0.35461898680289483,
+        "std": 0.0032140631908347266,
+        "values": [
+          0.351213282247765,
+          0.3550446998722861,
+          0.35759897828863346
+        ]
+      },
+      "hamming_loss": {
+        "mean": 0.2013762855414398,
+        "std": 0.0036036759096926265,
+        "values": [
+          0.19918330308529947,
+          0.19941016333938294,
+          0.205535390199637
+        ]
+      },
+      "exact_match": {
+        "mean": 0.2189957652752571,
+        "std": 0.0020956452602164223,
+        "values": [
+          0.2177858439201452,
+          0.22141560798548093,
+          0.2177858439201452
+        ]
+      },
+      "malformed_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "empty_rate": {
+        "mean": 0.0006049606775559588,
+        "std": 0.0010478226301082138,
+        "values": [
+          0.0,
+          0.0018148820326678765,
+          0.0
+        ]
+      }
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "seeds": [
+        42,
+        67,
+        128
+      ],
+      "micro_f1": {
+        "mean": 0.4024757938864755,
+        "std": 0.00018878836475510414,
+        "values": [
+          0.4026936026936027,
+          0.40235910878112713,
+          0.4023746701846966
+        ]
+      },
+      "jaccard_samples": {
+        "mean": 0.35385734451070205,
+        "std": 0.004199044749066114,
+        "values": [
+          0.3585601935874168,
+          0.3525278714026445,
+          0.3504839685420448
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.37870874939072446,
+        "std": 0.0022663989392431565,
+        "values": [
+          0.3799577867859498,
+          0.380075836412324,
+          0.3760926249738995
+        ]
+      },
+      "micro_precision": {
+        "mean": 0.4184046411967827,
+        "std": 0.006673984641515257,
+        "values": [
+          0.42592592592592593,
+          0.41318977119784656,
+          0.41609822646657574
+        ]
+      },
+      "micro_recall": {
+        "mean": 0.3878246062154108,
+        "std": 0.005317154532480534,
+        "values": [
+          0.3818646232439336,
+          0.39208173690932313,
+          0.3895274584929757
+        ]
+      },
+      "hamming_loss": {
+        "mean": 0.2045523290986086,
+        "std": 0.0029607943058759588,
+        "values": [
+          0.20122504537205083,
+          0.20689655172413793,
+          0.205535390199637
+        ]
+      },
+      "exact_match": {
+        "mean": 0.22020568663036902,
+        "std": 0.008576797869786951,
+        "values": [
+          0.22686025408348456,
+          0.22323049001814882,
+          0.21052631578947367
+        ]
+      },
+      "malformed_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "empty_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "en",
+      "seeds": [
+        42,
+        67,
+        128
+      ],
+      "micro_f1": {
+        "mean": 0.5054569049433967,
+        "std": 0.007045462880837927,
+        "values": [
+          0.5110837438423645,
+          0.5077319587628866,
+          0.49755501222493886
+        ]
+      },
+      "jaccard_samples": {
+        "mean": 0.4419194538069311,
+        "std": 0.00914949225698215,
+        "values": [
+          0.4507562008469449,
+          0.4425157721890934,
+          0.43248638838475495
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.4899101044798671,
+        "std": 0.004947747694272777,
+        "values": [
+          0.4941507185061169,
+          0.49110538214466276,
+          0.48447421278882163
+        ]
+      },
+      "micro_precision": {
+        "mean": 0.5054372350574006,
+        "std": 0.018632595037661723,
+        "values": [
+          0.5042527339003645,
+          0.5246338215712384,
+          0.4874251497005988
+        ]
+      },
+      "micro_recall": {
+        "mean": 0.5060341240116522,
+        "std": 0.013231887720003898,
+        "values": [
+          0.5181023720349563,
+          0.4918851435705368,
+          0.5081148564294632
+        ]
+      },
+      "hamming_loss": {
+        "mean": 0.17997580157289775,
+        "std": 0.006580251033819454,
+        "values": [
+          0.18012704174228675,
+          0.1733212341197822,
+          0.18647912885662432
+        ]
+      },
+      "exact_match": {
+        "mean": 0.26255293405928615,
+        "std": 0.009995590829920327,
+        "values": [
+          0.2631578947368421,
+          0.27223230490018147,
+          0.25226860254083483
+        ]
+      },
+      "malformed_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "empty_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "seeds": [
+        42,
+        67,
+        128
+      ],
+      "micro_f1": {
+        "mean": 0.4164993067367792,
+        "std": 0.01804933792477342,
+        "values": [
+          0.4365482233502538,
+          0.41140529531568226,
+          0.4015444015444015
+        ]
+      },
+      "jaccard_samples": {
+        "mean": 0.36364402385273525,
+        "std": 0.02271683042944536,
+        "values": [
+          0.38787702013654823,
+          0.3602238354506957,
+          0.34283121597096183
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.3997190784340422,
+        "std": 0.01825104642175039,
+        "values": [
+          0.4205459177713411,
+          0.3920954200280533,
+          0.38651589750273213
+        ]
+      },
+      "micro_precision": {
+        "mean": 0.4258651359890783,
+        "std": 0.018548953135970634,
+        "values": [
+          0.4337957124842371,
+          0.4391304347826087,
+          0.4046692607003891
+        ]
+      },
+      "micro_recall": {
+        "mean": 0.40825883354618986,
+        "std": 0.027520300313144303,
+        "values": [
+          0.4393358876117497,
+          0.38697318007662834,
+          0.39846743295019155
+        ]
+      },
+      "hamming_loss": {
+        "mean": 0.20303992740471868,
+        "std": 0.007277230005601369,
+        "values": [
+          0.2014519056261343,
+          0.19668784029038114,
+          0.21098003629764064
+        ]
+      },
+      "exact_match": {
+        "mean": 0.22444041137326073,
+        "std": 0.023686354447007747,
+        "values": [
+          0.24682395644283123,
+          0.22686025408348456,
+          0.1996370235934664
+        ]
+      },
+      "malformed_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "empty_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "learning_curve": [
+    {
+      "system": "zero-shot",
+      "eval_lang": "hr",
+      "micro_f1": 0.37976122797043776,
+      "jaccard_samples": 0.32155820585947625,
+      "macro_f1": 0.36984271276754455,
+      "micro_precision": 0.3422131147540984,
+      "micro_recall": 0.42656449553001274,
+      "hamming_loss": 0.24750453720508167,
+      "exact_match": 0.1560798548094374,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.010889292196007259,
+      "micro_f1_ci": [
+        0.350812317565609,
+        0.4069938844959033
+      ],
+      "jaccard_samples_ci": [
+        0.2916229150462363,
+        0.34782203353210617
+      ],
+      "macro_f1_ci": [
+        0.3415064858968385,
+        0.39639740964392334
+      ],
+      "count": 551,
+      "lines": 0
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "micro_f1": 0.4026936026936027,
+      "jaccard_samples": 0.3585601935874168,
+      "macro_f1": 0.3799577867859498,
+      "micro_precision": 0.42592592592592593,
+      "micro_recall": 0.3818646232439336,
+      "hamming_loss": 0.20122504537205083,
+      "exact_match": 0.22686025408348456,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.36908113188633235,
+        0.43392045766573906
+      ],
+      "jaccard_samples_ci": [
+        0.32503856624319416,
+        0.3934407138535995
+      ],
+      "macro_f1_ci": [
+        0.34588591895009274,
+        0.40988431123837266
+      ],
+      "count": 551,
+      "lines": 3803
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "micro_f1": 0.36476566911349523,
+      "jaccard_samples": 0.30595886267392614,
+      "macro_f1": 0.3360979444070913,
+      "micro_precision": 0.3269230769230769,
+      "micro_recall": 0.4125159642401022,
+      "hamming_loss": 0.25521778584392013,
+      "exact_match": 0.14156079854809436,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.3335210641279584,
+        0.39292403365443235
+      ],
+      "jaccard_samples_ci": [
+        0.275673018753781,
+        0.3337651240169389
+      ],
+      "macro_f1_ci": [
+        0.30432526122191944,
+        0.3649353544343535
+      ],
+      "count": 551,
+      "lines": 1000
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "micro_f1": 0.4162303664921466,
+      "jaccard_samples": 0.3647912885662432,
+      "macro_f1": 0.3870082511145827,
+      "micro_precision": 0.4268456375838926,
+      "micro_recall": 0.4061302681992337,
+      "hamming_loss": 0.20235934664246824,
+      "exact_match": 0.2323049001814882,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.38169884747792243,
+        0.4482542531252527
+      ],
+      "jaccard_samples_ci": [
+        0.32885586811857226,
+        0.397321536600121
+      ],
+      "macro_f1_ci": [
+        0.3510279606493118,
+        0.41881283776025646
+      ],
+      "count": 551,
+      "lines": 2000
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "micro_f1": 0.34315651604453173,
+      "jaccard_samples": 0.3015037593984963,
+      "macro_f1": 0.3228309920800412,
+      "micro_precision": 0.3521505376344086,
+      "micro_recall": 0.334610472541507,
+      "hamming_loss": 0.22754083484573503,
+      "exact_match": 0.18148820326678766,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0018148820326678765,
+      "micro_f1_ci": [
+        0.3126595307767339,
+        0.37508317322170054
+      ],
+      "jaccard_samples_ci": [
+        0.27030496499870366,
+        0.33222571514994387
+      ],
+      "macro_f1_ci": [
+        0.2901931653098635,
+        0.3536578121145516
+      ],
+      "count": 551,
+      "lines": 250
+    },
+    {
+      "system": "PEFT-hr",
+      "eval_lang": "hr",
+      "micro_f1": 0.3802145411203814,
+      "jaccard_samples": 0.32291504623628037,
+      "macro_f1": 0.3575051310009875,
+      "micro_precision": 0.3564245810055866,
+      "micro_recall": 0.4074074074074074,
+      "hamming_loss": 0.23593466424682397,
+      "exact_match": 0.16878402903811252,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0018148820326678765,
+      "micro_f1_ci": [
+        0.34958095088351276,
+        0.4119209139204781
+      ],
+      "jaccard_samples_ci": [
+        0.29264011321406963,
+        0.35420825771324865
+      ],
+      "macro_f1_ci": [
+        0.3250444246250015,
+        0.3887497621081848
+      ],
+      "count": 551,
+      "lines": 500
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "micro_f1": 0.4365482233502538,
+      "jaccard_samples": 0.38787702013654823,
+      "macro_f1": 0.4205459177713411,
+      "micro_precision": 0.4337957124842371,
+      "micro_recall": 0.4393358876117497,
+      "hamming_loss": 0.2014519056261343,
+      "exact_match": 0.24682395644283123,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.4033181790133981,
+        0.4673452815407838
+      ],
+      "jaccard_samples_ci": [
+        0.35456323999654316,
+        0.4212574539797771
+      ],
+      "macro_f1_ci": [
+        0.38705637484213834,
+        0.45012044277572977
+      ],
+      "count": 551,
+      "lines": 3803
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "micro_f1": 0.43339472068753837,
+      "jaccard_samples": 0.3768645752311814,
+      "macro_f1": 0.4113196336131356,
+      "micro_precision": 0.41725768321513,
+      "micro_recall": 0.4508301404853129,
+      "hamming_loss": 0.20939201451905626,
+      "exact_match": 0.22141560798548093,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.40191598562416797,
+        0.46321124547464887
+      ],
+      "jaccard_samples_ci": [
+        0.34509700976579377,
+        0.41107153660012097
+      ],
+      "macro_f1_ci": [
+        0.3798274737804712,
+        0.44112669788137093
+      ],
+      "count": 551,
+      "lines": 1000
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "micro_f1": 0.4217506631299735,
+      "jaccard_samples": 0.36914700544464607,
+      "macro_f1": 0.4027162396823111,
+      "micro_precision": 0.4386206896551724,
+      "micro_recall": 0.4061302681992337,
+      "hamming_loss": 0.19782214156079855,
+      "exact_match": 0.22141560798548093,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.3871367685825214,
+        0.4537124624624625
+      ],
+      "jaccard_samples_ci": [
+        0.33620614035087726,
+        0.4021181185722928
+      ],
+      "macro_f1_ci": [
+        0.36608757685372945,
+        0.43460789147288814
+      ],
+      "count": 551,
+      "lines": 2000
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "micro_f1": 0.38821268417680976,
+      "jaccard_samples": 0.3355414398064126,
+      "macro_f1": 0.3713044533374545,
+      "micro_precision": 0.38946015424164526,
+      "micro_recall": 0.38697318007662834,
+      "hamming_loss": 0.21665154264972777,
+      "exact_match": 0.20508166969147004,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.3564839731741637,
+        0.42011151158293436
+      ],
+      "jaccard_samples_ci": [
+        0.30398517846339984,
+        0.36863278886872347
+      ],
+      "macro_f1_ci": [
+        0.3379221876740538,
+        0.40371338496033293
+      ],
+      "count": 551,
+      "lines": 250
+    },
+    {
+      "system": "PEFT-bilingual",
+      "eval_lang": "hr",
+      "micro_f1": 0.40660736975857686,
+      "jaccard_samples": 0.34762768991444126,
+      "macro_f1": 0.3812208979496623,
+      "micro_precision": 0.404551201011378,
+      "micro_recall": 0.4086845466155811,
+      "hamming_loss": 0.2118874773139746,
+      "exact_match": 0.2014519056261343,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.37706674669583523,
+        0.4398054161650595
+      ],
+      "jaccard_samples_ci": [
+        0.31595302912453554,
+        0.3804168827240515
+      ],
+      "macro_f1_ci": [
+        0.34995793234994116,
+        0.41219108418092304
+      ],
+      "count": 551,
+      "lines": 500
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "condition": "5_shot",
+  "config": {
+    "data_dir": "data/processed/xed",
+    "target_lang": "hr",
+    "out_dir": "outputs/hr/prompting",
+    "split": "test",
+    "max_samples": null,
+    "shots": 5,
+    "template": "default",
+    "demonstration_selection": "coverage",
+    "demonstration_ids": null,
+    "summary_models": null,
+    "seed": 42,
+    "definitions": {
+      "anger": "displeasure or hostility at a perceived wrong",
+      "anticipation": "expecting or looking forward to something",
+      "disgust": "revulsion or strong disapproval",
+      "fear": "feeling threatened or afraid",
+      "joy": "happiness or pleasure",
+      "sadness": "sorrow, loss or disappointment",
+      "surprise": "reaction to something unexpected",
+      "trust": "confidence in, or acceptance of, someone or something"
+    },
+    "templates": {
+      "default": "You classify the emotions expressed in a movie subtitle line.\n\nPermitted labels:\n{definitions}\n\nEvery line expresses at least one of these emotions and may express several. Answer with a JSON list of the matching label names, using only the names above, and nothing else, in the format [\"label\", ...].",
+      "terse": "Label the emotions in this subtitle line. Choose one or more of:\n{definitions}\n\nReply with only a JSON list of the chosen label names, like [\"label\", ...].",
+      "annotator": "You are an expert annotator of emotions in film dialogue, using Plutchik's eight basic emotions:\n{definitions}\n\nRead the subtitle line and decide which of these emotions it expresses; a line can express one emotion or several at once. Respond with a JSON list of the label names exactly as written above, and no other text."
+    },
+    "user": "Subtitle: {text}"
+  },
+  "model": {
+    "name": "qwen3_5_9b",
+    "hf_id": "Qwen/Qwen3.5-9B",
+    "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "revision_sha": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "dtype": "bfloat16",
+    "quantization": null,
+    "batch_size": 8,
+    "max_new_tokens": 32,
+    "decoding": {
+      "do_sample": false
+    },
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "device": "1x NVIDIA A100-PCIE-40GB, 39.5 GiB VRAM in total",
+    "vram_gb": 39.5
+  },
+  "prompt": {
+    "template": "default",
+    "system": "You classify the emotions expressed in a movie subtitle line.\n\nPermitted labels:\n- anger: displeasure or hostility at a perceived wrong\n- anticipation: expecting or looking forward to something\n- disgust: revulsion or strong disapproval\n- fear: feeling threatened or afraid\n- joy: happiness or pleasure\n- sadness: sorrow, loss or disappointment\n- surprise: reaction to something unexpected\n- trust: confidence in, or acceptance of, someone or something\n\nEvery line expresses at least one of these emotions and may express several. Answer with a JSON list of the matching label names, using only the names above, and nothing else, in the format [\"label\", ...].",
+    "user_template": "Subtitle: {text}",
+    "sha256": "a0116dcba0bae875c1a02b1aba8a75e893b68b2be322b50657dc29ef03bd2d7f",
+    "demonstrations": {
+      "align_ids": [
+        "en/1990/100507/4049754.xml.gz|hr/1990/100507/3976815.xml.gz|1882|1815",
+        "en/1965/59037/5735869.xml.gz|hr/1965/59037/6082076.xml.gz|628|618",
+        "en/1965/59017/5730443.xml.gz|hr/1965/59017/3689924.xml.gz|956|907",
+        "en/1990/100449/7037913.xml.gz|hr/1990/100449/6445315.xml.gz|184|183",
+        "en/1990/100258/4986942.xml.gz|hr/1990/100258/6988842.xml.gz|705|864"
+      ],
+      "selection": "selected (coverage): one per film, over gold, 1-hop, short train lines (seed=42)",
+      "turns": {
+        "en": [
+          {
+            "role": "user",
+            "content": "Subtitle: - Think I should go out with Paulie?"
+          },
+          {
+            "role": "assistant",
+            "content": "[\"anticipation\", \"surprise\", \"trust\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: Relax."
+          },
+          {
+            "role": "assistant",
+            "content": "[\"anger\", \"fear\", \"joy\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: You got old."
+          },
+          {
+            "role": "assistant",
+            "content": "[\"disgust\", \"sadness\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: He said no pilots."
+          },
+          {
+            "role": "assistant",
+            "content": "[\"sadness\", \"surprise\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: Shoot the fuck down!"
+          },
+          {
+            "role": "assistant",
+            "content": "[\"fear\"]"
+          }
+        ],
+        "hr": [
+          {
+            "role": "user",
+            "content": "Subtitle: - Hoćeš da izađem sa Paulijem?"
+          },
+          {
+            "role": "assistant",
+            "content": "[\"anticipation\", \"surprise\", \"trust\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: Smiri se."
+          },
+          {
+            "role": "assistant",
+            "content": "[\"anger\", \"fear\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: Ostarili ste."
+          },
+          {
+            "role": "assistant",
+            "content": "[\"disgust\", \"sadness\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: Neće pilota."
+          },
+          {
+            "role": "assistant",
+            "content": "[\"sadness\", \"surprise\"]"
+          },
+          {
+            "role": "user",
+            "content": "Subtitle: Skini ih jebeno dolje!"
+          },
+          {
+            "role": "assistant",
+            "content": "[\"fear\"]"
+          }
+        ]
+      }
+    }
+  },
+  "versions": {
+    "python": "3.13.12",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "peft": "0.21.2",
+    "scikit-learn": "1.9.1"
+  }
+}

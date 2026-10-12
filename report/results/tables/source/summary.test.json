@@ -1,0 +1,397 @@
+{
+  "split": "test",
+  "max_samples": null,
+  "target_lang": "hr",
+  "models": [
+    "eurollm_9b.4bit",
+    "qwen3_5_9b"
+  ],
+  "metrics": {
+    "label_order": [
+      "anger",
+      "anticipation",
+      "disgust",
+      "fear",
+      "joy",
+      "sadness",
+      "surprise",
+      "trust"
+    ],
+    "zero_division": 0.0,
+    "zero_division_policy": "A metric whose denominator is zero (no positive gold labels or no predictions for a class or line) is set to 0.0.",
+    "malformed_policy": "Malformed answers and answers with no permitted label count as an empty predicted label set.",
+    "implementation": "scikit-learn 1.9.1"
+  },
+  "results": [
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 0,
+      "variant": "default",
+      "is_default": true,
+      "selection": "-",
+      "template": "default",
+      "eval_lang": "en",
+      "micro_f1": 0.4281419122068551,
+      "jaccard_samples": 0.35700890156425547,
+      "macro_f1": 0.4116293237023192,
+      "micro_precision": 0.41299303944315546,
+      "micro_recall": 0.4444444444444444,
+      "hamming_loss": 0.21574410163339383,
+      "exact_match": 0.17604355716878403,
+      "malformed_rate": 0.0018148820326678765,
+      "empty_rate": 0.032667876588021776,
+      "micro_f1_ci": [
+        0.39806397899670504,
+        0.45548020700701464
+      ],
+      "jaccard_samples_ci": [
+        0.3266583484573503,
+        0.38616887045199205
+      ],
+      "macro_f1_ci": [
+        0.38008431466623893,
+        0.4387604933250847
+      ],
+      "count": 551
+    },
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 0,
+      "variant": "default",
+      "is_default": true,
+      "selection": "-",
+      "template": "default",
+      "eval_lang": "hr",
+      "micro_f1": 0.37976122797043776,
+      "jaccard_samples": 0.32155820585947625,
+      "macro_f1": 0.36984271276754455,
+      "micro_precision": 0.3422131147540984,
+      "micro_recall": 0.42656449553001274,
+      "hamming_loss": 0.24750453720508167,
+      "exact_match": 0.1560798548094374,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.010889292196007259,
+      "micro_f1_ci": [
+        0.350812317565609,
+        0.4069938844959033
+      ],
+      "jaccard_samples_ci": [
+        0.2916229150462363,
+        0.34782203353210617
+      ],
+      "macro_f1_ci": [
+        0.3415064858968385,
+        0.39639740964392334
+      ],
+      "count": 551
+    },
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 5,
+      "variant": "default",
+      "is_default": true,
+      "selection": "coverage",
+      "template": "default",
+      "eval_lang": "en",
+      "micro_f1": 0.42462180490349505,
+      "jaccard_samples": 0.3271022383545069,
+      "macro_f1": 0.4153069272960861,
+      "micro_precision": 0.36469534050179214,
+      "micro_recall": 0.5081148564294632,
+      "hamming_loss": 0.25022686025408347,
+      "exact_match": 0.0925589836660617,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.3960284354773358,
+        0.45133228176409557
+      ],
+      "jaccard_samples_ci": [
+        0.3006571385359952,
+        0.3526565335753176
+      ],
+      "macro_f1_ci": [
+        0.387111647421562,
+        0.44220255327619257
+      ],
+      "count": 551
+    },
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 5,
+      "variant": "default",
+      "is_default": true,
+      "selection": "coverage",
+      "template": "default",
+      "eval_lang": "hr",
+      "micro_f1": 0.39491150442477874,
+      "jaccard_samples": 0.31246218995765274,
+      "macro_f1": 0.3858303990886256,
+      "micro_precision": 0.34829268292682924,
+      "micro_recall": 0.4559386973180077,
+      "hamming_loss": 0.24818511796733211,
+      "exact_match": 0.10344827586206896,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.36524542067510907,
+        0.4248883056625677
+      ],
+      "jaccard_samples_ci": [
+        0.2849266485178463,
+        0.34087341197822146
+      ],
+      "macro_f1_ci": [
+        0.3554260078668139,
+        0.41453294563213594
+      ],
+      "count": 551
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 0,
+      "variant": "default",
+      "is_default": true,
+      "selection": "-",
+      "template": "default",
+      "eval_lang": "en",
+      "micro_f1": 0.48380427291523087,
+      "jaccard_samples": 0.41657592256503323,
+      "macro_f1": 0.45921633176027526,
+      "micro_precision": 0.54,
+      "micro_recall": 0.43820224719101125,
+      "hamming_loss": 0.16991833030852996,
+      "exact_match": 0.2631578947368421,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0054446460980036296,
+      "micro_f1_ci": [
+        0.4543566543784234,
+        0.5133484676660188
+      ],
+      "jaccard_samples_ci": [
+        0.38596491228070173,
+        0.44956291591046577
+      ],
+      "macro_f1_ci": [
+        0.42764855236848154,
+        0.48825276517255367
+      ],
+      "count": 551
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 0,
+      "variant": "default",
+      "is_default": true,
+      "selection": "-",
+      "template": "default",
+      "eval_lang": "hr",
+      "micro_f1": 0.4225352112676056,
+      "jaccard_samples": 0.37468239564428313,
+      "macro_f1": 0.4077552761477666,
+      "micro_precision": 0.47095761381475665,
+      "micro_recall": 0.3831417624521073,
+      "hamming_loss": 0.18602540834845735,
+      "exact_match": 0.2595281306715064,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0054446460980036296,
+      "micro_f1_ci": [
+        0.38869449846326326,
+        0.45588125703727367
+      ],
+      "jaccard_samples_ci": [
+        0.34058076225045375,
+        0.4077465214761041
+      ],
+      "macro_f1_ci": [
+        0.3735320097820442,
+        0.4400481895090353
+      ],
+      "count": 551
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 5,
+      "variant": "default",
+      "is_default": true,
+      "selection": "coverage",
+      "template": "default",
+      "eval_lang": "en",
+      "micro_f1": 0.5127659574468085,
+      "jaccard_samples": 0.4080459770114942,
+      "macro_f1": 0.5050467700012334,
+      "micro_precision": 0.44670991658943465,
+      "micro_recall": 0.6017478152309613,
+      "hamming_loss": 0.20780399274047187,
+      "exact_match": 0.14337568058076225,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.48464381565830844,
+        0.5392344374978992
+      ],
+      "jaccard_samples_ci": [
+        0.3812764670296431,
+        0.43467180883242595
+      ],
+      "macro_f1_ci": [
+        0.4761356152513492,
+        0.5315907769394973
+      ],
+      "count": 551
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 5,
+      "variant": "default",
+      "is_default": true,
+      "selection": "coverage",
+      "template": "default",
+      "eval_lang": "hr",
+      "micro_f1": 0.4442036836403034,
+      "jaccard_samples": 0.34900181488203263,
+      "macro_f1": 0.43774254084570174,
+      "micro_precision": 0.3857008466603951,
+      "micro_recall": 0.5236270753512133,
+      "hamming_loss": 0.23275862068965517,
+      "exact_match": 0.11978221415607986,
+      "malformed_rate": 0.0,
+      "empty_rate": 0.0,
+      "micro_f1_ci": [
+        0.41419915457435663,
+        0.4725921723013778
+      ],
+      "jaccard_samples_ci": [
+        0.32237825166364187,
+        0.3758340895341803
+      ],
+      "macro_f1_ci": [
+        0.4066088421938764,
+        0.4654247966563106
+      ],
+      "count": 551
+    }
+  ],
+  "sensitivity": [
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 0,
+      "selection": "-",
+      "eval_lang": "en",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.4281419122068551,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.35700890156425547,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 0,
+      "selection": "-",
+      "eval_lang": "hr",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.37976122797043776,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.32155820585947625,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 5,
+      "selection": "coverage",
+      "eval_lang": "en",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.42462180490349505,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.3271022383545069,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "eurollm_9b.4bit",
+      "shots": 5,
+      "selection": "coverage",
+      "eval_lang": "hr",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.39491150442477874,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.31246218995765274,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 0,
+      "selection": "-",
+      "eval_lang": "en",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.48380427291523087,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.41657592256503323,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 0,
+      "selection": "-",
+      "eval_lang": "hr",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.4225352112676056,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.37468239564428313,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 5,
+      "selection": "coverage",
+      "eval_lang": "en",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.5127659574468085,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.4080459770114942,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    },
+    {
+      "model": "qwen3_5_9b",
+      "shots": 5,
+      "selection": "coverage",
+      "eval_lang": "hr",
+      "templates": [
+        "default"
+      ],
+      "micro_f1_mean": 0.4442036836403034,
+      "micro_f1_std": 0.0,
+      "micro_f1_range": 0.0,
+      "jaccard_samples_mean": 0.34900181488203263,
+      "jaccard_samples_std": 0.0,
+      "jaccard_samples_range": 0.0
+    }
+  ]
+}

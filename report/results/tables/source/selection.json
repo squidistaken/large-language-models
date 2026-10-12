@@ -1,0 +1,268 @@
+{
+  "metric": "micro_f1",
+  "conditions": [
+    "en",
+    "hr",
+    "bilingual"
+  ],
+  "langs": [
+    "en",
+    "hr"
+  ],
+  "rule": "Highest dev micro_f1: averaged per language over the conditions en, hr, bilingual, then over the languages en, hr with equal weight. Ties go to the candidate listed first.",
+  "results": [
+    {
+      "run_name": "qlora_lr1e-4",
+      "language_scores": {
+        "en": 0.5211762819026533,
+        "hr": 0.4367831513677528
+      },
+      "selection_score": 0.47897971663520306,
+      "settings": {
+        "model": {
+          "hf_id": "utter-project/EuroLLM-9B-Instruct",
+          "revision_sha": "f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace",
+          "dtype": "bfloat16",
+          "max_new_tokens": 32,
+          "decoding": {
+            "do_sample": false
+          },
+          "chat_template_kwargs": {}
+        },
+        "data_dir": "data/processed/xed",
+        "target_lang": "hr",
+        "max_train_samples": null,
+        "max_target_samples": null,
+        "max_eval_samples": null,
+        "max_length": 256,
+        "seed": 42,
+        "lora": {
+          "r": 16,
+          "alpha": 32,
+          "dropout": 0.05,
+          "target_modules": "all-linear"
+        },
+        "quantization": "4bit",
+        "learning_rate": 0.0001,
+        "epochs": 3,
+        "batch_size": 8,
+        "grad_accum_steps": 2,
+        "warmup_ratio": 0.03,
+        "evals_per_epoch": 2,
+        "checkpoint_metric": "micro_f1",
+        "early_stopping_patience": 2
+      }
+    },
+    {
+      "run_name": "qlora",
+      "language_scores": {
+        "en": 0.5166194745932822,
+        "hr": 0.437833816415531
+      },
+      "selection_score": 0.4772266455044066,
+      "settings": {
+        "model": {
+          "hf_id": "utter-project/EuroLLM-9B-Instruct",
+          "revision_sha": "f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace",
+          "dtype": "bfloat16",
+          "max_new_tokens": 32,
+          "decoding": {
+            "do_sample": false
+          },
+          "chat_template_kwargs": {}
+        },
+        "data_dir": "data/processed/xed",
+        "target_lang": "hr",
+        "max_train_samples": null,
+        "max_target_samples": null,
+        "max_eval_samples": null,
+        "max_length": 256,
+        "seed": 42,
+        "lora": {
+          "r": 16,
+          "alpha": 32,
+          "dropout": 0.05,
+          "target_modules": "all-linear"
+        },
+        "quantization": "4bit",
+        "learning_rate": 0.0002,
+        "epochs": 3,
+        "batch_size": 8,
+        "grad_accum_steps": 2,
+        "warmup_ratio": 0.03,
+        "evals_per_epoch": 2,
+        "checkpoint_metric": "micro_f1",
+        "early_stopping_patience": 2
+      }
+    },
+    {
+      "run_name": "lora_lr1e-4",
+      "language_scores": {
+        "en": 0.5119682322230148,
+        "hr": 0.43856523893548316
+      },
+      "selection_score": 0.475266735579249,
+      "settings": {
+        "model": {
+          "hf_id": "utter-project/EuroLLM-9B-Instruct",
+          "revision_sha": "f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace",
+          "dtype": "bfloat16",
+          "max_new_tokens": 32,
+          "decoding": {
+            "do_sample": false
+          },
+          "chat_template_kwargs": {}
+        },
+        "data_dir": "data/processed/xed",
+        "target_lang": "hr",
+        "max_train_samples": null,
+        "max_target_samples": null,
+        "max_eval_samples": null,
+        "max_length": 256,
+        "seed": 42,
+        "lora": {
+          "r": 16,
+          "alpha": 32,
+          "dropout": 0.05,
+          "target_modules": "all-linear"
+        },
+        "quantization": null,
+        "learning_rate": 0.0001,
+        "epochs": 3,
+        "batch_size": 8,
+        "grad_accum_steps": 2,
+        "warmup_ratio": 0.03,
+        "evals_per_epoch": 2,
+        "checkpoint_metric": "micro_f1",
+        "early_stopping_patience": 2
+      }
+    },
+    {
+      "run_name": "lora_lr4e-4",
+      "language_scores": {
+        "en": 0.5100722664079378,
+        "hr": 0.43647197275955923
+      },
+      "selection_score": 0.4732721195837485,
+      "settings": {
+        "model": {
+          "hf_id": "utter-project/EuroLLM-9B-Instruct",
+          "revision_sha": "f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace",
+          "dtype": "bfloat16",
+          "max_new_tokens": 32,
+          "decoding": {
+            "do_sample": false
+          },
+          "chat_template_kwargs": {}
+        },
+        "data_dir": "data/processed/xed",
+        "target_lang": "hr",
+        "max_train_samples": null,
+        "max_target_samples": null,
+        "max_eval_samples": null,
+        "max_length": 256,
+        "seed": 42,
+        "lora": {
+          "r": 16,
+          "alpha": 32,
+          "dropout": 0.05,
+          "target_modules": "all-linear"
+        },
+        "quantization": null,
+        "learning_rate": 0.0004,
+        "epochs": 3,
+        "batch_size": 8,
+        "grad_accum_steps": 2,
+        "warmup_ratio": 0.03,
+        "evals_per_epoch": 2,
+        "checkpoint_metric": "micro_f1",
+        "early_stopping_patience": 2
+      }
+    },
+    {
+      "run_name": "qlora_lr4e-4",
+      "language_scores": {
+        "en": 0.5087645336329847,
+        "hr": 0.4372763002230957
+      },
+      "selection_score": 0.4730204169280402,
+      "settings": {
+        "model": {
+          "hf_id": "utter-project/EuroLLM-9B-Instruct",
+          "revision_sha": "f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace",
+          "dtype": "bfloat16",
+          "max_new_tokens": 32,
+          "decoding": {
+            "do_sample": false
+          },
+          "chat_template_kwargs": {}
+        },
+        "data_dir": "data/processed/xed",
+        "target_lang": "hr",
+        "max_train_samples": null,
+        "max_target_samples": null,
+        "max_eval_samples": null,
+        "max_length": 256,
+        "seed": 42,
+        "lora": {
+          "r": 16,
+          "alpha": 32,
+          "dropout": 0.05,
+          "target_modules": "all-linear"
+        },
+        "quantization": "4bit",
+        "learning_rate": 0.0004,
+        "epochs": 3,
+        "batch_size": 8,
+        "grad_accum_steps": 2,
+        "warmup_ratio": 0.03,
+        "evals_per_epoch": 2,
+        "checkpoint_metric": "micro_f1",
+        "early_stopping_patience": 2
+      }
+    },
+    {
+      "run_name": "lora",
+      "language_scores": {
+        "en": 0.5104432013627858,
+        "hr": 0.43057302728755104
+      },
+      "selection_score": 0.47050811432516837,
+      "settings": {
+        "model": {
+          "hf_id": "utter-project/EuroLLM-9B-Instruct",
+          "revision_sha": "f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace",
+          "dtype": "bfloat16",
+          "max_new_tokens": 32,
+          "decoding": {
+            "do_sample": false
+          },
+          "chat_template_kwargs": {}
+        },
+        "data_dir": "data/processed/xed",
+        "target_lang": "hr",
+        "max_train_samples": null,
+        "max_target_samples": null,
+        "max_eval_samples": null,
+        "max_length": 256,
+        "seed": 42,
+        "lora": {
+          "r": 16,
+          "alpha": 32,
+          "dropout": 0.05,
+          "target_modules": "all-linear"
+        },
+        "quantization": null,
+        "learning_rate": 0.0002,
+        "epochs": 3,
+        "batch_size": 8,
+        "grad_accum_steps": 2,
+        "warmup_ratio": 0.03,
+        "evals_per_epoch": 2,
+        "checkpoint_metric": "micro_f1",
+        "early_stopping_patience": 2
+      }
+    }
+  ],
+  "best": "qlora_lr1e-4"
+}

@@ -1,0 +1,13 @@
+model,shots,selection,eval_lang,micro_f1_mean,micro_f1_std,micro_f1_range,jaccard_samples_mean,jaccard_samples_std,jaccard_samples_range,templates
+eurollm_9b.4bit,0,-,en,0.4282,0.0062,0.0149,0.3437,0.0128,0.0273,annotator default terse
+eurollm_9b.4bit,0,-,hr,0.377,0.0129,0.0308,0.2972,0.0124,0.0303,annotator default terse
+eurollm_9b.4bit,5,coverage,en,0.4384,0.0066,0.0154,0.3436,0.0024,0.0057,annotator default terse
+eurollm_9b.4bit,5,coverage,hr,0.4118,0.0084,0.0192,0.3212,0.0076,0.0183,annotator default terse
+eurollm_9b.4bit,5,random,en,0.4161,0.0,0.0,0.3553,0.0,0.0,default
+eurollm_9b.4bit,5,random,hr,0.3819,0.0,0.0,0.3205,0.0,0.0,default
+qwen3_5_9b,0,-,en,0.4803,0.0073,0.0172,0.4278,0.0049,0.0107,annotator default terse
+qwen3_5_9b,0,-,hr,0.4096,0.0157,0.0381,0.3496,0.0184,0.0392,annotator default terse
+qwen3_5_9b,5,coverage,en,0.521,0.0035,0.0075,0.4196,0.0048,0.0116,annotator default terse
+qwen3_5_9b,5,coverage,hr,0.4674,0.002,0.0047,0.3678,0.0014,0.0033,annotator default terse
+qwen3_5_9b,5,random,en,0.517,0.0,0.0,0.4463,0.0,0.0,default
+qwen3_5_9b,5,random,hr,0.4601,0.0,0.0,0.3944,0.0,0.0,default

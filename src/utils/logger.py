@@ -1,4 +1,5 @@
 import logging
+import os
 import warnings
 from collections.abc import Callable, Iterable, Iterator
 from datetime import datetime
@@ -34,7 +35,9 @@ class Logger:
 
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        self.log_file = log_dir / f"{datetime.now().astimezone():%Y%m%d_%H%M%S}.log"
+        # Runs started in the same second get their own file.
+        run_id = os.environ.get("SLURM_JOB_ID") or str(os.getpid())
+        self.log_file = log_dir / f"{datetime.now().astimezone():%Y%m%d_%H%M%S}_{run_id}.log"
         console_handler = RichHandler(
             show_time=False, show_level=False, show_path=False, rich_tracebacks=True
         )

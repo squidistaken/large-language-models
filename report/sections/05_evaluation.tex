@@ -2,3 +2,21 @@
 \label{sec:evaluation}
 
 % The metrics in section 7, random seeds, evaluation script, malformed-output policy, and controlled comparisons. Published XED values may be included separately as historical reference points.
+
+\subsection{Metrics}
+% TODO: primary (micro-F1, sample Jaccard), secondary (macro-F1, micro-P/R, Hamming loss), diagnostic (per-emotion, exact match, malformed rate).
+
+% TODO: write as prose, with these facts:
+%   - Every metric is computed with scikit-learn 1.9.1 from the same binarised eight-label predictions,
+%     in the fixed label order anger, anticipation, disgust, fear, joy, sadness, surprise, trust.
+%   - Zero division: a metric whose denominator is zero (no positive gold labels or no predictions for a
+%     class or line) is set to 0.0.
+%   - Malformed answers, and answers with no permitted label, count as an empty predicted label set; the
+%     malformed rate (and the empty rate) are reported separately.
+%   - Lower Hamming loss is better.
+%   - Confidence intervals: 95% percentile bootstrap over lines, 1,000 resamples, seed 42.
+%   - Seed repetitions: the selected PEFT configuration is trained with seeds 42, 67 and 128, reported as
+%     mean and standard deviation.
+
+\subsection{Protocol}
+% TODO: all design decisions (configuration, checkpoints, prompt wording) on dev; test used once for the final evaluation. Published XED values (Öhman et al., 2020) only as historical reference points.

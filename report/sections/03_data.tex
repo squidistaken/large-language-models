@@ -2,3 +2,27 @@
 \label{sec:data}
 % The XED data for your language, projected-label status, label space, leakage controls, train/development/test split, and data formatting.
 
+\subsection{XED for English and Croatian}
+% TODO: the English--Croatian data, projected-label status, and the eight-label space.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{label_distribution.en-hr}
+    \caption{Share of lines carrying each emotion in the prepared English and Croatian data.}
+    \label{fig:label-distribution}
+\end{figure}
+
+\subsection{Split and Leakage Controls}
+% TODO: one fixed 70/20/10 split by alignment id with multi-label stratification; duplicates never cross partitions.
+
+% TODO: write as prose, with these facts:
+%   - 5,941 Croatian rows in XED (3 malformed, 1 that could not be resolved); 518 exact duplicate pairs removed;
+%     5,422 matched English--Croatian units remain.
+%   - One fixed 70/20/10 split (seed 42) by XED alignment id, with multi-label stratification
+%     (iterstrat MultilabelStratifiedShuffleSplit): 3,803 train / 1,068 development / 551 test lines per language.
+%   - Parallel versions of a subtitle, and identical lines, always share a partition, so nothing leaks across splits.
+%   - 2,236 units have a direct (1-hop) English--Croatian alignment; 3,186 are aligned through Danish as a pivot (2 hops).
+%   - 5,247 lines carry gold (human) English labels; every Croatian label is projected from English.
+
+\subsection{Data Formatting}
+% TODO: the conversational format: the system prompt with the eight labels and their definitions, the subtitle as the user message, and the gold labels as a JSON list.

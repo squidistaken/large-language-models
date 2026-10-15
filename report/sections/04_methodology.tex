@@ -2,3 +2,69 @@
 \label{sec:methodology}
 
 % The models and selection rationale; PEFT setup and training conditions; prompt templates and demonstrations; decoding settings; and output parser.
+
+\subsection{Models}
+% TODO: justify both models: size, multilingual coverage, licence, accessibility (from their model cards).
+
+% TODO: write as prose, with these facts:
+%   - Primary model, for prompting and PEFT: EuroLLM-9B (utter-project/EuroLLM-9B-Instruct,
+%     revision f7ae2bc3bcbb538c0b93fa6cfbf388d9898b1ace), loaded in 4-bit for QLoRA and prompted at the same
+%     precision, so its prompting and PEFT results share one base model.
+%   - Second model, for prompting only: Qwen3.5-9B (Qwen/Qwen3.5-9B, revision
+%     c202236235762e1c871ad0ccb60c8ee5ba337b9a), in bf16, with thinking disabled.
+%   - For each: size, multilingual coverage (is Croatian in its training data?), licence and accessibility,
+%     from the model cards.
+
+\subsection{Parameter-Efficient Fine-Tuning}
+% TODO: the three conditions (English, Croatian, bilingual) and the configuration search.
+
+% TODO: write as prose, with these facts (the selected configuration, shared by all three conditions):
+%   - QLoRA: LoRA adapters on all linear layers of the 4-bit base model; rank 16, alpha 32, dropout 0.05;
+%     50.9M trainable parameters (0.55% of 9.2B).
+%   - Learning rate 1e-4 with 3% warm-up; 3 epochs; batch size 8 with 2 gradient-accumulation steps
+%     (effective batch 16); maximum sequence length 256 tokens; seed 42; gradient checkpointing and
+%     deterministic training.
+%   - Checkpoint selection: evaluate on dev twice per epoch, keep the checkpoint with the highest dev
+%     micro-F1 (on every dev line per language), stop after 2 evaluations without improvement.
+%   - Hardware: one NVIDIA A100 (40 GB).
+
+\begin{table}[H]
+    \centering
+    \caption{Candidate configurations on the development set. The selection score averages dev micro-F1 per language over the conditions evaluated in it, then over the two languages.}
+    \label{tab:selection}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Configuration & Base model, learning rate & Dev micro-F1 (en) & Dev micro-F1 (hr) & Selection score \\
+        \midrule
+        \textbf{qlora\_lr1e-4} & 4bit, 1e-4 & 0.521 & 0.437 & 0.479 \\
+        qlora & 4bit, 2e-4 & 0.517 & 0.438 & 0.477 \\
+        lora\_lr1e-4 & bf16, 1e-4 & 0.512 & 0.439 & 0.475 \\
+        lora\_lr4e-4 & bf16, 4e-4 & 0.510 & 0.436 & 0.473 \\
+        qlora\_lr4e-4 & 4bit, 4e-4 & 0.509 & 0.437 & 0.473 \\
+        lora & bf16, 2e-4 & 0.510 & 0.431 & 0.470 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Prompting}
+% TODO: the zero-shot and five-shot prompts, the same English instruction for both languages, greedy decoding with at most 32 new tokens, and the demonstration selection (gold, direct alignment, at most 80 characters in both languages, one per film, covering the emotions; seed 42).
+
+\begin{table}[H]
+    \centering
+    \caption{The five fixed demonstrations of the five-shot prompt, shown in English for English evaluation and in Croatian for Croatian evaluation.}
+    \label{tab:demonstrations}
+    \begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+        \toprule
+        \# & English & Croatian & Labels \\
+        \midrule
+        1 & - Think I should go out with Paulie? & - Hoćeš da izađem sa Paulijem? & anticipation, surprise, trust \\
+        2 & Relax. & Smiri se. & anger, fear, joy \\
+        3 & You got old. & Ostarili ste. & disgust, sadness \\
+        4 & He said no pilots. & Neće pilota. & sadness, surprise \\
+        5 & Shoot the fuck down! & Skini ih jebeno dolje! & fear \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Output Parsing}
+% TODO: the answer is parsed as a JSON list; case and whitespace are normalised, duplicates removed, no synonyms mapped; malformed answers count as an empty label set.

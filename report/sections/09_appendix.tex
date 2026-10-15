@@ -19,3 +19,198 @@ Table~\ref{tab:bands} lists the five resource bands from the project brief, whic
         \bottomrule
     \end{tabularx}
 \end{table}
+
+\section{Prompts}
+\label{app:prompts}
+\raggedbottom % keep the prompt boxes together instead of stretching the space between them
+\tcbset{before skip=10pt, after skip=10pt} % a fixed gap between the prompt boxes
+
+Every prompt has a system message and a user message. The system message is one of the instruction templates below, in which \texttt{\{definitions\}} is replaced by the label definitions; the user message holds the subtitle. In the five-shot prompts, the demonstrations (Table~\ref{tab:demonstrations}) are inserted as user and assistant turns between the two.
+
+\begin{tcolorbox}[title={Label definitions, replacing \texttt{\{definitions\}}}]
+\begin{verbatim}
+- anger: displeasure or hostility at a perceived wrong
+- anticipation: expecting or looking forward to something
+- disgust: revulsion or strong disapproval
+- fear: feeling threatened or afraid
+- joy: happiness or pleasure
+- sadness: sorrow, loss or disappointment
+- surprise: reaction to something unexpected
+- trust: confidence in, or acceptance of, someone or something
+\end{verbatim}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={User message}]
+\begin{verbatim}
+Subtitle: {text}
+\end{verbatim}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={Template \texttt{default} (used on test)}]
+\begin{verbatim}
+You classify the emotions expressed in a movie subtitle line.
+
+Permitted labels:
+{definitions}
+
+Every line expresses at least one of these emotions and may express
+several. Answer with a JSON list of the matching label names, using
+only the names above, and nothing else, in the format ["label", ...].
+\end{verbatim}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={Template \texttt{terse} (dev only)}]
+\begin{verbatim}
+Label the emotions in this subtitle line. Choose one or more of:
+{definitions}
+
+Reply with only a JSON list of the chosen label names, like ["label",
+...].
+\end{verbatim}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={Template \texttt{annotator} (dev only)}]
+\begin{verbatim}
+You are an expert annotator of emotions in film dialogue, using
+Plutchik's eight basic emotions:
+{definitions}
+
+Read the subtitle line and decide which of these emotions it
+expresses; a line can express one emotion or several at once. Respond
+with a JSON list of the label names exactly as written above, and no
+other text.
+\end{verbatim}
+\end{tcolorbox}
+
+\section{Training Histories}
+\label{app:training}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{training_history.en.qlora_lr1e-4}
+    \caption{Training history of PEFT-en in the selected configuration.}
+    \label{fig:history-en}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{training_history.hr.qlora_lr1e-4}
+    \caption{Training history of PEFT-hr in the selected configuration.}
+    \label{fig:history-hr}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{training_history.bilingual.qlora_lr1e-4}
+    \caption{Training history of PEFT-bilingual in the selected configuration.}
+    \label{fig:history-bilingual}
+\end{figure}
+
+\section{Further Results}
+\label{app:results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{metrics_appendix.test.qlora_lr1e-4}
+    \caption{Secondary and diagnostic metrics on test; the malformed and empty rates are on a zoomed scale.}
+    \label{fig:metrics-appendix}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Every prompting run on dev (micro-F1 and Jaccard).}
+    \label{tab:prompting-dev}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xl>{\raggedright\arraybackslash}Xl>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Model & Shots & Variant & Lang & micro-F1 & Jaccard \\
+        \midrule
+        eurollm\_9b.4bit & 0 & default & en & 0.430 & 0.362 \\
+        eurollm\_9b.4bit & 0 & default & hr & 0.381 & 0.312 \\
+        eurollm\_9b.4bit & 0 & annotator & en & 0.435 & 0.335 \\
+        eurollm\_9b.4bit & 0 & annotator & hr & 0.391 & 0.298 \\
+        eurollm\_9b.4bit & 0 & terse & en & 0.420 & 0.335 \\
+        eurollm\_9b.4bit & 0 & terse & hr & 0.360 & 0.282 \\
+        eurollm\_9b.4bit & 5 & default & en & 0.441 & 0.346 \\
+        eurollm\_9b.4bit & 5 & default & hr & 0.419 & 0.331 \\
+        eurollm\_9b.4bit & 5 & annotator & en & 0.429 & 0.340 \\
+        eurollm\_9b.4bit & 5 & annotator & hr & 0.400 & 0.313 \\
+        eurollm\_9b.4bit & 5 & random & en & 0.416 & 0.355 \\
+        eurollm\_9b.4bit & 5 & random & hr & 0.382 & 0.321 \\
+        eurollm\_9b.4bit & 5 & terse & en & 0.445 & 0.344 \\
+        eurollm\_9b.4bit & 5 & terse & hr & 0.416 & 0.320 \\
+        qwen3\_5\_9b & 0 & default & en & 0.478 & 0.431 \\
+        qwen3\_5\_9b & 0 & default & hr & 0.413 & 0.363 \\
+        qwen3\_5\_9b & 0 & annotator & en & 0.490 & 0.431 \\
+        qwen3\_5\_9b & 0 & annotator & hr & 0.427 & 0.362 \\
+        qwen3\_5\_9b & 0 & terse & en & 0.473 & 0.421 \\
+        qwen3\_5\_9b & 0 & terse & hr & 0.389 & 0.324 \\
+        qwen3\_5\_9b & 5 & default & en & 0.519 & 0.426 \\
+        qwen3\_5\_9b & 5 & default & hr & 0.466 & 0.369 \\
+        qwen3\_5\_9b & 5 & annotator & en & 0.526 & 0.414 \\
+        qwen3\_5\_9b & 5 & annotator & hr & 0.467 & 0.366 \\
+        qwen3\_5\_9b & 5 & random & en & 0.517 & 0.446 \\
+        qwen3\_5\_9b & 5 & random & hr & 0.460 & 0.394 \\
+        qwen3\_5\_9b & 5 & terse & en & 0.518 & 0.418 \\
+        qwen3\_5\_9b & 5 & terse & hr & 0.470 & 0.368 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{prompting.dev}
+    \caption{Zero- and five-shot prompting of both models on dev, with the default prompt.}
+    \label{fig:prompting-dev}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{configurations}
+    \caption{Dev micro-F1, peak GPU memory and training time of every candidate configuration.}
+    \label{fig:configurations}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{seeds.test.qlora_lr1e-4}
+    \caption{Headline metrics on test, mean $\pm$ standard deviation over three seeds.}
+    \label{fig:seeds}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Prompt sensitivity on dev: mean, standard deviation and range of micro-F1 across the three instruction templates.}
+    \label{tab:sensitivity}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Model & Shots & Lang & Mean & SD & Range \\
+        \midrule
+        eurollm\_9b.4bit & 0 & en & 0.428 & 0.006 & 0.015 \\
+        eurollm\_9b.4bit & 0 & hr & 0.377 & 0.013 & 0.031 \\
+        eurollm\_9b.4bit & 5 & en & 0.438 & 0.007 & 0.015 \\
+        eurollm\_9b.4bit & 5 & hr & 0.412 & 0.008 & 0.019 \\
+        eurollm\_9b.4bit & 5 & en & 0.416 & 0.000 & 0.000 \\
+        eurollm\_9b.4bit & 5 & hr & 0.382 & 0.000 & 0.000 \\
+        qwen3\_5\_9b & 0 & en & 0.480 & 0.007 & 0.017 \\
+        qwen3\_5\_9b & 0 & hr & 0.410 & 0.016 & 0.038 \\
+        qwen3\_5\_9b & 5 & en & 0.521 & 0.004 & 0.007 \\
+        qwen3\_5\_9b & 5 & hr & 0.467 & 0.002 & 0.005 \\
+        qwen3\_5\_9b & 5 & en & 0.517 & 0.000 & 0.000 \\
+        qwen3\_5\_9b & 5 & hr & 0.460 & 0.000 & 0.000 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{emotion_gain.test.qlora_lr1e-4}
+    \caption{Per-emotion F1 gain of each system over zero-shot on test.}
+    \label{fig:emotion-gain}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{compute.qlora_lr1e-4}
+    \caption{Peak GPU memory and training time of each PEFT condition of the selected configuration.}
+    \label{fig:compute}
+\end{figure}

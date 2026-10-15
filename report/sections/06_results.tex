@@ -1,5 +1,95 @@
 \section{Results}
 \label{sec:results}
 
-
 % Your quantitative findings in clear tables and charts, using the multi-label metrics.
+
+\subsection{PEFT and Prompting on Test}
+% TODO: describe the main comparison.
+
+\begin{table}[H]
+    \centering
+    \caption{Test results of the primary model (EuroLLM-9B), with 95\% bootstrap intervals; the best micro-F1 per language in bold. Hamming loss and malformed rates are in Figure~\ref{fig:metrics-appendix}.}
+    \label{tab:results}
+    \begin{tabularx}{\textwidth}{ll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        System & Lang & micro-F1 & Jaccard & macro-F1 \\
+        \midrule
+        zero-shot & en & 0.428\par{\small[0.398, 0.456]} & 0.357\par{\small[0.327, 0.386]} & 0.412\par{\small[0.380, 0.439]} \\
+        zero-shot & hr & 0.380\par{\small[0.351, 0.407]} & 0.322\par{\small[0.292, 0.348]} & 0.370\par{\small[0.342, 0.396]} \\
+        5-shot & en & 0.425\par{\small[0.396, 0.451]} & 0.327\par{\small[0.301, 0.353]} & 0.415\par{\small[0.387, 0.442]} \\
+        5-shot & hr & 0.395\par{\small[0.365, 0.425]} & 0.312\par{\small[0.285, 0.341]} & 0.386\par{\small[0.355, 0.414]} \\
+        PEFT-en & en & \textbf{0.517}\par{\small[0.488, 0.545]} & 0.441\par{\small[0.410, 0.470]} & 0.508\par{\small[0.477, 0.535]} \\
+        PEFT-en & hr & 0.385\par{\small[0.351, 0.419]} & 0.337\par{\small[0.303, 0.372]} & 0.367\par{\small[0.333, 0.398]} \\
+        PEFT-hr & hr & 0.403\par{\small[0.369, 0.434]} & 0.359\par{\small[0.325, 0.393]} & 0.380\par{\small[0.346, 0.410]} \\
+        PEFT-bilingual & en & 0.511\par{\small[0.483, 0.541]} & 0.451\par{\small[0.420, 0.481]} & 0.494\par{\small[0.464, 0.524]} \\
+        PEFT-bilingual & hr & \textbf{0.436}\par{\small[0.403, 0.467]} & 0.388\par{\small[0.355, 0.421]} & 0.420\par{\small[0.387, 0.450]} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{metrics.test.qlora_lr1e-4}
+    \caption{Headline metrics on test, with 95\% bootstrap intervals.}
+    \label{fig:metrics}
+\end{figure}
+
+\subsection{Prompting Both Models}
+% TODO: compare the two models and zero- versus five-shot.
+
+\begin{table}[H]
+    \centering
+    \caption{Prompting on test with the default prompt, with 95\% bootstrap intervals.}
+    \label{tab:prompting-test}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Model & Shots & Lang & micro-F1 & Jaccard & Malformed~$\downarrow$ \\
+        \midrule
+        eurollm\_9b.4bit & 0 & en & 0.428\par{\small[0.398, 0.456]} & 0.357\par{\small[0.327, 0.386]} & 0.002 \\
+        eurollm\_9b.4bit & 0 & hr & 0.380\par{\small[0.351, 0.407]} & 0.322\par{\small[0.292, 0.348]} & 0.000 \\
+        eurollm\_9b.4bit & 5 & en & 0.425\par{\small[0.396, 0.451]} & 0.327\par{\small[0.301, 0.353]} & 0.000 \\
+        eurollm\_9b.4bit & 5 & hr & 0.395\par{\small[0.365, 0.425]} & 0.312\par{\small[0.285, 0.341]} & 0.000 \\
+        qwen3\_5\_9b & 0 & en & 0.484\par{\small[0.454, 0.513]} & 0.417\par{\small[0.386, 0.450]} & 0.000 \\
+        qwen3\_5\_9b & 0 & hr & 0.422\par{\small[0.389, 0.456]} & 0.375\par{\small[0.341, 0.408]} & 0.000 \\
+        qwen3\_5\_9b & 5 & en & 0.513\par{\small[0.485, 0.539]} & 0.408\par{\small[0.381, 0.435]} & 0.000 \\
+        qwen3\_5\_9b & 5 & hr & 0.444\par{\small[0.414, 0.473]} & 0.349\par{\small[0.322, 0.376]} & 0.000 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{prompting.test}
+    \caption{Zero- and five-shot prompting of both models on test, with 95\% bootstrap intervals.}
+    \label{fig:prompting-test}
+\end{figure}
+
+\subsection{Variation over Seeds}
+% TODO: how stable the PEFT results are.
+
+\begin{table}[H]
+    \centering
+    \caption{PEFT on test, mean $\pm$ standard deviation over seeds 42, 67 and 128.}
+    \label{tab:seeds}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xl>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        System & Lang & micro-F1 & Jaccard & macro-F1 \\
+        \midrule
+        PEFT-en & en & 0.504 $\pm$ 0.012 & 0.434 $\pm$ 0.006 & 0.489 $\pm$ 0.017 \\
+        PEFT-en & hr & 0.385 $\pm$ 0.003 & 0.339 $\pm$ 0.002 & 0.366 $\pm$ 0.001 \\
+        PEFT-hr & hr & 0.403 $\pm$ 0.000 & 0.354 $\pm$ 0.004 & 0.379 $\pm$ 0.002 \\
+        PEFT-bilingual & en & 0.505 $\pm$ 0.007 & 0.442 $\pm$ 0.009 & 0.490 $\pm$ 0.005 \\
+        PEFT-bilingual & hr & 0.416 $\pm$ 0.018 & 0.364 $\pm$ 0.023 & 0.400 $\pm$ 0.018 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Learning Curve}
+% TODO: how much Croatian training data PEFT needs to beat zero-shot.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{learning_curve.test.qlora_lr1e-4}
+    \caption{Test scores on Croatian against the number of Croatian training lines, with 95\% bootstrap intervals; the dashed line and band are zero-shot.}
+    \label{fig:learning-curve}
+\end{figure}

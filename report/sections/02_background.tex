@@ -3,6 +3,35 @@
 
 % A short account of XED and the approaches you use (PEFT, prompting). Keep it brief — depth belongs in later sections.
 
+\subsection{Multi-label Emotion Classification}
+\label{sec:multilabel}
+% TODO: Plutchik's eight basic emotions; a line carries zero, one or several of them, so the
+% task is a yes/no decision per emotion rather than one choice; partial correctness and rare emotions make it
+% harder than single-label classification, and call for set-based metrics (micro-F1, Jaccard; Section~\ref{sec:evaluation}).
+
+gurt
+
 \subsection{XED}
+% TODO: describe XED (Öhman et al., 2020): annotated English and Finnish, projected labels for the other languages, Plutchik's eight emotions.
 
+yo
 
+\subsection{Cross-Lingual Transfer and Label Projection}
+\label{sec:projection}
+% TODO: annotation projection: English labels copied to aligned subtitles in another language, so the target
+% labels are projected reference labels, not human judgements; alignment errors and translation shifts add noise
+% (motivates the alignment-hops analysis in Section~\ref{sec:analysis}).
+% TODO: cross-lingual transfer: training in one language and evaluating in another (PEFT-en on Croatian, and the
+% bilingual condition); multilingual LLMs see far less Croatian than English in pretraining.
+
+joe
+
+\subsection{Parameter-Efficient Fine-Tuning}
+% TODO: LoRA and QLoRA in brief.
+
+dirt
+
+\subsection{Prompting}
+% TODO: zero-shot and few-shot (in-context) prompting in brief.
+
+dvd

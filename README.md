@@ -5,6 +5,14 @@ Repository for the Large Language Models course (WBAI068-05) at the University o
 We classify the emotions in movie subtitles from the [XED](https://github.com/Helsinki-NLP/XED)
 dataset with open-weight LLMs, in English and our assigned language, Croatian (`hr`). Each line can carry several of Plutchik's eight emotions. We compare zero-shot prompting with parameter-efficient fine-tuning (LoRA/QLoRA) in three conditions: English only, Croatian only, and bilingual.
 
+## Model cards
+
+The three QLoRA adapters (EuroLLM-9B-Instruct) each have a model card with the prompt template, training settings, results and limitations:
+
+- [English only](model_cards/en.md)
+- [Croatian only](model_cards/hr.md)
+- [Bilingual](model_cards/bilingual.md)
+
 ## Team
 
 - Petros Kontopirghos (S5851335)

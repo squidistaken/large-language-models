@@ -13,7 +13,7 @@ Croatian falls in band~3 of the project's five resource bands (``mid-low'', roug
 
 We:
 \begin{itemize}
-    \item build a fixed, leakage-controlled train/development/test split of matched English--Croatian pairs;
+    \item build a fixed, leakage-controlled training, development and test split of matched English--Croatian pairs;
     \item fine-tune our primary model, EuroLLM-9B, in three conditions (English only, Croatian only, and both), using one configuration selected on the development set from a comparison of LoRA and QLoRA;
     \item retrain on smaller samples of the Croatian training data, to see how much target-language data fine-tuning needs;
     \item prompt EuroLLM-9B and a second model, Qwen3.5-9B, zero-shot and five-shot, and measure sensitivity to prompt wording on the development set;

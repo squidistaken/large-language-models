@@ -13,7 +13,7 @@ a
 
 % TODO: which emotions each approach handles well or badly.
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{per_emotion_f1.test.qlora_lr1e-4}
     \caption{Per-emotion F1 on test, with the gold support of each emotion.}
@@ -25,7 +25,7 @@ a
 
 % TODO: how much the wording and the demonstration selection change the scores (dev only).
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{prompt_sensitivity.dev}
     \caption{Micro-F1 and Jaccard on dev for every prompt variant: the default prompt (black), the two reworded templates, and random instead of emotion-covering demonstrations.}
@@ -48,7 +48,7 @@ a
 
 % TODO: malformed and empty outputs, and how many labels each system predicts per line.
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{label_counts.test.qlora_lr1e-4}
     \caption{Number of labels per line in the gold labels and in each system's predictions on test.}
@@ -66,7 +66,7 @@ a
 
 % TODO: a table of a few concrete examples (Croatian line, aligned English line, gold labels, zero-shot and PEFT-bilingual predictions, alignment hops), chosen from results/analysis/*.jsonl.
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{alignment.test.qlora_lr1e-4}
     \caption{Mean per-line Jaccard on Croatian test lines by the number of alignment hops behind their projected labels, with 95\% bootstrap intervals.}

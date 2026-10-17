@@ -4,9 +4,10 @@
 % Your quantitative findings in clear tables and charts, using the multi-label metrics.
 
 \subsection{PEFT and Prompting on Test}
+a
 % TODO: describe the main comparison.
 
-\begin{table}[H]
+\begin{table}
     \centering
     \caption{Test results of the primary model (EuroLLM-9B), with 95\% bootstrap intervals; the best micro-F1 per language in bold. Hamming loss and malformed rates are in Figure~\ref{fig:metrics-appendix}.}
     \label{tab:results}
@@ -27,7 +28,7 @@
     \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{metrics.test.qlora_lr1e-4}
     \caption{Headline metrics on test, with 95\% bootstrap intervals.}
@@ -35,9 +36,10 @@
 \end{figure}
 
 \subsection{Prompting Both Models}
+a
 % TODO: compare the two models and zero- versus five-shot.
 
-\begin{table}[H]
+\begin{table}
     \centering
     \caption{Prompting on test with the default prompt, with 95\% bootstrap intervals.}
     \label{tab:prompting-test}
@@ -57,7 +59,7 @@
     \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{prompting.test}
     \caption{Zero- and five-shot prompting of both models on test, with 95\% bootstrap intervals.}
@@ -65,9 +67,10 @@
 \end{figure}
 
 \subsection{Variation over Seeds}
+a
 % TODO: how stable the PEFT results are.
 
-\begin{table}[H]
+\begin{table}
     \centering
     \caption{PEFT on test, mean $\pm$ standard deviation over seeds 42, 67 and 128.}
     \label{tab:seeds}
@@ -85,9 +88,10 @@
 \end{table}
 
 \subsection{Learning Curve}
+a
 % TODO: how much Croatian training data PEFT needs to beat zero-shot.
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{learning_curve.test.qlora_lr1e-4}
     \caption{Test scores on Croatian against the number of Croatian training lines, with 95\% bootstrap intervals; the dashed line and band are zero-shot.}

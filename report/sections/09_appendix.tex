@@ -1,3 +1,8 @@
+\section{Code Repository}
+\label{app:repository}
+
+The code is available at \href{https://github.com/squidistaken/large-language-models}{https://github.com/squidistaken/large-language-models}, on the \texttt{main} branch. The version submitted with this report is published as a release on the repository's \href{https://github.com/squidistaken/large-language-models/releases}{releases page}. The \texttt{model\_cards/} folder holds a model card for each fine-tuned adapter (\texttt{en.md}, \texttt{hr.md} and \texttt{bilingual.md}), describing its base model, training data, prompt template, settings and the commands to reproduce it. The adapter weights themselves are not published.
+
 \section{Language Resource Bands}
 \label{app:bands}
 
@@ -16,6 +21,29 @@ Table~\ref{tab:bands} lists the five resource bands from the project brief, whic
         3 & mid-low & $\sim$4,400--6,000 & Hebrew, Swedish, Dutch, German, Hungarian, Croatian \\
         4 & mid-high & $\sim$6,000--7,300 & Czech, Italian, Bulgarian, Polish, Portuguese, French \\
         5 & high & $\sim$8,000 and above & Greek, Finnish, Serbian, Turkish, Romanian, Spanish, Brazilian Portuguese \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Split Statistics}
+\label{app:split}
+
+\begin{table}[H]
+    \centering
+    \caption{Lines carrying each emotion per Croatian partition, with their share of the partition in parentheses. The split was stratified on these labels; the English partitions differ by at most 2.7 percentage points (fear).}
+    \label{tab:split-support}
+    \begin{tabularx}{\textwidth}{X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Emotion & Train (3,803) & Dev (1,068) & Test (551) \\
+        \midrule
+        anger & 962 (25.3\%) & 269 (25.2\%) & 132 (24.0\%) \\
+        anticipation & 905 (23.8\%) & 255 (23.9\%) & 132 (24.0\%) \\
+        disgust & 478 (12.6\%) & 132 (12.4\%) & 69 (12.5\%) \\
+        fear & 610 (16.0\%) & 169 (15.8\%) & 90 (16.3\%) \\
+        joy & 663 (17.4\%) & 186 (17.4\%) & 94 (17.1\%) \\
+        sadness & 596 (15.7\%) & 180 (16.9\%) & 80 (14.5\%) \\
+        surprise & 620 (16.3\%) & 169 (15.8\%) & 87 (15.8\%) \\
+        trust & 665 (17.5\%) & 200 (18.7\%) & 99 (18.0\%) \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -82,7 +110,45 @@ other text.
 \end{verbatim}
 \end{tcolorbox}
 
-\section{Training Histories}
+\section{Fine-Tuning Configuration}
+\label{app:finetune}
+
+\subsection{Configuration Search}
+\label{app:selection}
+
+\begin{table}[H]
+    \centering
+    \caption{Candidate configurations on the development set. The selection score averages dev micro-F1 per language over the conditions evaluated in it, then over the two languages.}
+    \label{tab:selection}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Configuration & Base model, learning rate & Dev micro-F1 (en) & Dev micro-F1 (hr) & Selection score \\
+        \midrule
+        \textbf{qlora\_lr1e-4} & \textbf{4bit}, \textbf{1e-4}& \textbf{0.521} & \textbf{0.437} & \textbf{0.479} \\
+        qlora & 4bit, 2e-4 & 0.517 & 0.438 & 0.477 \\
+        lora\_lr1e-4 & bf16, 1e-4 & 0.512 & 0.439 & 0.475 \\
+        lora\_lr4e-4 & bf16, 4e-4 & 0.510 & 0.436 & 0.473 \\
+        qlora\_lr4e-4 & 4bit, 4e-4 & 0.509 & 0.437 & 0.473 \\
+        lora & bf16, 2e-4 & 0.510 & 0.431 & 0.470 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{configurations}
+    \caption{Dev micro-F1, peak GPU memory and training time of every candidate configuration.}
+    \label{fig:configurations}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{compute.qlora_lr1e-4}
+    \caption{Peak GPU memory and training time of each PEFT condition of the selected configuration.}
+    \label{fig:compute}
+\end{figure}
+
+\subsection{Training Histories}
 \label{app:training}
 
 \begin{figure}[H]
@@ -106,15 +172,8 @@ other text.
     \label{fig:history-bilingual}
 \end{figure}
 
-\section{Further Results}
-\label{app:results}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{metrics_appendix.test.qlora_lr1e-4}
-    \caption{Secondary and diagnostic metrics on test; the malformed and empty rates are on a zoomed scale.}
-    \label{fig:metrics-appendix}
-\end{figure}
+\section{Prompting on the Development Set}
+\label{app:prompting-dev}
 
 \begin{table}[H]
     \centering
@@ -163,23 +222,9 @@ other text.
     \label{fig:prompting-dev}
 \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{configurations}
-    \caption{Dev micro-F1, peak GPU memory and training time of every candidate configuration.}
-    \label{fig:configurations}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{seeds.test.qlora_lr1e-4}
-    \caption{Headline metrics on test, mean $\pm$ standard deviation over three seeds.}
-    \label{fig:seeds}
-\end{figure}
-
 \begin{table}[H]
     \centering
-    \caption{Prompt sensitivity on dev: mean, standard deviation and range of micro-F1 across the three instruction templates.}
+    \caption{Prompt sensitivity on dev: mean, standard deviation and range of micro-F1 across the three instruction templates. Five-shot rows use the coverage demonstrations; the runs with random demonstrations are in Table~\ref{tab:prompting-dev}.}
     \label{tab:sensitivity}
     \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
         \toprule
@@ -189,28 +234,34 @@ other text.
         eurollm\_9b.4bit & 0 & hr & 0.377 & 0.013 & 0.031 \\
         eurollm\_9b.4bit & 5 & en & 0.438 & 0.007 & 0.015 \\
         eurollm\_9b.4bit & 5 & hr & 0.412 & 0.008 & 0.019 \\
-        eurollm\_9b.4bit & 5 & en & 0.416 & 0.000 & 0.000 \\
-        eurollm\_9b.4bit & 5 & hr & 0.382 & 0.000 & 0.000 \\
         qwen3\_5\_9b & 0 & en & 0.480 & 0.007 & 0.017 \\
         qwen3\_5\_9b & 0 & hr & 0.410 & 0.016 & 0.038 \\
         qwen3\_5\_9b & 5 & en & 0.521 & 0.004 & 0.007 \\
         qwen3\_5\_9b & 5 & hr & 0.467 & 0.002 & 0.005 \\
-        qwen3\_5\_9b & 5 & en & 0.517 & 0.000 & 0.000 \\
-        qwen3\_5\_9b & 5 & hr & 0.460 & 0.000 & 0.000 \\
         \bottomrule
     \end{tabularx}
 \end{table}
+
+\section{Further Test Results}
+\label{app:results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{metrics_appendix.test.qlora_lr1e-4}
+    \caption{Secondary and diagnostic metrics on test; the malformed and empty rates are on a zoomed scale.}
+    \label{fig:metrics-appendix}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{seeds.test.qlora_lr1e-4}
+    \caption{Headline metrics on test, mean $\pm$ standard deviation over three seeds.}
+    \label{fig:seeds}
+\end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{emotion_gain.test.qlora_lr1e-4}
     \caption{Per-emotion F1 gain of each system over zero-shot on test.}
     \label{fig:emotion-gain}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\linewidth]{compute.qlora_lr1e-4}
-    \caption{Peak GPU memory and training time of each PEFT condition of the selected configuration.}
-    \label{fig:compute}
 \end{figure}

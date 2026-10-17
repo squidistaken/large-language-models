@@ -1,37 +1,35 @@
 \section{Background}
 \label{sec:background}
 
-% A short account of XED and the approaches you use (PEFT, prompting). Keep it brief — depth belongs in later sections.
-
 \subsection{Multi-label Emotion Classification}
-\label{sec:multilabel}
-% TODO: Plutchik's eight basic emotions; a line carries zero, one or several of them, so the
-% task is a yes/no decision per emotion rather than one choice; partial correctness and rare emotions make it
-% harder than single-label classification, and call for set-based metrics (micro-F1, Jaccard; Section~\ref{sec:evaluation}).
+\label{sec:background_multilabel}
 
-gurt
+\textcite{plutchik1980general} proposes eight basic emotions: anger, anticipation, disgust, fear, joy, sadness, surprise, and trust. Since a subtitle line can carry none, one, or several of these emotions, a model has to make eight separate yes or no decisions rather than select one emotion class. Predictions are then rarely all correct or all wrong. For example, a model that finds one of the two emotions in a line's reference labels, or selects an additional one, has done better than one that misses them entirely, and plain accuracy does not capture this \parencite{zhang2014review}. Additionally, emotions are unevenly spread, so rare ones leave little to learn from and few test lines to score on. For this reason, the project brief prescribes set-based metrics, mainly micro-averaged F1 and per-line Jaccard similarity, which we will report.
 
 \subsection{XED}
-% TODO: describe XED (Öhman et al., 2020): annotated English and Finnish, projected labels for the other languages, Plutchik's eight emotions.
+\label{sec:background_xed}
 
-yo
+XED \parencite{ohman2020xed} is a dataset of movie subtitles from the OPUS collection of OpenSubtitles \parencite{lison2016opensubtitles}. Only the English and Finnish lines were annotated by people, who could assign several of Plutchik's eight emotions to each line. Labels for thirty additional languages, including Croatian, were obtained by projection \parencite{ohman2020xed}. Each line comes without the dialogue surrounding it, leaving a model with little to no context to interpret. The original paper reports results for SVMs and fine-tuned BERT models. Those results use different data, splits and metric definitions, so, as the project brief requires, we will treat them as historical reference points rather than as baselines for our work.
 
 \subsection{Cross-Lingual Transfer and Label Projection}
-\label{sec:projection}
-% TODO: annotation projection: English labels copied to aligned subtitles in another language, so the target
-% labels are projected reference labels, not human judgements; alignment errors and translation shifts add noise
-% (motivates the alignment-hops analysis in Section~\ref{sec:analysis}).
-% TODO: cross-lingual transfer: training in one language and evaluating in another (PEFT-en on Croatian, and the
-% bilingual condition); multilingual LLMs see far less Croatian than English in pretraining.
+\label{sec:background_projection}
 
-joe
+Annotation projection \parencite{yarowsky2001inducing} transfers labels through parallel text (the same content in two languages). For subtitles, the lines of the same film in two languages are aligned with each other, mainly by their timing \parencite{lison2016opensubtitles}. Whatever emotions an English subtitle was given are then assigned to its aligned line in the target language. In XED, labels in languages other than English and Finnish are therefore projected reference labels, not actual human judgements. A projected label may be inaccurate because the aligned lines are not necessarily translations of each other, or because the translation lost or changed the emotion of the original line \parencite{ohman2020xed}.
+
+Cross-lingual transfer means training in one language and testing in another. It works because multilingual models give sentences with similar meanings similar internal representations whatever their language, so what a model learns from English examples can partly carry over to another \parencite{conneau2020unsupervised}. The project brief's experimental conditions test this directly: we will evaluate an English-only fine-tuned model on Croatian, and a bilingual condition will show whether adding Croatian training data helps beyond that.
 
 \subsection{Parameter-Efficient Fine-Tuning}
-% TODO: LoRA and QLoRA in brief.
+\label{sec:background_peft}
 
-dirt
+Fine-tuning continues training a pretrained model on labelled examples of the target task. For our task, each example will pair a subtitle line with its emotions written out as the answer, and the model will learn to produce that answer. Updating every weight of a model with billions of parameters is costly, however: in addition to the weights themselves, training keeps a gradient and optimiser state for each of them. Together these need far more memory than a single GPU can offer. Parameter-efficient fine-tuning (PEFT; \cite{houlsby2019parameter}) avoids this by freezing the pretrained model and training only a small number of added parameters.
+
+Low-Rank Adaptation (LoRA; \cite{hu2022lora}) is a widely used PEFT method, which assumes that the change a task requires in a weight matrix can be captured by a matrix of low rank. Each frozen weight matrix therefore receives an update formed by multiplying two small trained matrices, whose shared inner dimension, the rank, sets how expressive the update can be. These trained matrices, called an adapter, take up a fraction of a percent of the model's parameters and can be stored separately from it.
+
+QLoRA \parencite{dettmers2023qlora} reduces memory further through quantisation, which stores numbers with fewer bits at some loss of precision. The frozen base model is kept in a 4-bit format and converted back to 16-bit only when each layer is computed, while the LoRA adapters train in 16-bit as before. This cuts the memory taken by the base weights roughly fourfold, at the cost of some rounding error in the frozen model. We will compare both methods when fine-tuning our primary model.
 
 \subsection{Prompting}
-% TODO: zero-shot and few-shot (in-context) prompting in brief.
+\label{sec:background_prompting}
 
-dvd
+Instruction-tuned language models have been trained to respond to a request \parencite{wei2022finetuned}, so a task can be posed simply by describing it in the input, known as the prompt. In zero-shot prompting, the prompt holds only the instruction, so a model has to rely entirely on what it learned in training. In few-shot prompting, the prompt also contains a handful of solved examples (demonstrations), from which a model can infer the task and the expected answer format without changes to its weights, an ability known as in-context learning \parencite{brown2020language}. We will evaluate both a zero-shot and a five-shot prompt on our primary model and on a second model.
+
+Prompting costs nothing to set up beyond writing the prompt, but results can be fragile. Few-shot performance changes with the wording of the prompt and with which demonstrations are shown and in what order, partly because models favour labels that are frequent among the demonstrations or appear near the end of the prompt \parencite{zhao2021calibrate}; reordering the same demonstrations alone can move performance from near state-of-the-art to near chance \parencite{lu2022fantastically}. We will therefore analyse prompt sensitivity on the development set by comparing reworded prompts and randomly chosen demonstrations.

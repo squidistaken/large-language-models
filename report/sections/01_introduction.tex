@@ -9,15 +9,17 @@ Moving beyond English raises two further difficulties. First, LLMs see very diff
 
 In this project, we study how well open-weight LLMs classify emotions in English and in Croatian, our assigned language, comparing the two approaches above: prompt engineering, with zero or five examples in the prompt, and parameter-efficient fine-tuning (PEFT). Training on English alone and evaluating on the assigned language also shows how much of what is learned transfers across languages.
 
-Croatian falls in band~3 of the project's five resource bands (``mid-low'', roughly 4,400--6,000 annotated lines; see Appendix~\ref{app:bands}). No member of our group reads Croatian, so Croatian outputs are judged only against XED's projected labels; the aligned English lines help us interpret individual examples but do not validate them.
+Croatian falls in band~3 of the project's five resource bands (``mid-low'', roughly 4,400--6,000 annotated lines; Table~\ref{tab:bands}, Appendix~\ref{app:bands}). No member of our group reads Croatian, so Croatian outputs are judged only against XED's projected labels; the aligned English lines help us interpret individual examples but do not validate them.
 
 We:
 \begin{itemize}
     \item build a fixed, leakage-controlled train/development/test split of matched English--Croatian pairs;
-    \item fine-tune one primary model with LoRA or QLoRA in three conditions (English only, Croatian only, and both), selecting one final configuration on the development set;
-    \item prompt the primary model and a second model zero-shot and five-shot, and measure sensitivity to prompt wording on the development set;
+    \item fine-tune our primary model, EuroLLM-9B, in three conditions (English only, Croatian only, and both), using one configuration selected on the development set from a comparison of LoRA and QLoRA;
+    \item retrain on smaller samples of the Croatian training data, to see how much target-language data fine-tuning needs;
+    \item prompt EuroLLM-9B and a second model, Qwen3.5-9B, zero-shot and five-shot, and measure sensitivity to prompt wording on the development set;
     \item evaluate every condition on English and Croatian with multi-label metrics and bootstrap confidence intervals; and
     \item analyse concrete errors, separating model errors from those that may stem from subtitle alignment or label projection.
 \end{itemize}
 
-Chapter~\ref{sec:background} introduces multi-label emotion classification, the XED dataset and its projected labels, and the two adaptation approaches. Chapter~\ref{sec:data} describes the data and split, Chapter~\ref{sec:methodology} the models, fine-tuning and prompts, and Chapter~\ref{sec:evaluation} the evaluation protocol. Chapters~\ref{sec:results} and~\ref{sec:analysis} present and discuss the results, and Chapter~\ref{sec:conclusion} concludes the project.
+
+Section~\ref{sec:background} introduces multi-label emotion classification, the XED dataset and its projected labels, and the two adaptation approaches. Section~\ref{sec:data} describes the data and split, Section~\ref{sec:methodology} the models, fine-tuning and prompts, and Section~\ref{sec:evaluation} the evaluation protocol. Sections~\ref{sec:results} and~\ref{sec:analysis} present and discuss the results, and Section~\ref{sec:conclusion} concludes the project. The code, configuration files and model cards are available in our repository (Appendix~\ref{app:repository}).

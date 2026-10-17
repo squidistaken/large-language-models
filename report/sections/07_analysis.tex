@@ -4,12 +4,16 @@
 % Error analysis with concrete examples; cross-lingual transfer, prompt sensitivity, and the PEFT-versus-prompting trade-off; malformed outputs; projected-label limitations; and other biases or limitations. Do not attribute cross-language differences to culture without direct evidence.
 
 \subsection{Cross-Lingual Transfer}
+a
+
 % TODO: PEFT-en on Croatian versus PEFT-hr and PEFT-bilingual (Table~\ref{tab:results}, Figure~\ref{fig:learning-curve}).
 
 \subsection{Per-Emotion Behaviour}
+a
+
 % TODO: which emotions each approach handles well or badly.
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{per_emotion_f1.test.qlora_lr1e-4}
     \caption{Per-emotion F1 on test, with the gold support of each emotion.}
@@ -17,9 +21,11 @@
 \end{figure}
 
 \subsection{Prompt Sensitivity}
+a
+
 % TODO: how much the wording and the demonstration selection change the scores (dev only).
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{prompt_sensitivity.dev}
     \caption{Micro-F1 and Jaccard on dev for every prompt variant: the default prompt (black), the two reworded templates, and random instead of emotion-covering demonstrations.}
@@ -27,6 +33,8 @@
 \end{figure}
 
 \subsection{PEFT versus Prompting: Cost}
+a
+
 % TODO: the trade-off between training cost and accuracy.
 
 % TODO: write as prose (one NVIDIA A100, 40 GB):
@@ -36,9 +44,11 @@
 %   - Several prompting jobs ran in parallel, so their wall-clock times are rough.
 
 \subsection{Output Behaviour}
+a
+
 % TODO: malformed and empty outputs, and how many labels each system predicts per line.
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{label_counts.test.qlora_lr1e-4}
     \caption{Number of labels per line in the gold labels and in each system's predictions on test.}
@@ -46,6 +56,8 @@
 \end{figure}
 
 \subsection{Error Analysis}
+a
+
 % TODO: concrete examples where fine-tuning improved or worsened predictions compared with prompting; separate model errors from alignment or projection noise.
 
 % TODO: write as prose: comparing zero-shot and PEFT-bilingual line by line on the 551 Croatian test lines,
@@ -54,7 +66,7 @@
 
 % TODO: a table of a few concrete examples (Croatian line, aligned English line, gold labels, zero-shot and PEFT-bilingual predictions, alignment hops), chosen from results/analysis/*.jsonl.
 
-\begin{figure}[H]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{alignment.test.qlora_lr1e-4}
     \caption{Mean per-line Jaccard on Croatian test lines by the number of alignment hops behind their projected labels, with 95\% bootstrap intervals.}
@@ -62,4 +74,6 @@
 \end{figure}
 
 \subsection{Limitations}
+a
+
 % TODO: projected labels, one assigned language, no claims about culture without direct evidence, single primary model.

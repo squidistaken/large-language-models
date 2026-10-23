@@ -4,21 +4,39 @@
 % The metrics in section 7, random seeds, evaluation script, malformed-output policy, and controlled comparisons. Published XED values may be included separately as historical reference points.
 
 \subsection{Metrics}
-a
-% TODO: primary (micro-F1, sample Jaccard), secondary (macro-F1, micro-P/R, Hamming loss), diagnostic (per-emotion, exact match, malformed rate).
+\label{sec:eval_metrics}
+%  Primary: micro-averaged F1 and sample-averaged Jaccard index.
+Every metric is computed from the same predictions: the parsed label set of each line, binarised into an eight-dimensional vector in the fixed label order. Following the project brief, we report two primary metrics. Micro-averaged F1 pools the counts of all eight emotions before computing F1, so frequent emotions weigh more:
+\begin{equation}
+    \text{micro-F1} = \frac{2\,\mathrm{TP}}{2\,\mathrm{TP} + \mathrm{FP} + \mathrm{FN}},
+    \label{eq:micro-f1}
+\end{equation}
+where $\mathrm{TP}$, $\mathrm{FP}$, and $\mathrm{FN}$ are the numbers of true positives, false positives, and false negatives summed over all eight emotions and all lines.
 
-% TODO: write as prose, with these facts:
-%   - Every metric is computed with scikit-learn 1.9.1 from the same binarised eight-label predictions,
-%     in the fixed label order anger, anticipation, disgust, fear, joy, sadness, surprise, trust.
-%   - Zero division: a metric whose denominator is zero (no positive gold labels or no predictions for a
-%     class or line) is set to 0.0.
-%   - Malformed answers, and answers with no permitted label, count as an empty predicted label set; the
-%     malformed rate (and the empty rate) are reported separately.
-%   - Lower Hamming loss is better.
-%   - Confidence intervals: 95% percentile bootstrap over lines, 1,000 resamples, seed 42.
+The sample-averaged Jaccard index scores each line by the overlap between its reference and predicted label sets and averages over the lines, giving partial credit to a line whose labels are partly right. 
+\begin{equation}
+    \text{Jaccard} = \frac{1}{N} \sum_{i=1}^{N} \frac{|Y_i \cap \hat{Y}_i|}{|Y_i \cup \hat{Y}_i|},
+    \label{eq:jaccard}
+\end{equation}
+where $N$ is the number of lines, and $Y_i$ and $\hat{Y}_i$ are the reference and predicted label sets of line $i$.
+
+%     Secondary: macro-averaged F1, micro-averaged precision and recall, and Hamming loss. Remember that lower Hamming loss is better.
+As secondary metrics, we report macro-averaged F1, the unweighted mean of the eight per-emotion F1 scores, which weighs all emotions equally. We also report micro-averaged precision and recall, which show whether a system predicts too many emotions or too few. The Hamming loss is the fraction of all label decisions (eight per line) that are wrong, counting both missed and spurious labels. Unlike the other metrics, lower Hamming loss is better.
+%     Diagnostic: per-emotion precision, recall, F1, and support; exact-match ratio; and malformed-output rate for prompted models.
+As diagnostics, we report the precision, recall, F1 and support of each emotion. Also the exact-match ratio and the malformed rate for prompted models.  
+
+All metrics are computed with scikit-learn 1.9.1 \parencite{scikit-learn}. Malformed answers and answers with no permitted label both count as an empty prediction and are scored as such, so they are penalised rather than left out. The malformed rate and the empty rate are reported separately. When a metric's denominator is 0, it is set to 0.0. Every reference line carries at least one label, so the denominator in Equation~\ref{eq:jaccard} is never zero. In practice, the zero-division rule therefore only applies to the precision and F1 of an emotion that a system never predicts, which then count as 0.0 towards macro-F1. Every scores file records the label order, the zero-division policy, and the scikit-learn version alongside the results.
+
+We give 95\% confidence intervals for micro-F1, Jaccard and macro-F1 using a percentile bootstrap over lines. We draw 1,000 resamples of the evaluated lines with replacement (seed 42), recompute each metric on every resample, and take the 2.5th and 97.5th percentiles as the interval bounds. These intervals reflect only the uncertainty from evaluating on a finite set of lines, not the variation between training runs.
 %   - Seed repetitions: the selected PEFT configuration is trained with seeds 42, 67 and 128, reported as
 %     mean and standard deviation.
 
 \subsection{Protocol}
-a
+\label{sec:eval_protocol}
+All design decisions were made on the development set: the PEFT configuration and the checkpoint of each run (Section~\ref{sec:methodology_peft}), and the prompt wording (Section~\ref{sec:methodology_prompting}). The five-shot demonstrations were drawn from the training set only. The test set was used once, for the final evaluation, after all of these choices were fixed. A single script (\texttt{uv run main.py action=evaluate\_final}) scores every system on the test set and computes all metrics and confidence intervals, so every number in Section~\ref{sec:results} comes from the same code.
+
+The comparisons are controlled as far as the design allows. Every system answers the same 551 test lines per language, with the same instruction, greedy decoding with at most 32 new tokens, the same parser and the same metrics. Prompting and PEFT use the same 4-bit EuroLLM-9B weights, and the three PEFT conditions share one configuration, so they differ only in their training data. The English and Croatian test sets hold aligned versions of the same subtitles, so a difference between the languages does not come from evaluating on different lines, although it can come from the projected Croatian labels. The comparison between the two prompted models is the exception, since they ran at different precisions (Section~\ref{sec:methodology_models}).
+
+\textcite{ohman2020xed} report results for XED with SVM and BERT classifiers, but on different data, splits and metric definitions. We therefore treat them only as historical reference points and do not compare our systems against them directly.
+
 % TODO: all design decisions (configuration, checkpoints, prompt wording) on dev; test used once for the final evaluation. Published XED values (Öhman et al., 2020) only as historical reference points.

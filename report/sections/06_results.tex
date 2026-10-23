@@ -1,12 +1,11 @@
 \section{Results}
 \label{sec:results}
-
 % Your quantitative findings in clear tables and charts, using the multi-label metrics.
-
-\subsection{PEFT and Prompting on Test}
-a
 % TODO: describe the main comparison.
+\subsection{PEFT and Prompting on Test}
+Table~\ref{tab:results} and Figure~\ref{fig:metrics} give the test results for all conditions with the primary model. In English, PEFT clearly outperformed prompting: PEFT-en reached a micro-F1 of 0.517 and PEFT-bilingual 0.511, as opposed to 0.428 zero-shot and 0.425 five-shot prompting. The two fine-tuned conditions do not differ significantly from each other in English. 
 
+In Croatian, PEFT-bilingual scored the highest, with a micro-F1 of 0.436 as opposed to 0.403 for PEFT-hr and 0.380 zero-shot. Training on Croatian alone gave a small gain over zero-shot. PEFT-en, trained on English only, scored 0.385 on Croatian, about the same as zero-shot prompting. Every system scored lower on Croatian than on English. The difference was smallest on five-shot prompting (0.030) and largest on PEFT-en (0.132). Five-shot prompting changed the micro-F1 metric little compared with zero-shot (-0.003 in English, 0.015 in Croatian), but lowered Jaccard in both languages. Macro-F1 gives the same best system in each language, but reorders closer ones. In Croatian, five-shot prompting scored above PEFT-hr on macro-F1, although it scored below micro-F1. 
 \begin{table}[H]
     \centering
     \caption{Test results of the primary model (EuroLLM-9B), with 95\% bootstrap intervals; the best micro-F1 per language in bold. Hamming loss and malformed rates are in Figure~\ref{fig:metrics-appendix}.}

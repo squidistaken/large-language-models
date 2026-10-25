@@ -35,9 +35,9 @@ In Croatian, PEFT-bilingual scored the highest, with a micro-F1 of 0.436 as oppo
 \end{figure}
 
 \subsection{Prompting Both Models}
-a
 % TODO: compare the two models and zero- versus five-shot.
-
+Table~\ref{tab:prompting-test} compares the two prompted models. Qwen3.5-9B outperformed EuroLLM-9B in every setting. With five demonstrations, Qwen3.5-9B reached a micro-F1 score of 0.513 in English, and 0.444 in Croatian, close to the best fine-tuned EuroLLM conditions (0.517 and 0.436). Its Jaccard scores remained lower than those of fine-tuning. For both models, five-shot prompting raised or kept micro-F1, but lowered Jaccard. 
+ 
 \begin{table}[H]
     \centering
     \caption{Prompting on test with the default prompt, with 95\% bootstrap intervals.}
@@ -66,8 +66,9 @@ a
 \end{figure}
 
 \subsection{Variation over Seeds}
-a
 % TODO: how stable the PEFT results are.
+Table~\ref{tab:seeds} gives the mean and standard deviation of the PEFT conditions over seeds 42, 67 and 128. Standard deviations were at most 0.018 micro-F1, largest for PEFT-bilingual on Croatian. The averaged results keep the same ordering: PEFT-bilingual still scores highest in Croatian (0.416 against 0.403 for PEFT-hr), but by about one standard deviation, and PEFT-en and
+PEFT-bilingual remain equal in English (0.504 and 0.505).
 
 \begin{table}[H]
     \centering
@@ -87,8 +88,8 @@ a
 \end{table}
 
 \subsection{Learning Curve}
-a
 % TODO: how much Croatian training data PEFT needs to beat zero-shot.
+Figure~\ref{fig:learning-curve} shows Croatian test scores as the Croatian training data grows from 250 lines to all 3803. 
 
 \begin{figure}[H]
     \centering

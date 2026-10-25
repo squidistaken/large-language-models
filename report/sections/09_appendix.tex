@@ -6,7 +6,7 @@ The code is available at \href{https://github.com/squidistaken/large-language-mo
 \section{Language Resource Bands}
 \label{app:bands}
 
-Table~\ref{tab:bands} lists the five resource bands from the project brief, which group XED's projected languages by their approximate number of annotated lines; the example languages are illustrative rather than exhaustive. Our assigned language, Croatian, is in band~3.
+Table~\ref{tab:bands} lists the five resource bands that group XED's projected languages by their approximate number of annotated lines; the example languages are illustrative rather than exhaustive. Our assigned language, Croatian, is in band~3.
 
 \begin{table}[H]
     \centering
@@ -183,34 +183,34 @@ other text.
         \toprule
         Model & Shots & Variant & Lang & micro-F1 & Jaccard \\
         \midrule
-        eurollm\_9b.4bit & 0 & default & en & 0.430 & 0.362 \\
-        eurollm\_9b.4bit & 0 & default & hr & 0.381 & 0.312 \\
-        eurollm\_9b.4bit & 0 & annotator & en & 0.435 & 0.335 \\
-        eurollm\_9b.4bit & 0 & annotator & hr & 0.391 & 0.298 \\
-        eurollm\_9b.4bit & 0 & terse & en & 0.420 & 0.335 \\
-        eurollm\_9b.4bit & 0 & terse & hr & 0.360 & 0.282 \\
-        eurollm\_9b.4bit & 5 & default & en & 0.441 & 0.346 \\
-        eurollm\_9b.4bit & 5 & default & hr & 0.419 & 0.331 \\
-        eurollm\_9b.4bit & 5 & annotator & en & 0.429 & 0.340 \\
-        eurollm\_9b.4bit & 5 & annotator & hr & 0.400 & 0.313 \\
-        eurollm\_9b.4bit & 5 & random & en & 0.416 & 0.355 \\
-        eurollm\_9b.4bit & 5 & random & hr & 0.382 & 0.321 \\
-        eurollm\_9b.4bit & 5 & terse & en & 0.445 & 0.344 \\
-        eurollm\_9b.4bit & 5 & terse & hr & 0.416 & 0.320 \\
-        qwen3\_5\_9b & 0 & default & en & 0.478 & 0.431 \\
-        qwen3\_5\_9b & 0 & default & hr & 0.413 & 0.363 \\
-        qwen3\_5\_9b & 0 & annotator & en & 0.490 & 0.431 \\
-        qwen3\_5\_9b & 0 & annotator & hr & 0.427 & 0.362 \\
-        qwen3\_5\_9b & 0 & terse & en & 0.473 & 0.421 \\
-        qwen3\_5\_9b & 0 & terse & hr & 0.389 & 0.324 \\
-        qwen3\_5\_9b & 5 & default & en & 0.519 & 0.426 \\
-        qwen3\_5\_9b & 5 & default & hr & 0.466 & 0.369 \\
-        qwen3\_5\_9b & 5 & annotator & en & 0.526 & 0.414 \\
-        qwen3\_5\_9b & 5 & annotator & hr & 0.467 & 0.366 \\
-        qwen3\_5\_9b & 5 & random & en & 0.517 & 0.446 \\
-        qwen3\_5\_9b & 5 & random & hr & 0.460 & 0.394 \\
-        qwen3\_5\_9b & 5 & terse & en & 0.518 & 0.418 \\
-        qwen3\_5\_9b & 5 & terse & hr & 0.470 & 0.368 \\
+        EuroLLM-9B & 0 & default & en & 0.430 & 0.362 \\
+        EuroLLM-9B & 0 & default & hr & 0.381 & 0.312 \\
+        EuroLLM-9B & 0 & annotator & en & 0.435 & 0.335 \\
+        EuroLLM-9B & 0 & annotator & hr & 0.391 & 0.298 \\
+        EuroLLM-9B & 0 & terse & en & 0.420 & 0.335 \\
+        EuroLLM-9B & 0 & terse & hr & 0.360 & 0.282 \\
+        EuroLLM-9B & 5 & default & en & 0.441 & 0.346 \\
+        EuroLLM-9B & 5 & default & hr & 0.419 & 0.331 \\
+        EuroLLM-9B & 5 & annotator & en & 0.429 & 0.340 \\
+        EuroLLM-9B & 5 & annotator & hr & 0.400 & 0.313 \\
+        EuroLLM-9B & 5 & random & en & 0.416 & 0.355 \\
+        EuroLLM-9B & 5 & random & hr & 0.382 & 0.321 \\
+        EuroLLM-9B & 5 & terse & en & 0.445 & 0.344 \\
+        EuroLLM-9B & 5 & terse & hr & 0.416 & 0.320 \\
+        Qwen3.5-9B & 0 & default & en & 0.478 & 0.431 \\
+        Qwen3.5-9B & 0 & default & hr & 0.413 & 0.363 \\
+        Qwen3.5-9B & 0 & annotator & en & 0.490 & 0.431 \\
+        Qwen3.5-9B & 0 & annotator & hr & 0.427 & 0.362 \\
+        Qwen3.5-9B & 0 & terse & en & 0.473 & 0.421 \\
+        Qwen3.5-9B & 0 & terse & hr & 0.389 & 0.324 \\
+        Qwen3.5-9B & 5 & default & en & 0.519 & 0.426 \\
+        Qwen3.5-9B & 5 & default & hr & 0.466 & 0.369 \\
+        Qwen3.5-9B & 5 & annotator & en & 0.526 & 0.414 \\
+        Qwen3.5-9B & 5 & annotator & hr & 0.467 & 0.366 \\
+        Qwen3.5-9B & 5 & random & en & 0.517 & 0.446 \\
+        Qwen3.5-9B & 5 & random & hr & 0.460 & 0.394 \\
+        Qwen3.5-9B & 5 & terse & en & 0.518 & 0.418 \\
+        Qwen3.5-9B & 5 & terse & hr & 0.470 & 0.368 \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -230,14 +230,14 @@ other text.
         \toprule
         Model & Shots & Lang & Mean & SD & Range \\
         \midrule
-        eurollm\_9b.4bit & 0 & en & 0.428 & 0.006 & 0.015 \\
-        eurollm\_9b.4bit & 0 & hr & 0.377 & 0.013 & 0.031 \\
-        eurollm\_9b.4bit & 5 & en & 0.438 & 0.007 & 0.015 \\
-        eurollm\_9b.4bit & 5 & hr & 0.412 & 0.008 & 0.019 \\
-        qwen3\_5\_9b & 0 & en & 0.480 & 0.007 & 0.017 \\
-        qwen3\_5\_9b & 0 & hr & 0.410 & 0.016 & 0.038 \\
-        qwen3\_5\_9b & 5 & en & 0.521 & 0.004 & 0.007 \\
-        qwen3\_5\_9b & 5 & hr & 0.467 & 0.002 & 0.005 \\
+        EuroLLM-9B & 0 & en & 0.428 & 0.006 & 0.015 \\
+        EuroLLM-9B & 0 & hr & 0.377 & 0.013 & 0.031 \\
+        EuroLLM-9B & 5 & en & 0.438 & 0.007 & 0.015 \\
+        EuroLLM-9B & 5 & hr & 0.412 & 0.008 & 0.019 \\
+        Qwen3.5-9B & 0 & en & 0.480 & 0.007 & 0.017 \\
+        Qwen3.5-9B & 0 & hr & 0.410 & 0.016 & 0.038 \\
+        Qwen3.5-9B & 5 & en & 0.521 & 0.004 & 0.007 \\
+        Qwen3.5-9B & 5 & hr & 0.467 & 0.002 & 0.005 \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -248,7 +248,7 @@ other text.
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{metrics_appendix.test.qlora_lr1e-4}
-    \caption{Secondary and diagnostic metrics on test; the malformed and empty rates are on a zoomed scale.}
+    \caption{Secondary and diagnostic metrics on test; $\downarrow$ marks metrics for which lower is better, and the malformed and empty rates are on a zoomed scale.}
     \label{fig:metrics-appendix}
 \end{figure}
 

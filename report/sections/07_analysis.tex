@@ -4,82 +4,75 @@
 \subsection{Cross-Lingual Transfer}
 \label{sec:analysis_transfer}
 
-Fine-tuning on English alone did not carry over to Croatian: PEFT-en scored about the same as zero-shot prompting on Croatian and had the largest gap between the two languages of any system. Its precision and recall show what did transfer: In English, fine-tuning raised both micro-precision and micro-recall over zero-shot prompting, but in Croatian it raised precision from 0.34 to 0.43 while lowering recall from 0.43 to 0.35. PEFT-en assigned a single emotion to more than four in five Croatian lines, against about two in three in the reference labels (Figure~\ref{fig:label-counts}), which also explains its much lower Hamming loss at an unchanged micro-F1. English training thus taught the model to give fewer labels, and this habit carried over to Croatian, even beyond the reference, but its better recognition of the emotions themselves largely did not. PEFT-hr showed the same pattern less strongly, with precision above recall and a single emotion on about three quarters of the lines.
+Fine-tuning on English alone did not carry over to Croatian: PEFT-en scored about the same as zero-shot prompting on Croatian and had the largest gap between the two languages of any system. In English, fine-tuning raised both precision and recall over zero-shot prompting, but in Croatian it raised precision from 0.34 to 0.43 while lowering recall from 0.43 to 0.35, and PEFT-en assigned a single emotion to more than four in five Croatian lines, against about two in three in the reference labels (Figure~\ref{fig:label-counts}). English training thus taught the model to give fewer labels, and this habit carried over to Croatian, but its better recognition of the emotions themselves largely did not. PEFT-hr showed the same pattern less strongly.
 
-Croatian training data closed part of the gap, and combining it with English worked best. Over three seeds, PEFT-bilingual led PEFT-hr by only about one standard deviation, so this comparison alone does not separate the two conditions. The learning curve gives firmer evidence: PEFT-bilingual scored above PEFT-hr at every size of the Croatian training set, and with only 250 Croatian lines it stayed above zero-shot prompting while PEFT-hr fell below it. Since each point is a single run and the curve of PEFT-hr is not monotonic, we rely on this consistent ordering rather than on any single point.
+Croatian training data closed part of the gap, and combining it with English worked best. Over three seeds, PEFT-bilingual led PEFT-hr by only about one standard deviation, but the learning curve gives firmer evidence: PEFT-bilingual scored above PEFT-hr at every size of the Croatian training set, and with only 250 Croatian lines it stayed above zero-shot prompting while PEFT-hr fell below it. This advantage did not come from longer training, since the PEFT-bilingual checkpoint was kept after half an epoch, about a third of the optimisation steps of the PEFT-hr checkpoint. The English lines therefore appear to teach the task, which a modest amount of Croatian data then adapts to the language.
 
-The advantage of PEFT-bilingual did not come from longer training. Its checkpoint was kept after half an epoch, about a third of the optimisation steps behind the PEFT-hr checkpoint, which was kept after three epochs (Figures~\ref{fig:history-hr} and~\ref{fig:history-bilingual}). The English lines therefore appear to give the model a grasp of the task that a modest amount of Croatian data then adapts to the language, which is consistent with the shared multilingual representations described in Section~\ref{sec:background_projection}.
+Pretrained language coverage did not predict which model scored higher. EuroLLM-9B was built for Croatian, whereas Qwen3.5-9B does not document whether it covers it, yet Qwen3.5-9B scored higher in Croatian with both prompts. EuroLLM-9B did lose less from English to Croatian when prompted (0.048 in micro-F1 zero-shot and 0.030 five-shot, against 0.062 and 0.069 for Qwen3.5-9B), which fits its explicit coverage of Croatian, but the two models also differ in other ways, including their numeric precision, so this comparison cannot isolate the effect of coverage.
 
-\subsection{Per-Emotion Behaviour}
-\label{sec:analysis_emotion}
-
-The systems differed more between emotions than from each other (Figure~\ref{fig:per-emotion}). Anger and joy were the easiest emotions in both languages, with an F1 of up to 0.62 in English and 0.56 in Croatian. Disgust was the hardest emotion for every fine-tuned system and weak for all, with an F1 between 0.15 and 0.38. It is also the rarest emotion in the data (Figure~\ref{fig:label-distribution}), so fine-tuning had the fewest examples of it to learn from. Prompting predicted it far too often: zero-shot and five-shot prompting found more than half of the disgust lines, but only about one in five of their disgust predictions was correct. Fine-tuning raised this precision to at most 0.30, so disgust remained weak.
-
-
-In English, fine-tuning improved every emotion over zero-shot prompting, sadness most of all: zero-shot prompting recognised only 17\% of the sad lines, and PEFT-en raised the F1 for sadness from 0.26 to 0.49 (Figure~\ref{fig:emotion-gain}). In Croatian, the gains were smaller and less even. PEFT-bilingual improved six of the eight emotions by between 0.03 and 0.10, but not fear or disgust, even though fine-tuning raised the F1 for fear by 0.12 to 0.14 in English. The sparse answers of PEFT-en on Croatian cost most on disgust, where it found only 12\% of the lines, and on anticipation, where it found 27\%.
-
-The small overall effect of the five demonstrations hides large changes in opposite directions. In English, five-shot prompting raised the F1 for fear and sadness by about 0.11 and 0.12 but lowered it for surprise by 0.18, as recall for surprise fell from 0.46 to 0.18, although two of the five demonstrations are labelled with surprise (Table~\ref{tab:demonstrations}). In micro-F1, these changes largely cancel out.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{per_emotion_f1.test.qlora_lr1e-4}
-    \caption{Per-emotion F1 on test, with the gold support of each emotion.}
-    \label{fig:per-emotion}
-\end{figure}
-
-\subsection{Prompt Sensitivity}
-\label{sec:analysis_sensitivity}
-
-We measured sensitivity to the prompt on the development set only, using the three instruction templates and, for five-shot prompting, a random set of demonstrations in place of the coverage set (Figure~\ref{fig:prompt-sensitivity}; Tables~\ref{tab:prompting-dev} and~\ref{tab:sensitivity}). Rewording the instruction changed micro-F1 by at most 0.038. In zero-shot prompting, Croatian was about twice as sensitive as English: the range across templates was 0.031 against 0.015 for EuroLLM-9B, and 0.038 against 0.017 for Qwen3.5-9B. The terse template scored lowest on Croatian for both models, and for Qwen3.5-9B it left 8.4\% of the Croatian answers empty, against 1.9\% with the default template. Demonstrations reduced the sensitivity to wording: for Qwen3.5-9B the range fell to 0.007 in English and 0.005 in Croatian, and for EuroLLM-9B in Croatian to 0.019. The templates also traded precision against recall, so micro-F1 and Jaccard did not always rank them alike. With zero-shot EuroLLM-9B, for example, the annotator template gave the highest micro-F1 in both languages but a lower Jaccard than the default template (0.335 against 0.362 in English).
-
-For EuroLLM-9B, the choice of demonstrations mattered more than the wording. The coverage demonstrations scored 0.025 (English) and 0.037 (Croatian) above random ones, more than the range across templates in five-shot prompting, while for Qwen3.5-9B the two sets were within 0.006 of each other. With random demonstrations, both models answered more conservatively, with higher precision and lower recall, and the exact-match ratio of EuroLLM-9B in English doubled, from 0.099 to 0.203. This matches the number of labels the demonstrations show: the coverage set carries 2.2 emotions per line in English and 2.0 in Croatian (Table~\ref{tab:demonstrations}), against about 1.45 in the data, and few-shot predictions are known to be biased towards what the demonstrations show \parencite{zhao2021calibrate}. Our selection procedure therefore explains part of the over-labelling of five-shot prompting. We drew only one random set, however, so we cannot tell how much other random sets would vary.
-
-The default template, used for all test runs, was not the best variant in every setting, but it was never behind by more than 0.014 in micro-F1, well within the development bootstrap intervals. Overall, the effect of wording was small next to the differences between systems, such as the gain of 0.09 from fine-tuning in English, so our main conclusions do not depend on the particular wording of the prompt.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{prompt_sensitivity.dev}
-    \caption{Micro-F1 and Jaccard on the development set for every prompt variant: the default prompt (black), the two reworded templates, and random instead of emotion-covering demonstrations.}
-    \label{fig:prompt-sensitivity}
-\end{figure}
-
-\subsection{PEFT versus Prompting: Cost}
-\label{sec:analysis_cost}
-
-Fine-tuning bought its accuracy with a one-off training cost. With the selected configuration, each PEFT run took between 0.70 and 0.86 hours on a single A100 and used at most 13.8~GiB of GPU memory (Figure~\ref{fig:compute}). Prompting needed no training, and a full pass of either model over the development set took between three and six minutes, including loading the model. In return, fine-tuning raised micro-F1 over zero-shot prompting by about 0.09 in English and by 0.056 in Croatian, or 0.036 for the mean over three seeds. Since a fine-tuned model receives the same input as zero-shot prompting, its extra cost lies in training rather than in use.
-
-Choosing the configuration cost more than training the final models. The search trained six candidates in all three conditions, 18 runs that took about 13.6 GPU hours in total (Figure~\ref{fig:configurations}), yet all candidates ended within 0.01 of each other on the development set (Table~\ref{tab:selection}), less than the variation between seeds. The search thus mainly showed that our results do not depend on these settings. It did give one clear result on cost: with the base model in 4-bit, QLoRA used 13.4 to 13.8~GiB of GPU memory, against 21.1 to 21.4~GiB for LoRA on the bf16 model, about a third less, with no loss on the development set.
-
-The second model changes the balance. Qwen3.5-9B with five-shot prompting matched or exceeded the fine-tuned EuroLLM-9B averaged over three seeds (0.513 against 0.505 in English, 0.444 against 0.416 in Croatian) without any training. With a stronger base model, a few minutes of prompting can therefore achieve what an hour of fine-tuning achieves on a weaker one, although this comparison is not controlled, since Qwen3.5-9B ran at a higher precision. Fine-tuning also needs labelled data in the target language, here projected labels; the learning curve suggests that about 1,000 Croatian lines, combined with the English data, are enough.
-
-\subsection{Output Behaviour}
+\subsection{Label Counts and Output Format}
 \label{sec:analysis_behaviour}
 
-Producing the required format was almost never a problem: apart from the single malformed English answer of zero-shot EuroLLM-9B, every system always returned a valid JSON list. Empty answers, with no permitted label, were more common, but only in zero-shot prompting: 3.3\% in English and 1.1\% in Croatian for EuroLLM-9B, and 0.5\% in both languages for Qwen3.5-9B. Five-shot prompting and fine-tuning removed them entirely. In Croatian, every empty answer of EuroLLM-9B named an emotion outside the label set, most often \texttt{"disappointment"}, and its zero-shot Croatian answers contained 14 such labels in total, most of them next to permitted ones. Since the parser maps no synonyms (Section~\ref{sec:methodology_parsing}), these labels count as nothing: the model recognised an emotion but ignored the label set. The raw English answers were not stored, so we cannot say whether the English empty answers have the same cause.
+How many labels a system gave per line mattered more for its scores than producing the required format (Figure~\ref{fig:label-counts}). On the test set, the reference labels give a single emotion to about two thirds of the lines, with 1.42 labels per Croatian line on average. Zero-shot EuroLLM-9B gave 1.77 per Croatian line, and five-shot prompting gave two labels to 70--74\% of the lines in both languages, in line with its demonstrations. This over-labelling explains why five-shot prompting raised recall but lowered precision and the exact-match ratio (Table~\ref{tab:results}). Fine-tuning brought the number of labels close to that of the reference, with 1.44 labels per Croatian line for PEFT-bilingual, which accounts for much of its gain; only PEFT-en and PEFT-hr gave too few on Croatian.
 
-How many labels a system gave per line mattered more for its scores (Figure~\ref{fig:label-counts}). On the test set, the reference labels give a single emotion to about two thirds of the lines, with 1.42 labels per Croatian line on average. Zero-shot EuroLLM-9B gave more, 1.77 per Croatian line, with four or more on 5\% of the lines, and five-shot prompting gave two labels to about 70\% of the lines in both languages, in line with its demonstrations. This over-labelling explains why five-shot prompting raised recall but lowered precision, and why it cut the exact-match ratio from 0.18 to 0.09 in English and from 0.16 to 0.10 in Croatian. Fine-tuning brought the number of labels close to that of the reference: PEFT-bilingual gave 1.44 labels per Croatian line. Only PEFT-en and PEFT-hr gave too few on Croatian. Much of what fine-tuning learned was therefore how many emotions to report, not only which ones.
-
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\linewidth]{label_counts.test.qlora_lr1e-4}
+    \includegraphics[width=0.85\linewidth]{label_counts.test.qlora_lr1e-4}
     \caption{Number of labels per line in the gold labels and in each system's predictions on test.}
     \label{fig:label-counts}
 \end{figure}
 
+Apart from the single malformed answer, every answer was a valid JSON list. Empty answers occurred only in zero-shot prompting, at most 3.3\% (Figure~\ref{fig:metrics-appendix}). Every empty Croatian answer of EuroLLM-9B named an emotion outside the label set, most often \texttt{"disappointment"}, which the parser does not map to a label.
+
+\subsection{Per-Emotion Behaviour}
+\label{sec:analysis_emotion}
+
+Prompted EuroLLM-9B over-predicted disgust, the rarest emotion. It found more than half of the disgust lines, but only about one in five of its disgust predictions was correct, and fine-tuning, which had the fewest disgust examples to learn from, raised this precision to at most 0.30.
+
+The five demonstrations changed micro-F1 little because their effects on single emotions pulled in opposite directions. In English, five-shot prompting raised the F1 for fear and sadness by about 0.11 and 0.12 but lowered it for surprise by 0.18, as recall for surprise fell from 0.46 to 0.18, even though two of the five demonstrations carry surprise.
+
+\subsection{Prompt Sensitivity}
+\label{sec:analysis_sensitivity}
+
+We measured sensitivity to the prompt on the development set only, using the three instruction templates and, for five-shot prompting, a random set of demonstrations in place of the coverage set (Table~\ref{tab:sensitivity}; all runs in Table~\ref{tab:prompting-dev} and Figure~\ref{fig:prompt-sensitivity}). Rewording the instruction changed micro-F1 by at most 0.038. In zero-shot prompting, Croatian was about twice as sensitive as English for both models, and the terse template scored lowest on Croatian, leaving 8.4\% of the Croatian answers of Qwen3.5-9B empty, against 1.9\% with the default template. Demonstrations reduced the sensitivity to wording, most of all for Qwen3.5-9B.
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Prompt sensitivity on dev: mean, standard deviation and range of micro-F1 across the three instruction templates. Five-shot rows use the coverage demonstrations.}
+    \label{tab:sensitivity}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+        \toprule
+        Model & Shots & Lang & Mean & SD & Range \\
+        \midrule
+        EuroLLM-9B & 0 & en & 0.428 & 0.006 & 0.015 \\
+        EuroLLM-9B & 0 & hr & 0.377 & 0.013 & 0.031 \\
+        EuroLLM-9B & 5 & en & 0.438 & 0.007 & 0.015 \\
+        EuroLLM-9B & 5 & hr & 0.412 & 0.008 & 0.019 \\
+        Qwen3.5-9B & 0 & en & 0.480 & 0.007 & 0.017 \\
+        Qwen3.5-9B & 0 & hr & 0.410 & 0.016 & 0.038 \\
+        Qwen3.5-9B & 5 & en & 0.521 & 0.004 & 0.007 \\
+        Qwen3.5-9B & 5 & hr & 0.467 & 0.002 & 0.005 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+For EuroLLM-9B, the coverage demonstrations scored 0.025 (English) and 0.037 (Croatian) above random ones, more than rewording changed its five-shot scores, while for Qwen3.5-9B the two sets were within 0.006 of each other. With random demonstrations, both models gave fewer labels, with higher precision and lower recall. The coverage set carries about two emotions per line, against about 1.45 in the data, and few-shot predictions are known to be biased towards what the demonstrations show \parencite{zhao2021calibrate}, which suggests that our selection procedure explains part of the over-labelling of five-shot prompting. The default template, used for all test runs, was never behind the best variant by more than 0.014 in micro-F1, well within the development bootstrap intervals, so our conclusions do not depend on the wording.
+
+\subsection{PEFT versus Prompting: Cost}
+\label{sec:analysis_cost}
+
+Fine-tuning bought its accuracy with a one-off training cost: each PEFT run took between 0.70 and 0.86 hours on a single A100 and used at most 13.8~GiB of GPU memory (Figure~\ref{fig:compute}), while a full prompting pass over the development set took about four to six minutes. Since a fine-tuned model receives the same input as zero-shot prompting, it costs no more in use. In return, fine-tuning raised micro-F1 over zero-shot prompting by about 0.09 in English and by 0.056 in Croatian, or 0.036 for the mean over three seeds. The configuration search cost more (18 runs, about 13.6 GPU hours), and its main cost result is that QLoRA used about a third less GPU memory than LoRA (13.4 to 13.8 against 21.1 to 21.4~GiB) with no loss on the development set.
+
+A stronger base model changes the balance. Five-shot Qwen3.5-9B matched or exceeded the fine-tuned EuroLLM-9B averaged over three seeds (0.513 against 0.505 in English, 0.444 against 0.416 in Croatian) without any training, although it ran unquantised rather than in 4-bit. Fine-tuning also needs labelled target-language data, although the learning curve suggests that about 1,000 Croatian lines alongside English are enough.
+
 \subsection{Error Analysis}
 \label{sec:analysis_error}
 
-To see where fine-tuning changed individual predictions, we compared zero-shot prompting and PEFT-bilingual on every Croatian test line by the per-line Jaccard index. PEFT-bilingual improved 150 lines (27\%) and worsened 94 (17\%); 62 lines were exactly right under both systems and 245 were equally wrong, 172 of them without a single correct label. Table~\ref{tab:error-examples} shows five lines that illustrate the main patterns. The aligned English lines help us read the examples, but since nobody in our group reads Croatian, they do not validate the reference labels.
+To see where fine-tuning changed individual predictions, we compared zero-shot prompting and PEFT-bilingual on every Croatian test line by the per-line Jaccard index. PEFT-bilingual improved 150 lines (27\%) and worsened 94 (17\%); the other 307 scored equally, including 172 on which neither system found a correct label. Table~\ref{tab:error-examples} shows five illustrative lines; their aligned English lines help us read them but do not validate the labels.
 
-Most improvements came from dropping wrong labels rather than finding missing ones. On 116 of the 150 improved lines, PEFT-bilingual predicted fewer emotions that the reference does not contain, and on 63 of them it gained no correct label at all. Zero-shot prompting had wrongly predicted disgust on 58 of these lines and anger on 30, as in row~1, where an agreeing ``Yeah, absolutely'' received both. This is the over-prediction of disgust seen in Section~\ref{sec:analysis_emotion}.
+On 116 of the 150 improved lines, PEFT-bilingual predicted fewer emotions that the reference does not contain; most improvements came from dropping wrong labels. It most often removed disgust (49 lines) and anger (24), as in row~1, where zero-shot prompting gave both to an agreeing ``Yeah, absolutely''. The worsened lines were of two kinds. Some predictions are defensible readings that the reference does not share: in row~2, missing someone can express sadness as well as joy, and without the surrounding dialogue a single line often supports more than one reading. Others are plain model errors, such as row~3, where PEFT-bilingual listed all eight emotions.
 
-The worsened lines were of two kinds. Some predictions are defensible readings that the reference does not share: in row~2, missing someone can express sadness as well as the joy given by the reference, and without the surrounding dialogue a single line often supports more than one reading. Others are plain model errors, such as row~3, where PEFT-bilingual listed all eight emotions. This happened on only one line, and PEFT-bilingual gave four or more labels on 14 lines against 30 for zero-shot prompting, but fine-tuning did not rule out such answers entirely. On 72 of the 94 worsened lines, PEFT-bilingual lost a correct label.
-
-Some errors lie in the reference labels rather than in the models. On 35 test lines (6.4\%), the Croatian reference differs from the human labels of its own aligned English line: on 19 it drops emotions that the English line has, and on 11 the two share no emotion. Some pairs are not translations of each other at all. In row~4, the Croatian line, which a machine translator renders as ``What is that?'', is aligned with ``Sign this.'', and in row~5 a long Croatian sentence about a woman taking bad news hard is aligned with ``What is it?'', whose labels it inherited. The sadness predicted by PEFT-bilingual fits the Croatian sentence but counts as wrong, so on such lines a model that reads the Croatian correctly is penalised. The mismatched lines do not, however, simply hide correct predictions: on them, PEFT-bilingual agreed more with the Croatian reference (mean Jaccard 0.40) than with the English labels (0.29).
-
-Every system, including zero-shot prompting, scored a mean Jaccard between 0.03 and 0.05 lower on lines whose labels came through Danish than on directly aligned lines, with overlapping intervals (Figure~\ref{fig:alignment}). Since zero-shot prompting never saw a training label, this difference lies in the lines or their labels rather than in training. The pivot is not the only source of noise, though: label mismatches were not more frequent on two-hop lines (16 of 329) than on direct ones (19 of 222), and row~4 is aligned directly.
-
-\begin{table}[H]
+\begin{table}[!htbp]
     \centering
     \small
     \caption{Five Croatian test lines with their aligned English line, the number of alignment hops, the Croatian reference labels and the predictions of zero-shot prompting and PEFT-bilingual.}
@@ -97,19 +90,11 @@ Every system, including zero-shot prompting, scored a mean Jaccard between 0.03 
     \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{alignment.test.qlora_lr1e-4}
-    \caption{Mean per-line Jaccard on Croatian test lines by the number of alignment hops behind their projected labels, with 95\% bootstrap intervals.}
-    \label{fig:alignment}
-\end{figure}
+Some errors lie in the reference labels rather than in the models. On 35 test lines (6.4\%), the Croatian reference differs from the human labels of its own aligned English line, and on 11 of them the two share no emotion. Some pairs are not translations of each other at all. In row~4, the Croatian line, which a machine translator renders as ``What is that?'', is aligned with ``Sign this.'', and in row~5 a long Croatian sentence about a woman taking bad news hard inherited the labels of ``What is it?''. The sadness predicted by PEFT-bilingual fits the Croatian sentence but counts as wrong. Every system, including zero-shot prompting, also scored a mean Jaccard between 0.02 and 0.05 lower on lines whose labels came through Danish than on directly aligned lines, with overlapping intervals (Figure~\ref{fig:alignment}). As zero-shot prompting saw no training labels, this gap lies in the lines or labels, not in training, although label mismatches were not more frequent on two-hop lines (16 of 329) than on direct ones (19 of 222).
 
 \subsection{Limitations}
 \label{sec:limitations}
 
-The largest limitation lies in the Croatian reference labels. They were projected rather than annotated, and our error analysis showed that some contradict the human labels of their own English line and that some pairs are not translations of each other. Our Croatian scores therefore measure agreement with the projected reference, not with how a Croatian reader would label the lines, and may understate how well the models handle Croatian. Since no member of our group reads Croatian, we could neither measure how many lines are affected nor correct them. The English evaluation is cleaner but not purely human either, since 175 of its lines (3.2\%) also carry projected labels. For the same reason, our design cannot tell whether the lower Croatian scores of every system reflect the models' weaker command of Croatian, noise in the projected labels, or both. It provides no evidence about cultural differences in how emotions are expressed, so we make no claims about them.
+The largest limitation lies in the Croatian reference labels. Our Croatian scores measure agreement with the projected reference, not with how a Croatian reader would label the lines, and without a Croatian reader we could neither measure nor correct the affected lines; even 175 English lines (3.2\%) carry projected labels. Our design therefore cannot tell whether the lower Croatian scores reflect the models' weaker command of Croatian, noise in the projected labels, or both, and it provides no evidence about cultural differences in how emotions are expressed, so we make no claims about them.
 
-
-Our conclusions also have a limited scope. We studied one language, one primary model of one size, and a second model that was only prompted, at a different precision. Whether the pattern we found, in which English-only fine-tuning does not transfer but bilingual fine-tuning does, holds for other languages, resource bands or models remains untested. Each line was also classified without its surrounding dialogue, so some lines support several readings (row~2 of Table~\ref{tab:error-examples}), which limits how closely any system can agree with a single reference.
-
-Finally, several results rest on few runs or few lines. With 551 test lines per language, the bootstrap intervals on micro-F1 span about $\pm 0.03$, so small differences, such as between the two fine-tuned conditions in English, are within noise. These intervals also leave out the variation between training runs, which we measured with only three seeds for the main PEFT conditions; the learning curve, the prompt variants and the random demonstrations are single runs. Each emotion has only 66 to 134 test lines and we computed no per-emotion intervals, so we draw per-emotion conclusions only from patterns that hold across systems or languages. PEFT-hr was still improving slightly when it reached the three-epoch limit, so longer training might narrow its gap to PEFT-bilingual.
+Our conclusions also have a limited scope: one language, one primary model of one size, and a second model that was only prompted, at a different precision, all classifying lines without their surrounding dialogue. With 551 test lines per language, the bootstrap intervals on micro-F1 span about $\pm 0.03$, so small differences, such as between the two fine-tuned conditions in English, are within noise. The variation between training runs was measured with only three seeds, the learning curve and prompt variants are single runs, and with only 66 to 134 test lines per emotion we computed no per-emotion intervals and draw per-emotion conclusions only from patterns that hold across systems or languages. Finally, PEFT-hr was still improving slightly when it reached the three-epoch limit, and longer training might narrow its gap to PEFT-bilingual.

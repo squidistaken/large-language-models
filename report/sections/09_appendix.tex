@@ -28,6 +28,13 @@ Table~\ref{tab:bands} lists the five resource bands that group XED's projected l
 \section{Split Statistics}
 \label{app:split}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{label_distribution.en-hr}
+    \caption{Share of lines carrying each emotion in the prepared English and Croatian data. The two languages are almost identical, as nearly all labels share one origin.}
+    \label{fig:label-distribution}
+\end{figure}
+
 \begin{table}[H]
     \centering
     \caption{Lines carrying each emotion per Croatian partition, with their share of the partition in parentheses. The split was stratified on these labels; the English partitions differ by at most 2.7 percentage points (fear).}
@@ -54,6 +61,23 @@ Table~\ref{tab:bands} lists the five resource bands that group XED's projected l
 \tcbset{before skip=10pt, after skip=10pt} % a fixed gap between the prompt boxes
 
 Every prompt has a system message and a user message. The system message is one of the instruction templates below, in which \texttt{\{definitions\}} is replaced by the label definitions; the user message holds the subtitle. In the five-shot prompts, the demonstrations (Table~\ref{tab:demonstrations}) are inserted as user and assistant turns between the two.
+
+\begin{table}[H]
+    \centering
+    \caption{Five fixed demonstrations of the five-shot prompt, shown in English for English evaluation and in Croatian for Croatian evaluation, each with its own labels.}
+    \label{tab:demonstrations}
+    \begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+        \toprule
+        \# & English & Croatian & Labels (en) & Labels (hr) \\
+        \midrule
+        1 & - Think I should go out with Paulie? & - Hoćeš da izađem sa Paulijem? & anticipation, surprise, trust & anticipation, surprise, trust \\
+        2 & Relax. & Smiri se. & anger, fear, joy & anger, fear \\
+        3 & You got old. & Ostarili ste. & disgust, sadness & disgust, sadness \\
+        4 & He said no pilots. & Neće pilota. & sadness, surprise & sadness, surprise \\
+        5 & Shoot the fuck down! & Skini ih jebeno dolje! & fear & fear \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
 
 \begin{tcolorbox}[title={Label definitions, replacing \texttt{\{definitions\}}}]
 \begin{verbatim}
@@ -217,30 +241,10 @@ other text.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{prompting.dev}
-    \caption{Zero- and five-shot prompting of both models on dev, with the default prompt.}
-    \label{fig:prompting-dev}
+    \includegraphics[width=\linewidth]{prompt_sensitivity.dev}
+    \caption{Micro-F1 and Jaccard on the development set for every prompt variant: the default prompt (black), the two reworded templates, and random instead of emotion-covering demonstrations.}
+    \label{fig:prompt-sensitivity}
 \end{figure}
-
-\begin{table}[H]
-    \centering
-    \caption{Prompt sensitivity on dev: mean, standard deviation and range of micro-F1 across the three instruction templates. Five-shot rows use the coverage demonstrations; the runs with random demonstrations are in Table~\ref{tab:prompting-dev}.}
-    \label{tab:sensitivity}
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
-        \toprule
-        Model & Shots & Lang & Mean & SD & Range \\
-        \midrule
-        EuroLLM-9B & 0 & en & 0.428 & 0.006 & 0.015 \\
-        EuroLLM-9B & 0 & hr & 0.377 & 0.013 & 0.031 \\
-        EuroLLM-9B & 5 & en & 0.438 & 0.007 & 0.015 \\
-        EuroLLM-9B & 5 & hr & 0.412 & 0.008 & 0.019 \\
-        Qwen3.5-9B & 0 & en & 0.480 & 0.007 & 0.017 \\
-        Qwen3.5-9B & 0 & hr & 0.410 & 0.016 & 0.038 \\
-        Qwen3.5-9B & 5 & en & 0.521 & 0.004 & 0.007 \\
-        Qwen3.5-9B & 5 & hr & 0.467 & 0.002 & 0.005 \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
 
 \section{Further Test Results}
 \label{app:results}
@@ -248,20 +252,64 @@ other text.
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{metrics_appendix.test.qlora_lr1e-4}
-    \caption{Secondary and diagnostic metrics on test; $\downarrow$ marks metrics for which lower is better, and the malformed and empty rates are on a zoomed scale.}
+    \caption{Secondary and diagnostic metrics on test, complementing Table~\ref{tab:results}; $\downarrow$ marks metrics for which lower is better, and the malformed and empty rates are on a zoomed scale.}
     \label{fig:metrics-appendix}
 \end{figure}
 
-\begin{figure}[H]
+\begin{table}[H]
     \centering
-    \includegraphics[width=\linewidth]{seeds.test.qlora_lr1e-4}
-    \caption{Headline metrics on test, mean $\pm$ standard deviation over three seeds.}
-    \label{fig:seeds}
-\end{figure}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \caption{Per-emotion precision / recall / F1 on the English test set, with the gold support of each emotion. E-0 and E-5 are zero- and five-shot EuroLLM-9B, Q-0 and Q-5 zero- and five-shot Qwen3.5-9B, and PEFT-bi is PEFT-bilingual.}
+    \label{tab:per-emotion-en}
+    \begin{tabular}{lrcccccc}
+        \toprule
+        Emotion & $n$ & E-0 & E-5 & PEFT-en & PEFT-bi & Q-0 & Q-5 \\
+        \midrule
+        anger & 134 & .52/.55/.53 & .54/.51/.52 & .54/.68/.60 & .54/.72/.62 & .59/.59/.59 & .63/.65/.64 \\
+        anticipation & 133 & .37/.58/.45 & .48/.54/.51 & .54/.50/.52 & .49/.61/.55 & .59/.29/.39 & .52/.41/.46 \\
+        disgust & 66 & .24/.58/.34 & .20/.74/.32 & .30/.52/.38 & .28/.44/.35 & .33/.15/.21 & .28/.41/.33 \\
+        fear & 101 & .45/.29/.35 & .51/.43/.46 & .60/.41/.49 & .59/.40/.47 & .54/.49/.51 & .45/.63/.52 \\
+        joy & 95 & .57/.49/.53 & .40/.75/.52 & .62/.62/.62 & .57/.61/.59 & .59/.67/.63 & .48/.75/.58 \\
+        sadness & 81 & .54/.17/.26 & .29/.56/.38 & .49/.48/.49 & .54/.41/.46 & .58/.40/.47 & .48/.62/.54 \\
+        surprise & 93 & .41/.46/.43 & .40/.18/.25 & .58/.39/.46 & .53/.41/.46 & .47/.45/.46 & .41/.59/.49 \\
+        trust & 98 & .45/.35/.39 & .30/.43/.35 & .46/.55/.50 & .51/.41/.45 & .49/.37/.42 & .35/.76/.48 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \caption{Per-emotion precision / recall / F1 on the Croatian test set, with the gold support of each emotion. E-0 and E-5 are zero- and five-shot EuroLLM-9B, Q-0 and Q-5 zero- and five-shot Qwen3.5-9B, and PEFT-bi is PEFT-bilingual.}
+    \label{tab:per-emotion-hr}
+    \begin{tabular}{lrccccccc}
+        \toprule
+        Emotion & $n$ & E-0 & E-5 & PEFT-en & PEFT-hr & PEFT-bi & Q-0 & Q-5 \\
+        \midrule
+        anger & 132 & .41/.58/.48 & .65/.34/.45 & .46/.50/.48 & .46/.58/.51 & .51/.62/.56 & .54/.48/.51 & .52/.54/.53 \\
+        anticipation & 132 & .35/.39/.37 & .34/.68/.46 & .45/.27/.34 & .40/.46/.43 & .40/.47/.43 & .49/.20/.29 & .43/.43/.43 \\
+        disgust & 69 & .20/.55/.29 & .21/.51/.30 & .21/.12/.15 & .27/.25/.26 & .26/.32/.29 & .44/.17/.25 & .24/.35/.28 \\
+        fear & 90 & .37/.34/.36 & .38/.26/.31 & .42/.26/.32 & .40/.31/.35 & .45/.28/.34 & .41/.39/.40 & .35/.56/.43 \\
+        joy & 94 & .39/.53/.45 & .41/.64/.50 & .49/.50/.50 & .51/.49/.50 & .54/.56/.55 & .49/.59/.53 & .44/.62/.51 \\
+        sadness & 80 & .45/.26/.33 & .33/.50/.40 & .40/.46/.43 & .41/.33/.36 & .40/.44/.42 & .48/.46/.47 & .44/.53/.48 \\
+        surprise & 87 & .35/.51/.41 & .45/.33/.38 & .58/.30/.39 & .49/.26/.34 & .47/.43/.45 & .45/.44/.44 & .35/.46/.40 \\
+        trust & 99 & .33/.22/.27 & .25/.35/.29 & .34/.32/.33 & .45/.21/.29 & .39/.28/.33 & .42/.33/.37 & .33/.69/.45 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{emotion_gain.test.qlora_lr1e-4}
     \caption{Per-emotion F1 gain of each system over zero-shot on test.}
     \label{fig:emotion-gain}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{alignment.test.qlora_lr1e-4}
+    \caption{Mean per-line Jaccard on Croatian test lines by the number of alignment hops behind their projected labels, with 95\% bootstrap intervals.}
+    \label{fig:alignment}
 \end{figure}

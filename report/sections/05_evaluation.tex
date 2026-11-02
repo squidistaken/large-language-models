@@ -4,30 +4,23 @@
 \subsection{Metrics}
 \label{sec:eval_metrics}
 
-Every metric is computed from the same predictions: the parsed label set of each line, binarised into an eight-dimensional vector in the fixed label order (Section~\ref{sec:methodology_parsing}). We report two primary metrics. Micro-averaged F1 pools the counts of all eight emotions before computing F1, so frequent emotions weight more:
-
+Every metric is computed from the same binarised predictions with scikit-learn 1.9.1 \parencite{pedregosa2011scikit}. We report two primary metrics. Micro-averaged F1 pools the counts of all eight emotions before computing F1, so frequent emotions weigh more:
 \begin{equation}
     \text{Micro-F1} = \frac{2\,\mathrm{TP}}{2\,\mathrm{TP} + \mathrm{FP} + \mathrm{FN}},
     \label{eq:micro-f1}
 \end{equation}
-
-where $\mathrm{TP}$, $\mathrm{FP}$, and $\mathrm{FN}$ are the numbers of true positives, false positives, and false negatives summed over all eight emotions and all lines. The sample-averaged Jaccard index scores each line by the overlap between its reference and predicted label sets and averages over the lines, giving partial credit to a line whose labels are partly right:
-
+where $\mathrm{TP}$, $\mathrm{FP}$, and $\mathrm{FN}$ are the numbers of true positives, false positives, and false negatives summed over all emotions and lines. The sample-averaged Jaccard index scores each line by the overlap between its reference and predicted label sets, giving partial credit to a line whose labels are partly right:
 \begin{equation}
     \text{Jaccard} = \frac{1}{N} \sum_{i=1}^{N} \frac{|Y_i \cap \hat{Y}_i|}{|Y_i \cup \hat{Y}_i|},
     \label{eq:jaccard}
 \end{equation}
 where $N$ is the number of lines, and $Y_i$ and $\hat{Y}_i$ are the reference and predicted label sets of line $i$.
 
-As secondary metrics, we report macro-averaged F1, the unweighted mean of the eight per-emotion F1 scores, which weighs all emotions equally; micro-averaged precision and recall, which show whether a system predicts too many emotions or too few; and the Hamming loss, the fraction of all label decisions (eight per line) that are wrong. As diagnostics, we report the precision, recall, F1 and support of each emotion, the exact-match ratio (the share of lines whose predicted set equals the reference exactly), and the malformed and empty rates of every system.
+As secondary metrics, we report macro-averaged F1, the unweighted mean of the per-emotion F1 scores; micro-averaged precision and recall, which show whether a system predicts too many emotions or too few; and the Hamming loss, the fraction of all label decisions that are wrong (lower is better). As diagnostics, we report each emotion's precision, recall, F1 and support, the exact-match ratio (the share of lines whose predicted set equals the reference), and the malformed and empty rates. When a denominator is zero, the metric is set to 0.0; since every reference line carries a label, this only affects an emotion that a system never predicts.
 
-All metrics are computed with scikit-learn 1.9.1 \parencite{scikit-learn}. Malformed and empty answers are scored as empty predictions (Section~\ref{sec:methodology_parsing}), so they are penalised rather than left out. When a metric's denominator is zero, it is set to 0.0. Since every reference line carries at least one label, the denominator in Equation~\ref{eq:jaccard} is never zero. In practice, the rule only applies to an emotion that a system never predicts, whose precision and F1 then count as 0.0 towards macro-F1. Every scores file records the label order, the zero-division policy, and the scikit-learn version alongside the results.
-
-We give 95\% confidence intervals for micro-F1, Jaccard and macro-F1 using a percentile bootstrap over lines: we drew 1,000 resamples of the evaluated lines with replacement (seed 42), recomputed each metric on every resample, and took the 2.5th and 97.5th percentiles as the bounds. These intervals reflect only the uncertainty from evaluating on a finite set of lines. To capture the variation between training runs, we repeated each PEFT condition with seeds 42, 67, and 128 and report the mean and standard deviation; every other run used seed 42.
+We give 95\% confidence intervals for micro-F1, Jaccard and macro-F1 using a percentile bootstrap over lines, with 1,000 resamples (seed 42). These reflect only test-set sampling; for the variation between training runs, we repeated each PEFT condition with seeds 42, 67, and 128. Every other run used seed 42.
 
 \subsection{Protocol}
 \label{sec:eval_protocol}
 
-As described in Section~\ref{sec:data}, every design decision was made on the development set, and the test set was used once, after all choices were fixed. A single script scores every system on the test set and computes all metrics and confidence intervals, so every result comes from the same code.
-
-The comparisons are controlled as far as the design allows. Every system answers the same 551 test lines per language, with the same instruction, greedy decoding, parser and metrics. Prompting and PEFT use the same 4-bit EuroLLM-9B weights, and the three PEFT conditions share one configuration, so they differ only in their training data. The English and Croatian test sets hold aligned versions of the same subtitles, so a difference between the languages does not come from evaluating on different lines, although it can come from the projected Croatian labels. The comparison between the two prompted models is the exception, since they ran at different precisions (Section~\ref{sec:methodology_models}). Finally, the SVM and BERT results of \textcite{ohman2020xed} use different data, splits and metric definitions, so we treat them only as historical reference points (Section~\ref{sec:background_xed}) and do not compare our systems against them.
+A single script scores every system on the test set. The comparisons are controlled as far as the design allows: every system answers the same 551 test lines per language, with the same instruction, greedy decoding, parser and metrics; prompting and PEFT use the same 4-bit EuroLLM-9B weights; and the three PEFT conditions differ only in their training data. The English and Croatian test sets hold aligned versions of the same subtitles, so a difference between the languages does not come from evaluating on different lines, although it can come from the projected labels. The comparison between the two prompted models is the exception, since they ran at different precisions.

@@ -1,16 +1,12 @@
 \section{Methodology}
 \label{sec:methodology}
 
-We used one primary model for all prompting and fine-tuning conditions, so that differences between conditions do not come from the choice of model, and a second model for prompting only.
+We used one primary model for all prompting and fine-tuning conditions, keeping the choice of model out of the comparisons, and a second model for prompting only.
 
 \subsection{Models}
 \label{sec:methodology_models}
 
-We chose both models for their size, multilingual coverage, licence and accessibility: both are open-weight, run in Hugging Face Transformers, and fit on a single NVIDIA A100 (40~GB) of the university's high-performance computing cluster. All experiments used PyTorch~2.14.0, Transformers~5.17.0 and PEFT~0.21.2.
-
-The primary model is EuroLLM-9B-Instruct \parencite{martins2025eurollm}, hereafter EuroLLM-9B, which we used at revision \texttt{f7ae2bc3} of \path{utter-project/EuroLLM-9B-Instruct} on the Hugging Face Hub. At 9.15B parameters, it can be fine-tuned with QLoRA on one A100; our runs peaked below 14~GiB. It was pretrained on about four trillion tokens in 35 languages, including all official EU languages, so Croatian is one of the languages it was built for. It is released under the Apache~2.0 licence and is freely downloadable from the Hugging Face Hub. We used the same 4-bit version of it for prompting and fine-tuning.
-
-The second model is Qwen3.5-9B \parencite{qwen2026qwen35}, which we used at revision \texttt{c2022362} of \path{Qwen/Qwen3.5-9B}. It is a post-trained model of the same size, also released under Apache~2.0 on the Hugging Face Hub. Its model card claims support for ``201 languages and dialects'' but does not list them, so we do not know whether Croatian was deliberately covered. We ran it unquantised in bfloat16 (bf16), a 16-bit number format with the range of 32-bit floats but less precision \parencite{kalamkar2019study}, and with its reasoning (``thinking'') mode disabled, so that it answers with the label list directly. The two models were therefore also prompted at different precisions: EuroLLM in 4-bit and Qwen in 16-bit.
+We chose both models for their size, multilingual coverage, licence and accessibility: both are open-weight, released under the Apache~2.0 licence on the Hugging Face Hub, and fit on a single NVIDIA A100 (40~GB) of the university's high-performance computing cluster. All experiments used PyTorch~2.14.0, Transformers~5.17.0 and PEFT~0.21.2. The primary model is EuroLLM-9B-Instruct \parencite{martins2025eurollm}, hereafter EuroLLM-9B (\path{utter-project/EuroLLM-9B-Instruct}, revision \texttt{f7ae2bc3}). It has 9.15B parameters and was pretrained on about four trillion tokens in 35 languages, including all official EU languages, so Croatian is one of the languages it was built for. Prompting and fine-tuning used the same 4-bit version of it, leaving the way the model is adapted as the only difference between the two approaches. The second model is Qwen3.5-9B \parencite{qwen2026qwen35} (\path{Qwen/Qwen3.5-9B}, revision \texttt{c2022362}), a widely used open-weight model of the same size; its model card claims support for ``201 languages and dialects'' but does not list them, so we do not know whether Croatian was deliberately covered. As it was never fine-tuned, it had no 4-bit runs to match, and we ran it at its default bfloat16 (bf16) precision, which fits on the A100. The two models were thus prompted at different precisions. We disabled its reasoning mode to make it answer with the label list directly.
 
 \subsection{Parameter-Efficient Fine-Tuning}
 \label{sec:methodology_peft}
@@ -18,57 +14,29 @@ The second model is Qwen3.5-9B \parencite{qwen2026qwen35}, which we used at revi
 We fine-tuned the primary model in three conditions:
 \begin{enumerate}
     \item \textbf{PEFT-en} on the 3,803 English training lines, evaluated on English and Croatian;
-    \item \textbf{PEFT-hr} on 3,802 of the 3,803 Croatian training lines (one exceeded the 256-token limit below), evaluated on Croatian;
+    \item \textbf{PEFT-hr} on 3,802 of the 3,803 Croatian training lines (one exceeded the 256-token limit), evaluated on Croatian;
     \item \textbf{PEFT-bilingual} on both (7,605 lines), evaluated on English and Croatian.
 \end{enumerate}
 
-Each example is a conversation in the format of Section~\ref{sec:data_formatting}, and the model is trained on the answer only. For an example of $T$ tokens $x_1, \ldots, x_T$, the loss is
+Each example is a three-message conversation, and the cross-entropy loss is computed on the tokens of the assistant's answer only, with the system and user messages serving as context. We used LoRA, in which an adapted layer computes
 \begin{equation}
-    \mathcal{L}(\theta) = -\sum_{t \in \mathcal{A}} \log p_\theta(x_t \mid x_{<t}),
-    \label{eq:loss}
-\end{equation}
-where $\mathcal{A} \subseteq \{1, \ldots, T\}$ is the set of positions of the assistant's answer, $x_{<t} = (x_1, \ldots, x_{t-1})$ are the tokens before position $t$, and $p_\theta(x_t \mid x_{<t})$ is the probability that the model, with parameters $\theta$, assigns to the correct next token $x_t$. The system and user tokens serve as context but are never themselves predicted.
-
-Rather than updating every parameter in $\theta$, we used LoRA \parencite{hu2022lora}, which freezes each pretrained weight matrix and learns a low-rank update to it. An adapted layer computes
-\begin{equation}
-    \mathbf{h} = W_0 \mathbf{z} + \frac{\alpha}{r} B A \mathbf{z},
+    \mathbf{h} = W_0 \mathbf{x} + \frac{\alpha}{r} B A \mathbf{x},
     \label{eq:lora}
 \end{equation}
-where $\mathbf{z} \in \mathbb{R}^{k}$ is the layer's input and $\mathbf{h} \in \mathbb{R}^{d}$ its output, $W_0 \in \mathbb{R}^{d \times k}$ is the frozen pretrained weight matrix, $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ are the trained adapter matrices, $r \ll \min(d, k)$ is their rank, and $\alpha$ is a scaling constant. Each adapted matrix adds $r(d + k)$ trainable parameters instead of $dk$. $B$ is initialised to zero, so training starts from the unchanged pretrained model. We reduced memory further with QLoRA \parencite{dettmers2023qlora}, which stores $W_0$ in the 4-bit NormalFloat (NF4) format, quantises the quantisation constants themselves (double quantisation), and converts each layer back to bf16 only when it is computed.
+where $\mathbf{x} \in \mathbb{R}^{k}$ is the layer's input and $\mathbf{h} \in \mathbb{R}^{d}$ its output, $W_0 \in \mathbb{R}^{d \times k}$ the frozen pretrained weight matrix, $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ the trained adapter matrices of rank $r \ll \min(d, k)$, and $\alpha$ a scaling constant. $B$ is initialised to zero, so training starts from the unchanged model. With QLoRA, $W_0$ is stored in the 4-bit NormalFloat (NF4) format with double quantisation and converted back to bf16 only when each layer is computed.
 
-All three conditions shared one configuration, chosen on the development set as described below: QLoRA with adapters on all linear layers, rank $r = 16$, $\alpha = 32$ and dropout $0.05$, giving 50.9M trainable parameters (0.55\% of the model's 9.2B). We minimised Equation~\ref{eq:loss} with AdamW at zero weight decay, which makes it equivalent to Adam \parencite{kingma2015adam}, with a learning rate of $1 \times 10^{-4}$, linear warm-up over the first 3\% of steps and linear decay after. Each run lasted at most three epochs, with a batch size of 8 and two gradient-accumulation steps (an effective batch of 16), a maximum sequence length of 256 tokens, and seed 42. We used gradient checkpointing to save memory, and deterministic training so that runs can be repeated exactly.
+All three conditions shared one configuration: QLoRA with adapters on all linear layers, rank $r = 16$, $\alpha = 32$ and dropout $0.05$, giving 50.9M trainable parameters (0.55\% of the model). We fixed the rank, $\alpha$ and dropout rather than tuning them, as the project brief does not require a full hyperparameter grid. We trained with AdamW without weight decay, a learning rate of $1 \times 10^{-4}$ with linear warm-up over the first 3\% of steps and linear decay after, a batch size of 8 with two gradient-accumulation steps (an effective batch of 16), a maximum sequence length of 256 tokens, at most three epochs, and seed 42, with gradient checkpointing to save memory and deterministic training to make runs exactly repeatable. The 256-token limit fits every training example except the one Croatian line (259 tokens). Since validation loss does not measure whether the generated label set is correct, we selected checkpoints by development micro-F1: twice per epoch, the model generated answers for every development line in its training language(s), and we kept the best checkpoint and stopped after two evaluations without improvement. The kept checkpoints are from epoch 1.5 for PEFT-en, 3.0 for PEFT-hr and 0.5 for PEFT-bilingual.
 
-The checkpoint was also chosen on the development set, by micro-F1, since validation loss does not measure whether the generated label set is correct. Twice per epoch, the model generated answers for every development line in its training language(s). We kept the checkpoint with the highest micro-F1 and stopped after two evaluations without improvement. The kept checkpoints are from epoch 1.5 for PEFT-en, 3.0 for PEFT-hr and 0.5 for PEFT-bilingual, after which training stopped early at epochs 2.5, 3.0 (the maximum) and 1.5. Their training histories are in Appendix~\ref{app:training}.
-
-The configuration came from a small search over LoRA on the bf16 model and QLoRA on the 4-bit model, each at learning rates of $1 \times 10^{-4}$, $2 \times 10^{-4}$ and $4 \times 10^{-4}$. We trained each candidate in all three conditions and averaged its development micro-F1 over the conditions evaluated in each language, then over the two languages, so that Croatian (evaluated in three conditions) does not outweigh English (evaluated in two). QLoRA at $1 \times 10^{-4}$ scored highest (0.479; 0.521 in English and 0.437 in Croatian), although all six candidates lay within 0.01 of each other (Table~\ref{tab:selection}). The development scores, peak GPU memory and training time of every candidate are shown in Figure~\ref{fig:configurations} (Appendix~\ref{app:selection}).
-
-To see how much Croatian training data fine-tuning needs, we also retrained PEFT-hr and PEFT-bilingual with the Croatian training lines capped at 250, 500, 1,000 and 2,000, keeping all English lines in PEFT-bilingual and every other setting unchanged.
+This configuration won a small development-set search over LoRA (bf16) and QLoRA (4-bit) at learning rates of $1$, $2$ and $4 \times 10^{-4}$. Each candidate was trained in all three conditions and scored by its development micro-F1 averaged over the conditions evaluated in each language, then over the two languages, so that Croatian, evaluated in three conditions, does not outweigh English, evaluated in two. All six candidates lay within 0.01 micro-F1 of each other (Table~\ref{tab:selection}). To see how much Croatian training data fine-tuning needs, we also retrained PEFT-hr and PEFT-bilingual with the Croatian training lines capped at 250, 500, 1,000 and 2,000, keeping every other setting unchanged.
 
 \subsection{Prompting}
 \label{sec:methodology_prompting}
 
-Both models were prompted zero-shot and five-shot, with the instruction and message format of Section~\ref{sec:data_formatting}; the complete prompts are in Appendix~\ref{app:prompts}. The five-shot prompt adds five demonstrations as user and assistant turns before the test line. The same five alignment IDs were used throughout: English evaluation shows the English lines with their gold labels, and Croatian evaluation the aligned Croatian lines with their projected labels (Table~\ref{tab:demonstrations}). Few-shot results depend on which demonstrations are shown \parencite{zhao2021calibrate, lu2022fantastically}, so we chose them by a fixed procedure from the training split only. Candidates needed gold English labels, a direct English--Croatian alignment, at most 80 characters in both languages, and at most three labels. From these, we greedily picked the candidate that added the most emotions not yet covered, one per film, breaking ties at random (seed 42).
+Both models were prompted zero-shot and five-shot with the same instruction and message format as the fine-tuning data. The five-shot prompt adds five demonstrations as user and assistant turns before the test line, with the same five alignment IDs throughout: English evaluation shows the English lines with their gold labels, and Croatian evaluation the aligned Croatian lines with their projected labels (Table~\ref{tab:demonstrations}). Since few-shot results depend on the demonstrations, we chose them from the training split by a fixed procedure: candidates needed gold English labels, for human-labelled English demonstrations; a direct English--Croatian alignment, making each Croatian demonstration the closest counterpart of its English line; at most 80 characters in both languages, which keeps the prompt short and still admits about 95\% of the lines; and at most three labels, as 98\% of the lines have. From these, we greedily picked the candidate that added the most emotions not yet covered, one per film for variety, breaking ties at random (seed 42).
 
-\begin{table}[H]
-    \centering
-    \caption{Five fixed demonstrations of the five-shot prompt, shown in English for English evaluation and in Croatian for Croatian evaluation, each with its own labels.}
-    \label{tab:demonstrations}
-    \begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
-        \toprule
-        \# & English & Croatian & Labels (en) & Labels (hr) \\
-        \midrule
-        1 & - Think I should go out with Paulie? & - Hoćeš da izađem sa Paulijem? & anticipation, surprise, trust & anticipation, surprise, trust \\
-        2 & Relax. & Smiri se. & anger, fear, joy & anger, fear \\
-        3 & You got old. & Ostarili ste. & disgust, sadness & disgust, sadness \\
-        4 & He said no pilots. & Neće pilota. & sadness, surprise & sadness, surprise \\
-        5 & Shoot the fuck down! & Skini ih jebeno dolje! & fear & fear \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-All answers, prompted and fine-tuned, were decoded greedily without sampling, with at most 32 new tokens and a batch size of 8. To measure prompt sensitivity, we also scored two reworded instructions and five randomly drawn demonstrations on the development set only (Appendix~\ref{app:prompting-dev}, Section~\ref{sec:analysis}); only the default prompt was run on test.
+All answers were decoded greedily, which makes them deterministic, with at most 32 new tokens, enough for a list of all eight labels (31 tokens for EuroLLM-9B and 30 for Qwen3.5-9B). To measure prompt sensitivity, we also scored two reworded instructions and one set of five randomly drawn demonstrations on the development set only; only the default prompt was run on test.
 
 \subsection{Output Parsing}
 \label{sec:methodology_parsing}
 
-A single parser turns every answer into a set of permitted labels. It first trims the surrounding whitespace and decodes the answer as JSON; an answer that is not valid JSON, or does not decode to a list, is counted as malformed. From a well-formed list, it keeps the string items, lowercases them and collapses their whitespace, then drops duplicates and anything that is not one of the eight permitted labels. No synonyms are mapped. Malformed answers and answers with no permitted label both count as an empty prediction, and the malformed rate is reported separately. Finally, the label set is binarised into an eight-dimensional vector in a fixed label order: anger, anticipation, disgust, fear, joy, sadness, surprise, trust.
+A single parser trims the surrounding whitespace of every answer and decodes it as JSON; an answer that does not decode to a list is counted as malformed. From a list, it keeps the string items, lowercases them and collapses their whitespace, then drops duplicates and anything that is not one of the eight permitted labels, mapping no synonyms. Malformed answers and answers with no permitted label both count as an empty prediction, and the malformed rate is reported separately. The label set is then binarised into an eight-dimensional vector in the fixed label order.

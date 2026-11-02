@@ -4,79 +4,50 @@
 \subsection{PEFT and Prompting}
 \label{sec:results_main}
 
-Table~\ref{tab:results} and Figure~\ref{fig:metrics} give the test results of every condition with the primary model. In English, both fine-tuned conditions outperformed prompting: PEFT-en reached a micro-F1 of 0.517 and PEFT-bilingual 0.511, against 0.428 for zero-shot and 0.425 for five-shot prompting. The two fine-tuned conditions lie within each other's bootstrap intervals. In Croatian, PEFT-bilingual scored highest, with a micro-F1 of 0.436, against 0.403 for PEFT-hr and 0.380 for zero-shot prompting. PEFT-en scored 0.385 on Croatian, about the same as zero-shot prompting.
+Table~\ref{tab:results} gives the test results of every system. In English, both fine-tuned conditions outperformed prompting the same model: PEFT-en reached a micro-F1 of 0.517 and PEFT-bilingual 0.511, against 0.428 for zero-shot and 0.425 for five-shot prompting, and the two fine-tuned conditions lie within each other's bootstrap intervals. In Croatian, PEFT-bilingual scored highest of the EuroLLM-9B systems (0.436), ahead of PEFT-hr (0.403), while PEFT-en (0.385) scored about the same as zero-shot prompting (0.380). Every system scored lower on Croatian than on English, by between 0.030 (five-shot prompting) and 0.132 (PEFT-en) in micro-F1.
 
-Every system scored lower on Croatian than on English, by between 0.030 (five-shot prompting) and 0.132 (PEFT-en) in micro-F1. Five-shot prompting changed micro-F1 little compared with zero-shot ($-0.003$ in English, $+0.015$ in Croatian) but lowered Jaccard in both languages. Macro-F1 gives the same best system in each language but reorders closer ones: in Croatian, five-shot prompting scored above PEFT-hr on macro-F1 (0.386 against 0.380), although below it on micro-F1.
+Qwen3.5-9B outperformed prompted EuroLLM-9B in every setting and metric. With five demonstrations, it reached a micro-F1 of 0.513 in English and 0.444 in Croatian, close to the best fine-tuned conditions, although its Jaccard stayed below theirs. For both models, five-shot prompting raised or kept micro-F1 but lowered Jaccard. Only one answer on the whole test set was malformed, from zero-shot EuroLLM-9B in English (0.2\%).
 
-The secondary metrics (Figure~\ref{fig:metrics-appendix}) separate the systems further. Fine-tuning gave the lowest Hamming loss, between 0.178 and 0.180 in English and between 0.199 and 0.201 in Croatian, against 0.216 to 0.250 for prompting. In English, five-shot prompting raised recall over zero-shot prompting (0.508 against 0.444) but lowered precision (0.365 against 0.413), the lowest precision of any system in English. On Croatian, PEFT-en and PEFT-hr had higher precision than recall (0.426 against 0.351, and 0.426 against 0.382), while zero-shot prompting showed the opposite (0.342 against 0.427).
+The secondary metrics show how the systems differ. Five-shot prompting raised recall for both models in both languages, mostly at the cost of precision, and matched the full label set on only 9--14\% of lines, against 22--26\% for fine-tuning. Zero-shot Qwen3.5-9B was the most conservative system, with the highest precision and the lowest Hamming loss in both languages. Among the EuroLLM-9B systems, fine-tuning gave the lowest Hamming loss, and on Croatian, PEFT-en and PEFT-hr favoured precision over recall, whereas zero-shot prompting favoured recall. In Croatian, five-shot EuroLLM-9B scored above PEFT-hr on macro-F1 (0.386 against 0.380) but below it on micro-F1, so macro-F1 changes the order only of close systems.
 
-\begin{table}[H]
+\begin{table}[!htbp]
     \centering
-    \caption{Test results of the primary model (EuroLLM-9B), with 95\% bootstrap intervals; the best micro-F1 per language in bold. The secondary and diagnostic metrics are in Figure~\ref{fig:metrics-appendix}.}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \caption{Test results, with 95\% bootstrap intervals for the primary metrics; the best micro-F1 per language in bold. P and R are micro-averaged precision and recall, HL the Hamming loss ($\downarrow$) and EM the exact-match ratio. PEFT rows use EuroLLM-9B.}
     \label{tab:results}
-    \begin{tabularx}{\textwidth}{ll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+    \begin{tabularx}{\textwidth}{l>{\centering\arraybackslash}X>{\centering\arraybackslash}Xccccc}
         \toprule
-        System & Lang & micro-F1 & Jaccard & macro-F1 \\
+        System & micro-F1 & Jaccard & macro-F1 & P & R & HL & EM \\
         \midrule
-        zero-shot & en & 0.428\par{\small[0.398, 0.456]} & 0.357\par{\small[0.327, 0.386]} & 0.412\par{\small[0.380, 0.439]} \\
-        zero-shot & hr & 0.380\par{\small[0.351, 0.407]} & 0.322\par{\small[0.292, 0.348]} & 0.370\par{\small[0.342, 0.396]} \\
-        five-shot & en & 0.425\par{\small[0.396, 0.451]} & 0.327\par{\small[0.301, 0.353]} & 0.415\par{\small[0.387, 0.442]} \\
-        five-shot & hr & 0.395\par{\small[0.365, 0.425]} & 0.312\par{\small[0.285, 0.341]} & 0.386\par{\small[0.355, 0.414]} \\
-        PEFT-en & en & \textbf{0.517}\par{\small[0.488, 0.545]} & 0.441\par{\small[0.410, 0.470]} & 0.508\par{\small[0.477, 0.535]} \\
-        PEFT-en & hr & 0.385\par{\small[0.351, 0.419]} & 0.337\par{\small[0.303, 0.372]} & 0.367\par{\small[0.333, 0.398]} \\
-        PEFT-hr & hr & 0.403\par{\small[0.369, 0.434]} & 0.359\par{\small[0.325, 0.393]} & 0.380\par{\small[0.346, 0.410]} \\
-        PEFT-bilingual & en & 0.511\par{\small[0.483, 0.541]} & 0.451\par{\small[0.420, 0.481]} & 0.494\par{\small[0.464, 0.524]} \\
-        PEFT-bilingual & hr & \textbf{0.436}\par{\small[0.403, 0.467]} & 0.388\par{\small[0.355, 0.421]} & 0.420\par{\small[0.387, 0.450]} \\
+        \multicolumn{8}{l}{\textit{English}} \\
+        EuroLLM-9B, zero-shot & 0.428\,{\scriptsize[.398, .456]} & 0.357\,{\scriptsize[.327, .386]} & 0.412 & 0.413 & 0.444 & 0.216 & 0.176 \\
+        EuroLLM-9B, five-shot & 0.425\,{\scriptsize[.396, .451]} & 0.327\,{\scriptsize[.301, .353]} & 0.415 & 0.365 & 0.508 & 0.250 & 0.093 \\
+        PEFT-en & \textbf{0.517}\,{\scriptsize[.488, .545]} & 0.441\,{\scriptsize[.410, .470]} & 0.508 & 0.510 & 0.526 & 0.178 & 0.256 \\
+        PEFT-bilingual & 0.511\,{\scriptsize[.483, .541]} & 0.451\,{\scriptsize[.420, .481]} & 0.494 & 0.504 & 0.518 & 0.180 & 0.263 \\
+        Qwen3.5-9B, zero-shot & 0.484\,{\scriptsize[.454, .513]} & 0.417\,{\scriptsize[.386, .450]} & 0.459 & 0.540 & 0.438 & 0.170 & 0.263 \\
+        Qwen3.5-9B, five-shot & 0.513\,{\scriptsize[.485, .539]} & 0.408\,{\scriptsize[.381, .435]} & 0.505 & 0.447 & 0.602 & 0.208 & 0.143 \\
+        \midrule
+        \multicolumn{8}{l}{\textit{Croatian}} \\
+        EuroLLM-9B, zero-shot & 0.380\,{\scriptsize[.351, .407]} & 0.322\,{\scriptsize[.292, .348]} & 0.370 & 0.342 & 0.427 & 0.247 & 0.156 \\
+        EuroLLM-9B, five-shot & 0.395\,{\scriptsize[.365, .425]} & 0.312\,{\scriptsize[.285, .341]} & 0.386 & 0.348 & 0.456 & 0.248 & 0.103 \\
+        PEFT-en & 0.385\,{\scriptsize[.351, .419]} & 0.337\,{\scriptsize[.303, .372]} & 0.367 & 0.426 & 0.351 & 0.199 & 0.218 \\
+        PEFT-hr & 0.403\,{\scriptsize[.369, .434]} & 0.359\,{\scriptsize[.325, .393]} & 0.380 & 0.426 & 0.382 & 0.201 & 0.227 \\
+        PEFT-bilingual & 0.436\,{\scriptsize[.403, .467]} & 0.388\,{\scriptsize[.355, .421]} & 0.420 & 0.434 & 0.439 & 0.202 & 0.247 \\
+        Qwen3.5-9B, zero-shot & 0.422\,{\scriptsize[.389, .456]} & 0.375\,{\scriptsize[.341, .408]} & 0.408 & 0.471 & 0.383 & 0.186 & 0.260 \\
+        Qwen3.5-9B, five-shot & \textbf{0.444}\,{\scriptsize[.414, .473]} & 0.349\,{\scriptsize[.322, .376]} & 0.438 & 0.386 & 0.524 & 0.233 & 0.120 \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\subsection{Seeds and Learning Curve}
+\label{sec:results_curve}
+
+Over seeds 42, 67 and 128 (Table~\ref{tab:seeds}), the standard deviations of the PEFT conditions were at most 0.018 in micro-F1, the largest being PEFT-bilingual on Croatian. The averages keep the ordering above with smaller margins: PEFT-bilingual still scored highest in Croatian (0.416 against 0.403 for PEFT-hr), a lead of about one standard deviation, and PEFT-en and PEFT-bilingual remained level in English (0.504 and 0.505).
+
+\begin{table}[h]
     \centering
-    \includegraphics[width=\linewidth]{metrics.test.qlora_lr1e-4}
-    \caption{Primary metrics of EuroLLM-9B on test, with 95\% bootstrap intervals.}
-    \label{fig:metrics}
-\end{figure}
-
-\subsection{Prompting Both Models}
-\label{sec:results_prompting}
-
-Table~\ref{tab:prompting-test} and Figure~\ref{fig:prompting-test} compare the two prompted models. Qwen3.5-9B outperformed EuroLLM-9B in every setting and metric. With five demonstrations, it reached a micro-F1 of 0.513 in English and 0.444 in Croatian, close to the best fine-tuned EuroLLM-9B conditions (0.517 and 0.436), although its Jaccard stayed below theirs. For both models, five-shot prompting raised or kept micro-F1 but lowered Jaccard. Only one answer on the whole test set was malformed, from zero-shot EuroLLM-9B in English (0.2\%).
-
-\begin{table}[H]
-    \centering
-    \caption{Prompting on test with the default prompt, with 95\% bootstrap intervals.}
-    \label{tab:prompting-test}
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xll>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
-        \toprule
-        Model & Shots & Lang & micro-F1 & Jaccard & macro-F1 \\
-        \midrule
-        EuroLLM-9B & 0 & en & 0.428\par{\small[0.398, 0.456]} & 0.357\par{\small[0.327, 0.386]} & 0.412\par{\small[0.380, 0.439]} \\
-        EuroLLM-9B & 0 & hr & 0.380\par{\small[0.351, 0.407]} & 0.322\par{\small[0.292, 0.348]} & 0.370\par{\small[0.342, 0.396]} \\
-        EuroLLM-9B & 5 & en & 0.425\par{\small[0.396, 0.451]} & 0.327\par{\small[0.301, 0.353]} & 0.415\par{\small[0.387, 0.442]} \\
-        EuroLLM-9B & 5 & hr & 0.395\par{\small[0.365, 0.425]} & 0.312\par{\small[0.285, 0.341]} & 0.386\par{\small[0.355, 0.414]} \\
-        Qwen3.5-9B & 0 & en & 0.484\par{\small[0.454, 0.513]} & 0.417\par{\small[0.386, 0.450]} & 0.459\par{\small[0.428, 0.488]} \\
-        Qwen3.5-9B & 0 & hr & 0.422\par{\small[0.389, 0.456]} & 0.375\par{\small[0.341, 0.408]} & 0.408\par{\small[0.374, 0.440]} \\
-        Qwen3.5-9B & 5 & en & 0.513\par{\small[0.485, 0.539]} & 0.408\par{\small[0.381, 0.435]} & 0.505\par{\small[0.476, 0.532]} \\
-        Qwen3.5-9B & 5 & hr & 0.444\par{\small[0.414, 0.473]} & 0.349\par{\small[0.322, 0.376]} & 0.438\par{\small[0.407, 0.465]} \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{prompting.test}
-    \caption{Zero- and five-shot prompting of both models on test, with 95\% bootstrap intervals.}
-    \label{fig:prompting-test}
-\end{figure}
-
-\subsection{Variation over Seeds}
-\label{sec:results_seeds}
-
-Table~\ref{tab:seeds} gives the mean and standard deviation of each PEFT condition over seeds 42, 67 and 128. Standard deviations were at most 0.018 in micro-F1, the largest being for PEFT-bilingual on Croatian. The averages keep the ordering of Table~\ref{tab:results}, but with smaller margins: PEFT-bilingual still scored highest in Croatian (0.416 against 0.403 for PEFT-hr), a lead of about one standard deviation, and PEFT-en and PEFT-bilingual remained level in English (0.504 and 0.505).
-
-\begin{table}[H]
-    \centering
+    \footnotesize
     \caption{PEFT on test, mean $\pm$ standard deviation over seeds 42, 67 and 128.}
     \label{tab:seeds}
     \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xl>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
@@ -92,14 +63,23 @@ Table~\ref{tab:seeds} gives the mean and standard deviation of each PEFT conditi
     \end{tabularx}
 \end{table}
 
-\subsection{Learning Curve}
-\label{sec:results_curve}
+On the learning curve (Figure~\ref{fig:learning-curve}), PEFT-bilingual scored above PEFT-hr at all five sizes, by between 0.006 and 0.069 in micro-F1. With 250 Croatian lines, PEFT-hr (0.343) fell below zero-shot prompting, while PEFT-bilingual (0.388) was level with PEFT-en, and with 1,000 lines PEFT-bilingual came within 0.003 of its full-data score. The curve of PEFT-hr is not monotonic (0.380, 0.365 and 0.416 with 500, 1,000 and 2,000 lines). Each point is a single run.
 
-Figure~\ref{fig:learning-curve} shows the Croatian test scores as the Croatian training data grows from 250 lines to all 3,803. PEFT-bilingual scored above PEFT-hr at all five sizes, by between 0.006 and 0.069 in micro-F1. With 250 Croatian lines, PEFT-hr (0.343) fell below zero-shot prompting, while PEFT-bilingual (0.388) was level with PEFT-en, and with 1,000 lines PEFT-bilingual came within 0.003 of its full-data score. The curve of PEFT-hr is not monotonic: it scored 0.380 with 500 lines, 0.365 with 1,000 and 0.416 with 2,000, above its full-data score of 0.403. Each point is a single run.
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{learning_curve.test.qlora_lr1e-4}
+    \caption{Test scores on Croatian against the number of Croatian training lines, with 95\% bootstrap intervals; the dashed line and band are zero-shot prompting.}
+    \label{fig:learning-curve}
+\end{figure}
+
+\subsection{Per-Emotion Results}
+\label{sec:results_emotion}
+
+The systems differed more between emotions than from each other (Figure~\ref{fig:per-emotion}). Anger and joy were the easiest emotions in both languages, and disgust was weak for every system, with an F1 between 0.15 and 0.38. In English, fine-tuning improved every emotion over zero-shot prompting, sadness most of all (from 0.26 to 0.49 F1 for PEFT-en; Figure~\ref{fig:emotion-gain}). In Croatian, the gains were smaller, with PEFT-bilingual improving six of the eight emotions by between 0.03 and 0.10 but not fear or disgust.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{learning_curve.test.qlora_lr1e-4}
-    \caption{Test scores on Croatian against the number of Croatian training lines, with 95\% bootstrap intervals; the dashed line and band are zero-shot prompting.}
-    \label{fig:learning-curve}
+    \includegraphics[width=0.75\linewidth]{per_emotion_f1.test.qlora_lr1e-4}
+    \caption{Per-emotion F1 on test, with the gold support of each emotion.}
+    \label{fig:per-emotion}
 \end{figure}
